@@ -45,11 +45,11 @@ func (l *Link) Read() *head.Packet {
 }
 
 func (l *Link) Write(p *head.Packet) (n int, err error) {
-	var d []byte
-	d, err = p.Mashal(me.String(), l.peerip.String())
-	logrus.Debugln("[link] write data", string(d))
+	p.Data, err = l.Encode(p.Data)
 	if err == nil {
-		d, err = l.Encode(d)
+		var d []byte
+		d, err = p.Mashal(me.String(), l.peerip.String())
+		logrus.Debugln("[link] write data", string(d))
 		if err == nil {
 			n, err = myconn.WriteToUDP(d, l.endpoint)
 		}

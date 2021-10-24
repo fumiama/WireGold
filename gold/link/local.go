@@ -45,33 +45,30 @@ func listen() (conn *net.UDPConn, err error) {
 				n, addr, err := conn.ReadFromUDP(lbf)
 				if err == nil {
 					lbf = lbf[:n]
-					p, ok := IsEndpointInPeer(addr.String())
-					logrus.Infoln("[link] recv from endpoint", addr)
-					logrus.Debugln("[link] recv:", string(lbf))
-					if ok {
-						packet := head.Packet{}
-						d, err := p.Decode(lbf)
-						if err == nil {
-							packet.UnMashal(d)
-							r := packet.DataSZ - uint32(len(packet.Data))
-							if r > 0 {
-								i := 0
-								n := 0
-								remain := make([]byte, r)
-								for r > 0 {
-									n, _, err = conn.ReadFromUDP(remain[i:])
-									if err == nil {
-										i += n
-										r -= uint32(n)
-									} else {
-										logrus.Errorln("[link.listen]", err)
-										return
-									}
-								}
+					packet := head.Packet{}
+					err = packet.UnMashal(lbf)
+					if err == nil {
+						r := int(packet.DataSZ) - len(packet.Data)
+						if r > 0 {
+							remain, err := readAll(conn, r)
+							if err == nil {
 								packet.Data = append(packet.Data, remain...)
 							}
-							logrus.Infoln("[link] deliver to", p.peerip)
-							p.pipe <- &packet
+						}
+						p, ok := IsInPeer(packet.Src)
+						logrus.Infoln("[link] recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
+						logrus.Debugln("[link] recv:", string(lbf))
+						if ok {
+							packet.Data, err = p.Decode(packet.Data)
+							if err == nil {
+								logrus.Infoln("[link] deliver to", p.peerip)
+								if p.EndPoint == "" {
+									logrus.Infoln("[link] set endpoint of peer", p.peerip, "to", addr.String())
+									p.endpoint = addr
+									p.EndPoint = addr.String()
+								}
+								p.pipe <- &packet
+							}
 						}
 					}
 				}
@@ -79,4 +76,23 @@ func listen() (conn *net.UDPConn, err error) {
 		}()
 	}
 	return
+}
+
+func readAll(conn *net.UDPConn, sz int) ([]byte, error) {
+	i := 0
+	n := 0
+	r := sz
+	var err error
+	remain := make([]byte, r)
+	for sz > 0 {
+		n, _, err = conn.ReadFromUDP(remain[i:])
+		if err == nil {
+			i += n
+			r -= n
+		} else {
+			logrus.Errorln("[link] read all err:", err)
+			return nil, err
+		}
+	}
+	return remain, nil
 }

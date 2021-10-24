@@ -8,7 +8,7 @@ import (
 	"github.com/fumiama/WireGold/gold/head"
 )
 
-func (l *Link) KeepAlive() {
+func (l *Link) keepAlive() {
 	if l.peer.KeepAlive > 0 && !l.hasKeepRuning {
 		l.hasKeepRuning = true
 		go func() {

@@ -1,6 +1,8 @@
 package tunnel
 
 import (
+	"errors"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/gold/head"
@@ -8,11 +10,12 @@ import (
 )
 
 type Tunnel struct {
-	l    *link.Link
-	In   *chan []byte
-	Out  *chan []byte
-	src  uint16
-	dest uint16
+	l        *link.Link
+	in       chan []byte
+	out      chan []byte
+	outcache []byte
+	src      uint16
+	dest     uint16
 }
 
 func Create(peer string, srcport uint16, destport uint16) (s Tunnel, err error) {
@@ -21,26 +24,70 @@ func Create(peer string, srcport uint16, destport uint16) (s Tunnel, err error) 
 	l, err = link.Connect(peer)
 	if err == nil {
 		s.l = &l
-		s.In = new(chan []byte)
-		s.Out = new(chan []byte)
+		s.in = make(chan []byte, 4)
+		s.out = make(chan []byte, 4)
 		s.src = srcport
 		s.dest = destport
 		go s.handleWrite()
+		go s.handleRead()
 	} else {
 		logrus.Errorln("[tunnel] create err:", err)
 	}
 	return
 }
 
+func (s *Tunnel) Write(p []byte) (int, error) {
+	s.in <- p
+	return len(p), nil
+}
+
+func (s *Tunnel) Read(p []byte) (int, error) {
+	var d []byte
+	if s.outcache != nil {
+		d = s.outcache
+	} else {
+		d = <-s.out
+	}
+	if d != nil {
+		if len(p) >= len(d) {
+			s.outcache = nil
+			return copy(p, d), nil
+		} else {
+			s.outcache = d[len(p):]
+			return copy(p, d[:len(p)]), nil
+		}
+	}
+	return 0, errors.New("reading reaches nil")
+}
+
+func (s *Tunnel) Close() error {
+	s.l.Close()
+	close(s.in)
+	return nil
+}
+
 func (s *Tunnel) handleWrite() {
-	for b := range *s.In {
+	for b := range s.in {
+		if b == nil {
+			break
+		}
+		logrus.Debugln("[tunnel] writing", len(b), "bytes...")
 		_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.dest, b))
 		if err != nil {
 			logrus.Errorln("[tunnel] write err:", err)
+			break
+		} else {
+			logrus.Debugln("[tunnel] write succeeded")
 		}
 	}
 }
 
-func (s *Tunnel) Handle(srcport uint16, destport uint16, data *[]byte) {
-
+func (s *Tunnel) handleRead() {
+	for {
+		p := s.l.Read()
+		if p == nil {
+			break
+		}
+		s.out <- p.Data
+	}
 }

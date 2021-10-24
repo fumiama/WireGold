@@ -6,59 +6,53 @@ import (
 	"sync"
 
 	"github.com/fumiama/WireGold/gold/head"
+	"github.com/sirupsen/logrus"
 )
 
 type Link struct {
-	conn          net.Conn
-	peer          *Identity
+	PubicKey      [32]byte
+	EndPoint      string
+	KeepAlive     int64
+	pipe          chan *head.Packet
 	peerip        net.IP
+	endpoint      *net.UDPAddr
 	hasKeepRuning bool
 }
 
 var (
 	connections = make(map[string]*Link)
 	connmapmu   sync.RWMutex
+	myconn      *net.UDPConn
 )
 
-func Connect(peer string) (l Link, err error) {
-	peer = net.ParseIP(peer).String()
-	p, ok := IsInPeer(peer)
+func Connect(peer string) (*Link, error) {
+	p, ok := IsInPeer(net.ParseIP(peer).String())
 	if ok {
-		connmapmu.RLock()
-		lnk, ok := connections[peer]
-		connmapmu.RUnlock()
-		if ok {
-			return *lnk, nil
-		}
-		l.conn, err = net.Dial("udp", p.EndPoint)
-		l.peer = p
-		l.peerip = net.ParseIP(peer)
-		connmapmu.Lock()
-		connections[l.peerip.String()] = &l
-		connmapmu.Unlock()
-		l.keepAlive()
-	} else {
-		err = errors.New("peer not exist")
+		p.keepAlive()
+		return p, nil
 	}
-	return
+	return nil, errors.New("peer not exist")
 }
 
 func (l *Link) Close() {
-	l.conn.Close()
 	connmapmu.Lock()
 	delete(connections, l.peerip.String())
 	connmapmu.Unlock()
 }
 
 func (l *Link) Read() *head.Packet {
-	return <-l.peer.pipe
+	return <-l.pipe
 }
 
 func (l *Link) Write(p *head.Packet) (n int, err error) {
-	d := p.Mashal(me.String(), l.peerip.String())
-	d, err = l.peer.Encode(d)
+	var d []byte
+	d, err = p.Mashal(me.String(), l.peerip.String())
+	logrus.Debugln("[link] write data", string(d))
 	if err == nil {
-		n, err = l.conn.Write(d)
+		d, err = l.Encode(d)
+		if err == nil {
+			n, err = myconn.WriteToUDP(d, l.endpoint)
+		}
 	}
 	return
 }

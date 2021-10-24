@@ -20,10 +20,8 @@ type Tunnel struct {
 
 func Create(peer string, srcport uint16, destport uint16) (s Tunnel, err error) {
 	logrus.Infoln("[tunnel] create from", srcport, "to", destport)
-	var l link.Link
-	l, err = link.Connect(peer)
+	s.l, err = link.Connect(peer)
 	if err == nil {
-		s.l = &l
 		s.in = make(chan []byte, 4)
 		s.out = make(chan []byte, 4)
 		s.src = srcport
@@ -68,7 +66,9 @@ func (s *Tunnel) Close() error {
 
 func (s *Tunnel) handleWrite() {
 	for b := range s.in {
+		logrus.Debugln("[tunnel] write recv", b)
 		if b == nil {
+			logrus.Errorln("[tunnel] write recv nil")
 			break
 		}
 		logrus.Debugln("[tunnel] writing", len(b), "bytes...")
@@ -86,8 +86,10 @@ func (s *Tunnel) handleRead() {
 	for {
 		p := s.l.Read()
 		if p == nil {
+			logrus.Errorln("[tunnel] read recv nil")
 			break
 		}
+		logrus.Debugln("[tunnel] read recv", p.Data)
 		s.out <- p.Data
 	}
 }

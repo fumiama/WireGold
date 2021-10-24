@@ -9,10 +9,10 @@ import (
 )
 
 func (l *Link) keepAlive() {
-	if l.peer.KeepAlive > 0 && !l.hasKeepRuning {
+	if l.KeepAlive > 0 && !l.hasKeepRuning {
 		l.hasKeepRuning = true
 		go func() {
-			t := time.NewTicker(time.Second * time.Duration(l.peer.KeepAlive))
+			t := time.NewTicker(time.Second * time.Duration(l.KeepAlive))
 			for range t.C {
 				_, _ = l.Write(head.NewPacket(head.ProtoHello, 0, 0, nil))
 				logrus.Infoln("[link.nat] send keep alive packet")

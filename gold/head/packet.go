@@ -1,5 +1,7 @@
 package head
 
+import "encoding/json"
+
 type Packet struct {
 	DataSZ  uint32
 	Proto   uint8
@@ -21,10 +23,13 @@ func NewPacket(proto uint8, srcPort uint16, dstPort uint16, data []byte) *Packet
 	}
 }
 
-func (p *Packet) UnMashal(data []byte) {
-
+func (p *Packet) UnMashal(data []byte) error {
+	return json.Unmarshal(data, p)
 }
 
-func (p *Packet) Mashal(src string, dst string) []byte {
-	return nil
+func (p *Packet) Mashal(src string, dst string) ([]byte, error) {
+	p.DataSZ = uint32(len(p.Data))
+	p.Src = src
+	p.Dst = dst
+	return json.Marshal(p)
 }

@@ -10,33 +10,47 @@ import (
 var (
 	privKey [32]byte
 	me      net.IP
+	myend   *net.UDPAddr
 )
 
-func SetMyself(privateKey [32]byte, myIP string) {
+func SetMyself(privateKey [32]byte, myIP string, myEndpoint string) {
 	privKey = privateKey
+	var err error
+	myend, err = net.ResolveUDPAddr("udp", myEndpoint)
+	if err != nil {
+		panic(err)
+	}
 	me = net.ParseIP(myIP)
+	myconn, err = listen()
+	if err != nil {
+		panic(err)
+	}
 }
 
-func (id *Identity) Encode(b []byte) (eb []byte, err error) {
+func (l *Link) Encode(b []byte) (eb []byte, err error) {
 	return b, nil
 }
 
-func (id *Identity) Decode(b []byte) (db []byte, err error) {
+func (l *Link) Decode(b []byte) (db []byte, err error) {
 	return b, nil
 }
 
-func Listen(endpoint string) error {
-	conn, err := net.ListenPacket("udp", endpoint)
+func listen() (conn *net.UDPConn, err error) {
+	conn, err = net.ListenUDP("udp", myend)
 	if err == nil {
 		go func() {
 			listenbuff := make([]byte, 65536)
 			for {
-				_, addr, err := conn.ReadFrom(listenbuff)
+				lbf := listenbuff
+				n, addr, err := conn.ReadFromUDP(lbf)
 				if err == nil {
-					p, ok := IsInPeer(addr.String())
+					lbf = lbf[:n]
+					p, ok := IsEndpointInPeer(addr.String())
+					logrus.Infoln("[link] recv from endpoint", addr)
+					logrus.Debugln("[link] recv:", string(lbf))
 					if ok {
 						packet := head.Packet{}
-						d, err := p.Decode(listenbuff)
+						d, err := p.Decode(lbf)
 						if err == nil {
 							packet.UnMashal(d)
 							r := packet.DataSZ - uint32(len(packet.Data))
@@ -45,7 +59,7 @@ func Listen(endpoint string) error {
 								n := 0
 								remain := make([]byte, r)
 								for r > 0 {
-									n, _, err = conn.ReadFrom(remain[i:])
+									n, _, err = conn.ReadFromUDP(remain[i:])
 									if err == nil {
 										i += n
 										r -= uint32(n)
@@ -56,6 +70,7 @@ func Listen(endpoint string) error {
 								}
 								packet.Data = append(packet.Data, remain...)
 							}
+							logrus.Infoln("[link] deliver to", p.peerip)
 							p.pipe <- &packet
 						}
 					}
@@ -63,5 +78,5 @@ func Listen(endpoint string) error {
 			}
 		}()
 	}
-	return err
+	return
 }

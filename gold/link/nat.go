@@ -21,3 +21,11 @@ func (l *Link) keepAlive() {
 		logrus.Infoln("[link.nat] start to keep alive")
 	}
 }
+
+func onQuery(packet *head.Packet) {
+	// TODO: 完成data解包与notify分发
+}
+
+func onNotify(packet *head.Packet) {
+	// TODO: 完成data解包与endpoint注册
+}

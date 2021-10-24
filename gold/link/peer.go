@@ -6,7 +6,7 @@ import (
 	"github.com/fumiama/WireGold/gold/head"
 )
 
-func AddPeer(peerip string, pubicKey [32]byte, endPoint string, keepAlive int64) (l *Link) {
+func AddPeer(peerip string, pubicKey [32]byte, endPoint string, allowedIPs []string, keepAlive int64) (l *Link) {
 	peerip = net.ParseIP(peerip).String()
 	var ok bool
 	l, ok = IsInPeer(peerip)
@@ -26,6 +26,15 @@ func AddPeer(peerip string, pubicKey [32]byte, endPoint string, keepAlive int64)
 		}
 		l.EndPoint = endPoint
 		l.endpoint = e
+	}
+	if allowedIPs != nil {
+		l.allowedips = make([]*net.IPNet, len(allowedIPs))
+		for _, ipnet := range allowedIPs {
+			_, cidr, err := net.ParseCIDR(ipnet)
+			if err != nil {
+				l.allowedips = append(l.allowedips, cidr)
+			}
+		}
 	}
 	connmapmu.Lock()
 	connections[peerip] = l

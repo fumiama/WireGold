@@ -7,34 +7,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	privKey [32]byte
-	me      net.IP
-	myend   *net.UDPAddr
-)
-
-func SetMyself(privateKey [32]byte, myIP string, myEndpoint string) {
-	privKey = privateKey
-	var err error
-	myend, err = net.ResolveUDPAddr("udp", myEndpoint)
-	if err != nil {
-		panic(err)
-	}
-	me = net.ParseIP(myIP)
-	myconn, err = listen()
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (l *Link) Encode(b []byte) (eb []byte, err error) {
-	return b, nil
-}
-
-func (l *Link) Decode(b []byte) (db []byte, err error) {
-	return b, nil
-}
-
 func listen() (conn *net.UDPConn, err error) {
 	conn, err = net.ListenUDP("udp", myend)
 	if err == nil {
@@ -58,17 +30,41 @@ func listen() (conn *net.UDPConn, err error) {
 						p, ok := IsInPeer(packet.Src)
 						logrus.Infoln("[link] recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
 						logrus.Debugln("[link] recv:", string(lbf))
-						if ok {
+						if p.EndPoint == "" || p.EndPoint != addr.String() {
+							logrus.Infoln("[link] set endpoint of peer", p.peerip, "to", addr.String())
+							p.endpoint = addr
+							p.EndPoint = addr.String()
+						}
+						if ok && p.Accept(net.IP(packet.Dst)) {
 							packet.Data, err = p.Decode(packet.Data)
 							if err == nil {
-								logrus.Infoln("[link] deliver to", p.peerip)
-								if p.EndPoint == "" {
-									logrus.Infoln("[link] set endpoint of peer", p.peerip, "to", addr.String())
-									p.endpoint = addr
-									p.EndPoint = addr.String()
+								switch packet.Proto {
+								case head.ProtoHello:
+									switch p.status {
+									case LINK_STATUS_DOWN:
+										_, _ = p.Write(head.NewPacket(head.ProtoHello, 0, 0, nil))
+										logrus.Infoln("[link] send hello ack packet")
+										p.status = LINK_STATUS_HALFUP
+									case LINK_STATUS_HALFUP:
+										p.status = LINK_STATUS_UP
+									case LINK_STATUS_UP:
+										break
+									}
+								case head.ProtoNotify:
+									logrus.Infoln("[link] recv notify")
+									onNotify(&packet)
+								case head.ProtoQuery:
+									logrus.Infoln("[link] recv query")
+									onQuery(&packet)
+								case head.ProtoData:
+									logrus.Infoln("[link] deliver to", p.peerip)
+									p.pipe <- &packet
+								default:
+									break
 								}
-								p.pipe <- &packet
 							}
+						} else {
+							logrus.Infoln("[link] packet to", packet.Dst, "is refused")
 						}
 					}
 				}

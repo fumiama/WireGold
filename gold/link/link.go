@@ -16,8 +16,16 @@ type Link struct {
 	pipe          chan *head.Packet
 	peerip        net.IP
 	endpoint      *net.UDPAddr
+	allowedips    []*net.IPNet
 	hasKeepRuning bool
+	status        int
 }
+
+const (
+	LINK_STATUS_DOWN = iota
+	LINK_STATUS_HALFUP
+	LINK_STATUS_UP
+)
 
 var (
 	connections = make(map[string]*Link)
@@ -38,6 +46,7 @@ func (l *Link) Close() {
 	connmapmu.Lock()
 	delete(connections, l.peerip.String())
 	connmapmu.Unlock()
+	l.status = LINK_STATUS_DOWN
 }
 
 func (l *Link) Read() *head.Packet {

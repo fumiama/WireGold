@@ -1,6 +1,9 @@
 package head
 
-import "encoding/json"
+import (
+	"crypto/rand"
+	"encoding/json"
+)
 
 // Packet 是发送和接收的最小单位
 type Packet struct {
@@ -49,5 +52,6 @@ func (p *Packet) Mashal(src string, dst string) ([]byte, error) {
 	p.DataSZ = uint32(len(p.Data))
 	p.Src = src
 	p.Dst = dst
+	rand.Reader.Read(p.Hash[:])
 	return json.Marshal(p)
 }

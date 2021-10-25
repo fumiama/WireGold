@@ -12,7 +12,7 @@ import (
 // Link 是本机到 peer 的连接抽象
 type Link struct {
 	// peer 的公钥
-	pubk [32]byte
+	pubk *[32]byte
 	// peer 的公网 ip:port
 	pep string
 	// 决定本机是否定时向 peer 发送 hello 保持 NAT。
@@ -32,6 +32,8 @@ type Link struct {
 	allowtrans bool
 	// 连接的状态，详见下方 const
 	status int
+	// 连接所用对称加密密钥
+	key *[]byte
 }
 
 const (

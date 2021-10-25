@@ -3,11 +3,13 @@ package link
 import (
 	"net"
 
+	curve "github.com/fumiama/go-x25519"
+
 	"github.com/fumiama/WireGold/gold/head"
 )
 
 // AddPeer 添加一个 peer
-func AddPeer(peerip string, pubicKey [32]byte, endPoint string, allowedIPs []string, keepAlive int64, allowTrans bool) (l *Link) {
+func AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowedIPs []string, keepAlive int64, allowTrans bool) (l *Link) {
 	peerip = net.ParseIP(peerip).String()
 	var ok bool
 	l, ok = IsInPeer(peerip)
@@ -20,6 +22,13 @@ func AddPeer(peerip string, pubicKey [32]byte, endPoint string, allowedIPs []str
 		pipe:       make(chan *head.Packet, 32),
 		peerip:     net.ParseIP(peerip),
 		allowtrans: allowTrans,
+	}
+	if pubicKey != nil {
+		c := curve.Get(privKey)
+		k, err := c.Shared(pubicKey)
+		if err == nil {
+			l.key = &k
+		}
 	}
 	if endPoint != "" {
 		e, err := net.ResolveUDPAddr("udp", endPoint)

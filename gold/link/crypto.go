@@ -29,13 +29,13 @@ func SetMyself(privateKey [32]byte, myIP string, myEndpoint string) {
 	}
 }
 
-// Encode 使用  ChaCha20-Poly1305 AEAD 对称加密加密
+// Encode 使用 ChaCha20-Poly1305 加密
 // https://pkg.go.dev/golang.org/x/crypto/chacha20poly1305
 func (l *Link) Encode(b []byte) (eb []byte, err error) {
 	return b, nil
 }
 
-// Encode 使用  ChaCha20-Poly1305 AEAD 对称加密解密
+// Decode 使用 ChaCha20-Poly1305 解密
 // https://pkg.go.dev/golang.org/x/crypto/chacha20poly1305
 func (l *Link) Decode(b []byte) (db []byte, err error) {
 	return b, nil

@@ -42,8 +42,9 @@ func AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowedIPs []st
 		l.allowedips = make([]*net.IPNet, len(allowedIPs))
 		for _, ipnet := range allowedIPs {
 			_, cidr, err := net.ParseCIDR(ipnet)
-			if err != nil {
+			if err == nil {
 				l.allowedips = append(l.allowedips, cidr)
+				routetable[cidr.String()] = append(routetable[cidr.String()], l)
 			}
 		}
 	}

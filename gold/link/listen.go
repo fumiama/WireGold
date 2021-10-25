@@ -54,10 +54,10 @@ func listen() (conn *net.UDPConn, err error) {
 										}
 									case head.ProtoNotify:
 										logrus.Infoln("[link] recv notify")
-										onNotify(&packet)
+										p.onNotify(&packet)
 									case head.ProtoQuery:
 										logrus.Infoln("[link] recv query")
-										onQuery(&packet)
+										p.onQuery(&packet)
 									case head.ProtoData:
 										logrus.Infoln("[link] deliver to", p.peerip)
 										p.pipe <- &packet

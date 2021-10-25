@@ -1,7 +1,7 @@
 package head
 
-// map[peerip]endpoint
+// Notify 是 map[peerip]endpoint
 type Notify map[string]string
 
-// peerips array
+// Query 是 peerips 组成的数组
 type Query []string

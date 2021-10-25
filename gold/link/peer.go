@@ -6,7 +6,8 @@ import (
 	"github.com/fumiama/WireGold/gold/head"
 )
 
-func AddPeer(peerip string, pubicKey [32]byte, endPoint string, allowedIPs []string, keepAlive int64) (l *Link) {
+// AddPeer 添加一个 peer
+func AddPeer(peerip string, pubicKey [32]byte, endPoint string, allowedIPs []string, keepAlive int64, allowTrans bool) (l *Link) {
 	peerip = net.ParseIP(peerip).String()
 	var ok bool
 	l, ok = IsInPeer(peerip)
@@ -14,17 +15,18 @@ func AddPeer(peerip string, pubicKey [32]byte, endPoint string, allowedIPs []str
 		return
 	}
 	l = &Link{
-		PubicKey:  pubicKey,
-		KeepAlive: keepAlive,
-		pipe:      make(chan *head.Packet, 32),
-		peerip:    net.ParseIP(peerip),
+		pubk:       pubicKey,
+		keepalive:  keepAlive,
+		pipe:       make(chan *head.Packet, 32),
+		peerip:     net.ParseIP(peerip),
+		allowtrans: allowTrans,
 	}
 	if endPoint != "" {
 		e, err := net.ResolveUDPAddr("udp", endPoint)
 		if err != nil {
 			panic(err)
 		}
-		l.EndPoint = endPoint
+		l.pep = endPoint
 		l.endpoint = e
 	}
 	if allowedIPs != nil {
@@ -42,6 +44,7 @@ func AddPeer(peerip string, pubicKey [32]byte, endPoint string, allowedIPs []str
 	return
 }
 
+// IsInPeer 查找 peer 是否已经在册
 func IsInPeer(peer string) (p *Link, ok bool) {
 	connmapmu.RLock()
 	p, ok = connections[peer]

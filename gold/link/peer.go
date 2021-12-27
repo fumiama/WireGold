@@ -2,6 +2,7 @@ package link
 
 import (
 	"net"
+	"unsafe"
 
 	curve "github.com/fumiama/go-x25519"
 
@@ -24,10 +25,10 @@ func AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowedIPs []st
 		allowtrans: allowTrans,
 	}
 	if pubicKey != nil {
-		c := curve.Get(privKey)
+		c := curve.Get(privKey[:])
 		k, err := c.Shared(pubicKey)
 		if err == nil {
-			l.key = &k
+			l.key = (*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&k)))
 		}
 	}
 	if endPoint != "" {

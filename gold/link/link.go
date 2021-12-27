@@ -5,8 +5,9 @@ import (
 	"net"
 	"sync"
 
-	"github.com/fumiama/WireGold/gold/head"
 	"github.com/sirupsen/logrus"
+
+	"github.com/fumiama/WireGold/gold/head"
 )
 
 // Link 是本机到 peer 的连接抽象
@@ -33,7 +34,7 @@ type Link struct {
 	// 连接的状态，详见下方 const
 	status int
 	// 连接所用对称加密密钥
-	key *[]byte
+	key *[32]byte
 }
 
 const (

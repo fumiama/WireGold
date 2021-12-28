@@ -32,12 +32,12 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 						p, ok := m.IsInPeer(packet.Src)
 						logrus.Infoln("[link] recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
 						logrus.Debugln("[link] recv:", string(lbf))
-						if p.pep == "" || p.pep != addr.String() {
-							logrus.Infoln("[link] set endpoint of peer", p.peerip, "to", addr.String())
-							p.endpoint = addr
-							p.pep = addr.String()
-						}
 						if ok {
+							if p.pep == "" || p.pep != addr.String() {
+								logrus.Infoln("[link] set endpoint of peer", p.peerip, "to", addr.String())
+								p.endpoint = addr
+								p.pep = addr.String()
+							}
 							if p.IsToMe(net.ParseIP(packet.Dst)) {
 								packet.Data = p.Decode(packet.Data)
 								if packet.IsVaildHash() {

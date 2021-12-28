@@ -78,7 +78,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 								logrus.Infoln("[link] trans")
 							}
 						} else {
-							logrus.Infoln("[link] packet to", packet.Dst, "is refused", "(me:", m.me, ")")
+							logrus.Infoln("[link] packet to", packet.Dst, "is refused")
 						}
 					}
 				}

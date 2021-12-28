@@ -72,7 +72,7 @@ func (l *Link) Write(p *head.Packet) (n int, err error) {
 	p.FillHash()
 	p.Data = l.Encode(p.Data)
 	var d []byte
-	d, err = p.Mashal(l.me.me.String(), l.peerip.String())
+	d, err = p.Marshal(l.me.me.String(), l.peerip.String())
 	logrus.Debugln("[link] write data", string(d))
 	if err == nil {
 		n, err = l.me.myconn.WriteToUDP(d, l.NextHop(l.peerip).endpoint)

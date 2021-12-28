@@ -43,13 +43,13 @@ func NewPacket(proto uint8, srcPort uint16, dstPort uint16, data []byte) *Packet
 	}
 }
 
-// UnMashal 将 data 的数据解码到自身
-func (p *Packet) UnMashal(data []byte) error {
+// Unmarshal 将 data 的数据解码到自身
+func (p *Packet) Unmarshal(data []byte) error {
 	return json.Unmarshal(data, p)
 }
 
-// Mashal 将自身数据编码为 []byte
-func (p *Packet) Mashal(src string, dst string) ([]byte, error) {
+// Marshal 将自身数据编码为 []byte
+func (p *Packet) Marshal(src string, dst string) ([]byte, error) {
 	p.DataSZ = uint32(len(p.Data))
 	p.Src = src
 	p.Dst = dst

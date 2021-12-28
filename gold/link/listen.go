@@ -20,7 +20,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 				if err == nil {
 					lbf = lbf[:n]
 					packet := head.Packet{}
-					err = packet.UnMashal(lbf)
+					err = packet.Unmarshal(lbf)
 					if err == nil {
 						r := int(packet.DataSZ) - len(packet.Data)
 						if r > 0 {

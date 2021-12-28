@@ -46,6 +46,7 @@ func (r *Router) NextHop(cidr string) *Link {
 	return r.table[cidr]
 }
 
+// SetItem 添加一条表项
 func (r *Router) SetItem(ip *net.IPNet, l *Link) {
 	r.mu.Lock()
 	// 从第一条表项开始匹配

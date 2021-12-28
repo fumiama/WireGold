@@ -129,6 +129,20 @@ func main() {
 
 	nic := lower.NewNIC(c.IP, c.SubNet)
 	me := link.NewMe(&key, c.IP+"/32", c.EndPoint, true)
+
+	for _, peer := range c.Peers {
+		var peerkey [32]byte
+		k, err := base14.UTF82utf16be(helper.StringToBytes(peer.PublicKey + suffix32))
+		if err != nil {
+			panic(err)
+		}
+		n := copy(peerkey[:], base14.Decode(k))
+		if n != 32 {
+			panic("peer public key length is not 32")
+		}
+		me.AddPeer(peer.IP, &peerkey, peer.EndPoint, peer.AllowedIPs, peer.KeepAliveSeconds, peer.AllowTrans, true)
+	}
+
 	nic.Up()
 	defer func() {
 		nic.Stop()

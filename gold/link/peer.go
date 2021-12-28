@@ -49,6 +49,8 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 			if err == nil {
 				l.allowedips = append(l.allowedips, cidr)
 				l.me.router.SetItem(cidr, l)
+			} else {
+				panic(err)
 			}
 		}
 	}

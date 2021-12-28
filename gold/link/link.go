@@ -79,7 +79,14 @@ func (l *Link) Write(p *head.Packet) (n int, err error) {
 	d, err = p.Marshal(l.me.me.String(), l.peerip.String())
 	logrus.Debugln("[link] write data", string(d))
 	if err == nil {
-		n, err = l.me.myconn.WriteToUDP(d, l.me.router.NextHop(l.peerip.String()+"/32").endpoint)
+		peerlink := l.me.router.NextHop(l.peerip.String() + "/32")
+		if peerlink != nil {
+			peerep := peerlink.endpoint
+			logrus.Infoln("[link] write data from ep", l.me.myconn.LocalAddr(), "to", peerep)
+			n, err = l.me.myconn.WriteToUDP(d, peerep)
+		} else {
+			logrus.Warnln("[link] drop packet: nil peerlink")
+		}
 	}
 	return
 }

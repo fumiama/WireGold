@@ -56,10 +56,14 @@ func (m *Me) Connect(peer string) (*Link, error) {
 
 // Close 关闭到 peer 的连接
 func (l *Link) Close() {
+	l.status = LINK_STATUS_DOWN
+}
+
+// Destroy 从 connections 移除 peer
+func (l *Link) Destroy() {
 	l.me.connmapmu.Lock()
 	delete(l.me.connections, l.peerip.String())
 	l.me.connmapmu.Unlock()
-	l.status = LINK_STATUS_DOWN
 }
 
 // Read 从 peer 收包

@@ -4,13 +4,13 @@ import (
 	"net"
 	"unsafe"
 
-	curve "github.com/fumiama/go-x25519"
-
 	"github.com/fumiama/WireGold/gold/head"
+	curve "github.com/fumiama/go-x25519"
+	"github.com/sirupsen/logrus"
 )
 
 // AddPeer 添加一个 peer
-func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowedIPs []string, keepAlive int64, allowTrans bool) (l *Link) {
+func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowedIPs []string, keepAlive int64, allowTrans, nopipe bool) (l *Link) {
 	peerip = net.ParseIP(peerip).String()
 	var ok bool
 	l, ok = m.IsInPeer(peerip)
@@ -20,10 +20,12 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 	l = &Link{
 		pubk:       pubicKey,
 		keepalive:  keepAlive,
-		pipe:       make(chan *head.Packet, 32),
 		peerip:     net.ParseIP(peerip),
 		allowtrans: allowTrans,
 		me:         m,
+	}
+	if !nopipe {
+		l.pipe = make(chan *head.Packet, 32)
 	}
 	if pubicKey != nil {
 		c := curve.Get(m.privKey[:])
@@ -53,6 +55,7 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 	l.me.connmapmu.Lock()
 	l.me.connections[peerip] = l
 	l.me.connmapmu.Unlock()
+	logrus.Infoln("[peer] add peer:", peerip, "allow:", allowedIPs)
 	return
 }
 

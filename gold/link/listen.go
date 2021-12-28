@@ -61,7 +61,11 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 										p.onQuery(&packet)
 									case head.ProtoData:
 										logrus.Infoln("[link] deliver to", p.peerip)
-										p.pipe <- &packet
+										if p.pipe != nil {
+											p.pipe <- &packet
+										} else {
+											m.pipe <- &packet
+										}
 									default:
 										break
 									}
@@ -82,6 +86,12 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 		}()
 	}
 	return
+}
+
+// Read 接收所有发送给本机的报文
+// 需要开启 nopipe
+func (m *Me) Read() *head.Packet {
+	return <-m.pipe
 }
 
 // 从 conn 读取 sz 字节数据

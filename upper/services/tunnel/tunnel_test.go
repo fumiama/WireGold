@@ -27,10 +27,10 @@ func TestTunnel(t *testing.T) {
 	t.Log("peer priv key:", hex.EncodeToString(peerpk.Private()[:]))
 	t.Log("peer publ key:", hex.EncodeToString(peerpk.Public()[:]))
 
-	m := link.NewMe(selfpk.Private(), "192.168.1.2", "127.0.0.1:1236")
-	m.AddPeer("192.168.1.3", peerpk.Public(), "127.0.0.1:1237", []string{"192.168.1.3/32"}, 0, false)
-	p := link.NewMe(peerpk.Private(), "192.168.1.3", "127.0.0.1:1237")
-	p.AddPeer("192.168.1.2", selfpk.Public(), "127.0.0.1:1236", []string{"192.168.1.2/32"}, 0, false)
+	m := link.NewMe(selfpk.Private(), "192.168.1.2/32", "127.0.0.1:1236", false)
+	m.AddPeer("192.168.1.3", peerpk.Public(), "127.0.0.1:1237", []string{"192.168.1.3/32"}, 0, false, false)
+	p := link.NewMe(peerpk.Private(), "192.168.1.3/32", "127.0.0.1:1237", false)
+	p.AddPeer("192.168.1.2", selfpk.Public(), "127.0.0.1:1236", []string{"192.168.1.2/32"}, 0, false, false)
 	tunnme, err := Create(&m, "192.168.1.3", 1, 1, 4096)
 	if err != nil {
 		t.Fatal(err)

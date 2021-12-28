@@ -6,6 +6,8 @@ import (
 	"unsafe"
 
 	tea "github.com/fumiama/gofastTEA"
+
+	"github.com/fumiama/WireGold/gold/head"
 )
 
 // Me 是本机的抽象
@@ -29,10 +31,12 @@ type Me struct {
 	myconn *net.UDPConn
 	// 本机路由表
 	router *Router
+	// 不分目的 link 的接收队列
+	pipe chan *head.Packet
 }
 
 // NewMe 设置本机参数
-func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string) (m Me) {
+func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nopipeinlink bool) (m Me) {
 	m.privKey = *privateKey
 	var err error
 	m.myend, err = net.ResolveUDPAddr("udp", myEndpoint)
@@ -55,6 +59,10 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string) (m Me) 
 		table: make(map[string]*Link, 16),
 	}
 	m.router.SetDefault(nil)
+	if nopipeinlink {
+		m.pipe = make(chan *head.Packet, 32)
+	}
+	m.AddPeer(m.me.String(), nil, "127.0.0.1:56789", []string{myipwithmask, "127.0.0.0/8"}, 0, false, nopipeinlink)
 	return
 }
 

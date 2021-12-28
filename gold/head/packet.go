@@ -44,7 +44,6 @@ func NewPacket(proto uint8, srcPort uint16, dstPort uint16, data []byte) *Packet
 }
 
 // UnMashal 将 data 的数据解码到自身
-// 同时通过 Hash 验证数据完整性
 func (p *Packet) UnMashal(data []byte) error {
 	return json.Unmarshal(data, p)
 }

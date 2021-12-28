@@ -5,10 +5,10 @@ import (
 	"sync"
 )
 
-var (
-	routetable   = make(map[string][]*Link)
+type Router struct {
+	routetable   map[string][]*Link
 	routetablemu sync.RWMutex
-)
+}
 
 // Accept 判断是否应当接受 ip 发来的包
 func (l *Link) Accept(ip net.IP) bool {
@@ -22,7 +22,7 @@ func (l *Link) Accept(ip net.IP) bool {
 
 // IsToMe 判断是否是发给自己的包
 func (l *Link) IsToMe(ip net.IP) bool {
-	return ip.Equal(me)
+	return ip.Equal(l.me.me)
 }
 
 // NextHop 得到前往 ip 的下一跳的 link

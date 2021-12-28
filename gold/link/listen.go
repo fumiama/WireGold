@@ -8,8 +8,8 @@ import (
 )
 
 // 监听本机 endpoint
-func listen() (conn *net.UDPConn, err error) {
-	conn, err = net.ListenUDP("udp", myend)
+func (m *Me) listen() (conn *net.UDPConn, err error) {
+	conn, err = net.ListenUDP("udp", m.myend)
 	if err == nil {
 		go func() {
 			listenbuff := make([]byte, 65536)
@@ -28,7 +28,7 @@ func listen() (conn *net.UDPConn, err error) {
 								packet.Data = append(packet.Data, remain...)
 							}
 						}
-						p, ok := IsInPeer(packet.Src)
+						p, ok := m.IsInPeer(packet.Src)
 						logrus.Infoln("[link] recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
 						logrus.Debugln("[link] recv:", string(lbf))
 						if p.pep == "" || p.pep != addr.String() {
@@ -71,7 +71,7 @@ func listen() (conn *net.UDPConn, err error) {
 								logrus.Infoln("[link] trans")
 							}
 						} else {
-							logrus.Infoln("[link] packet to", packet.Dst, "is refused", "(me:", me, ")")
+							logrus.Infoln("[link] packet to", packet.Dst, "is refused", "(me:", m.me, ")")
 						}
 					}
 				}

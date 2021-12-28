@@ -18,9 +18,9 @@ type Tunnel struct {
 	dest     uint16
 }
 
-func Create(peer string, srcport uint16, destport uint16) (s Tunnel, err error) {
+func Create(me *link.Me, peer string, srcport uint16, destport uint16) (s Tunnel, err error) {
 	logrus.Infoln("[tunnel] create from", srcport, "to", destport)
-	s.l, err = link.Connect(peer)
+	s.l, err = me.Connect(peer)
 	if err == nil {
 		s.in = make(chan []byte, 4)
 		s.out = make(chan []byte, 4)

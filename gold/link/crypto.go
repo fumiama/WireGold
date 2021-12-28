@@ -17,6 +17,8 @@ type Me struct {
 	privKey [32]byte
 	// 本机虚拟 ip
 	me net.IP
+	// 本机子网
+	subnet net.IPNet
 	// 本机 endpoint
 	myend *net.UDPAddr
 	// 本机活跃的所有连接
@@ -30,14 +32,19 @@ type Me struct {
 }
 
 // NewMe 设置本机参数
-func NewMe(privateKey *[32]byte, myIP string, myEndpoint string) (m Me) {
+func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string) (m Me) {
 	m.privKey = *privateKey
 	var err error
 	m.myend, err = net.ResolveUDPAddr("udp", myEndpoint)
 	if err != nil {
 		panic(err)
 	}
-	m.me = net.ParseIP(myIP)
+	ip, cidr, err := net.ParseCIDR(myipwithmask)
+	if err != nil {
+		panic(err)
+	}
+	m.me = ip
+	m.subnet = *cidr
 	m.myconn, err = m.listen()
 	if err != nil {
 		panic(err)

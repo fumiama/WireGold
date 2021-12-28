@@ -62,6 +62,7 @@ func (p *Packet) FillHash() {
 	p.Hash = *(*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&sum)))
 }
 
+// IsVaildHash 验证 packet 合法性
 func (p *Packet) IsVaildHash() bool {
 	sum := blake2b.New256().Sum(p.Data)
 	return *(*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&sum))) == p.Hash

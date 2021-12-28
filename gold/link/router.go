@@ -1,6 +1,7 @@
 package link
 
 import (
+	"encoding/binary"
 	"net"
 	"sync"
 
@@ -26,7 +27,7 @@ func (l *Link) Accept(ip net.IP) bool {
 
 // IsToMe 判断是否是发给自己的包
 func (l *Link) IsToMe(ip net.IP) bool {
-	return ip.Equal(l.me.me)
+	return ip.Equal(l.me.me) || ip.Equal(net.IPv4bcast) || isSubnetBcast(ip, &l.me.subnet)
 }
 
 // SetDefault 设置默认网关
@@ -68,4 +69,13 @@ func (r *Router) SetItem(ip *net.IPNet, l *Link) {
 		}
 	}
 	r.mu.Unlock()
+}
+
+func isSubnetBcast(ip net.IP, subnet *net.IPNet) bool {
+	if !subnet.Contains(ip) {
+		return false
+	}
+	maskr := make(net.IPMask, 4)
+	binary.LittleEndian.PutUint32(maskr[:], ^binary.LittleEndian.Uint32(subnet.Mask))
+	return ip.Mask(maskr).Equal(net.IP(maskr))
 }

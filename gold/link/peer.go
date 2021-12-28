@@ -46,7 +46,7 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 			_, cidr, err := net.ParseCIDR(ipnet)
 			if err == nil {
 				l.allowedips = append(l.allowedips, cidr)
-				l.me.router.routetable[cidr.String()] = append(l.me.router.routetable[cidr.String()], l)
+				l.me.router.SetItem(cidr, l)
 			}
 		}
 	}

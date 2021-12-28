@@ -44,8 +44,10 @@ func NewMe(privateKey *[32]byte, myIP string, myEndpoint string) (m Me) {
 	}
 	m.connections = make(map[string]*Link)
 	m.router = &Router{
-		routetable: make(map[string][]*Link),
+		list:  make([]*net.IPNet, 1, 16),
+		table: make(map[string]*Link, 16),
 	}
+	m.router.SetDefault(nil)
 	return
 }
 

@@ -1,6 +1,11 @@
 package link
 
-import "github.com/fumiama/WireGold/gold/head"
+import (
+	"encoding/json"
+	"errors"
+
+	"github.com/fumiama/WireGold/gold/head"
+)
 
 // 收到询问包的处理函数
 func (l *Link) onQuery(packet *head.Packet) {
@@ -11,4 +16,17 @@ func (l *Link) onQuery(packet *head.Packet) {
 	// 2. notify分发
 	// ---- 封装 Notify 到 新的 packet.Data
 	// ---- 调用 l.Send 发送到对方
+}
+
+// SendQuery 主动发起查询，询问对方是否可以到达 peers
+func (l *Link) SendQuery(peers ...string) error {
+	if len(peers) == 0 {
+		return errors.New("len(peers) is 0")
+	}
+	data, err := json.Marshal(peers)
+	if err != nil {
+		return err
+	}
+	_, err = l.Write(head.NewPacket(head.ProtoQuery, 0, 0, data))
+	return err
 }

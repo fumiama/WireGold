@@ -50,7 +50,7 @@ func NewMe(privateKey *[32]byte, myIP string, myEndpoint string) (m Me) {
 }
 
 // Encode 使用 TEA 加密
-func (l *Link) Encode(b []byte) (eb []byte, err error) {
+func (l *Link) Encode(b []byte) (eb []byte) {
 	if b == nil {
 		return
 	}
@@ -65,7 +65,7 @@ func (l *Link) Encode(b []byte) (eb []byte, err error) {
 }
 
 // Decode 使用 TEA 解密
-func (l *Link) Decode(b []byte) (db []byte, err error) {
+func (l *Link) Decode(b []byte) (db []byte) {
 	if b == nil {
 		return
 	}

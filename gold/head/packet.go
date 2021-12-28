@@ -1,13 +1,16 @@
 package head
 
 import (
-	"crypto/rand"
 	"encoding/json"
+	"unsafe"
+
+	blake2b "github.com/minio/blake2b-simd"
 )
 
 // Packet 是发送和接收的最小单位
 type Packet struct {
 	// DataSZ len(Data)
+	// 不得超过 65507-head 字节
 	DataSZ uint32
 	// Proto 详见 head
 	Proto uint8
@@ -47,11 +50,20 @@ func (p *Packet) UnMashal(data []byte) error {
 }
 
 // Mashal 将自身数据编码为 []byte
-// 同时生成 Hash
 func (p *Packet) Mashal(src string, dst string) ([]byte, error) {
 	p.DataSZ = uint32(len(p.Data))
 	p.Src = src
 	p.Dst = dst
-	rand.Reader.Read(p.Hash[:])
 	return json.Marshal(p)
+}
+
+// FillHash 生成 p.Data 的 Hash
+func (p *Packet) FillHash() {
+	sum := blake2b.New256().Sum(p.Data)
+	p.Hash = *(*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&sum)))
+}
+
+func (p *Packet) IsVaildHash() bool {
+	sum := blake2b.New256().Sum(p.Data)
+	return *(*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&sum))) == p.Hash
 }

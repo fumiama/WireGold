@@ -16,9 +16,10 @@ type Tunnel struct {
 	outcache []byte
 	src      uint16
 	dest     uint16
+	mtu      uint16
 }
 
-func Create(me *link.Me, peer string, srcport uint16, destport uint16) (s Tunnel, err error) {
+func Create(me *link.Me, peer string, srcport, destport, mtu uint16) (s Tunnel, err error) {
 	logrus.Infoln("[tunnel] create from", srcport, "to", destport)
 	s.l, err = me.Connect(peer)
 	if err == nil {
@@ -26,6 +27,7 @@ func Create(me *link.Me, peer string, srcport uint16, destport uint16) (s Tunnel
 		s.out = make(chan []byte, 4)
 		s.src = srcport
 		s.dest = destport
+		s.mtu = mtu
 		go s.handleWrite()
 		go s.handleRead()
 	} else {
@@ -72,13 +74,22 @@ func (s *Tunnel) handleWrite() {
 			break
 		}
 		logrus.Debugln("[tunnel] writing", len(b), "bytes...")
+		for len(b) > int(s.mtu) {
+			logrus.Infoln("[tunnel] split buffer")
+			_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.dest, b[:s.mtu]))
+			if err != nil {
+				logrus.Errorln("[tunnel] write err:", err)
+				return
+			}
+			logrus.Debugln("[tunnel] write succeeded")
+			b = b[s.mtu:]
+		}
 		_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.dest, b))
 		if err != nil {
 			logrus.Errorln("[tunnel] write err:", err)
 			break
-		} else {
-			logrus.Debugln("[tunnel] write succeeded")
 		}
+		logrus.Debugln("[tunnel] write succeeded")
 	}
 }
 

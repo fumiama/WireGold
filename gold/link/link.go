@@ -69,14 +69,13 @@ func (l *Link) Read() *head.Packet {
 
 // Write 向 peer 发包
 func (l *Link) Write(p *head.Packet) (n int, err error) {
-	p.Data, err = l.Encode(p.Data)
+	p.FillHash()
+	p.Data = l.Encode(p.Data)
+	var d []byte
+	d, err = p.Mashal(l.me.me.String(), l.peerip.String())
+	logrus.Debugln("[link] write data", string(d))
 	if err == nil {
-		var d []byte
-		d, err = p.Mashal(l.me.me.String(), l.peerip.String())
-		logrus.Debugln("[link] write data", string(d))
-		if err == nil {
-			n, err = l.me.myconn.WriteToUDP(d, l.NextHop(l.peerip).endpoint)
-		}
+		n, err = l.me.myconn.WriteToUDP(d, l.NextHop(l.peerip).endpoint)
 	}
 	return
 }

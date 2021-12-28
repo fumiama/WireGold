@@ -1,7 +1,6 @@
 package link
 
 import (
-	"fmt"
 	"net"
 	"unsafe"
 
@@ -30,7 +29,6 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 		c := curve.Get(m.privKey[:])
 		k, err := c.Shared(pubicKey)
 		if err == nil {
-			fmt.Println(len(k))
 			l.key = (*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&k)))
 		}
 	}

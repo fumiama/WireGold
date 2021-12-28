@@ -3,8 +3,9 @@ package link
 import (
 	"net"
 
-	"github.com/fumiama/WireGold/gold/head"
 	"github.com/sirupsen/logrus"
+
+	"github.com/fumiama/WireGold/gold/head"
 )
 
 // 监听本机 endpoint
@@ -38,8 +39,8 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 						}
 						if ok {
 							if p.IsToMe(net.ParseIP(packet.Dst)) {
-								packet.Data, err = p.Decode(packet.Data)
-								if err == nil {
+								packet.Data = p.Decode(packet.Data)
+								if packet.IsVaildHash() {
 									switch packet.Proto {
 									case head.ProtoHello:
 										switch p.status {
@@ -64,6 +65,8 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 									default:
 										break
 									}
+								} else {
+									logrus.Infoln("[link] drop invalid packet")
 								}
 							} else if p.Accept(net.ParseIP(packet.Dst)) && p.allowtrans {
 								// 转发

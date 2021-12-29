@@ -4,9 +4,9 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/fumiama/water"
+	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
-	"github.com/songgao/water"
-	"github.com/songgao/water/waterutil"
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/link"
@@ -23,7 +23,7 @@ type NIC struct {
 // NewNIC 新建 TUN 网络接口卡
 // 网卡地址为 ip, 所属子网为 subnet
 func NewNIC(ip, subnet string) (n *NIC) {
-	ifce, err := water.New(tuncfg)
+	ifce, err := water.New(water.Config{DeviceType: water.TUN})
 	if err != nil {
 		panic(err)
 	}

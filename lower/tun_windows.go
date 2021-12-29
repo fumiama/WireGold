@@ -3,16 +3,22 @@
 
 package lower
 
+import "net"
+
 func (n *NIC) prepare() {
-	execute("/sbin/ip", "link", "set", "dev", ifcename, "mtu", "1500")
-	execute("/sbin/ip", "addr", "add", ip, "dev", ifcename)
-	execute("/sbin/ip", "route", "add", subnet, "dev", ifcename)
+	_, ipn, err := net.ParseCIDR(n.subnet)
+	if err != nil {
+		panic(err)
+	}
+	execute("cmd", "/c", "netsh interface ip set address name=\""+n.ifce.Name()+"\" source=static addr=\""+n.ip+"\" mask=\""+(net.IP)(ipn.Mask).String()+"\" gateway=none")
 }
 
 func (n *NIC) Up() {
-	execute("/sbin/ip", "link", "set", "dev", ifcename, "up")
+	// execute("netsh", "interface", "set", "interface", n.ifce.Name(), "enabled")
+	// don't need to bring up the device by hand
 }
 
 func (n *NIC) Down() {
-	execute("/sbin/ip", "link", "set", "dev", ifcename, "down")
+	// execute("netsh", "interface", "set", "interface", n.ifce.Name(), "disabled")
+	// don't need to bring up the device by hand
 }

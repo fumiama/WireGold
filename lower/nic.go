@@ -23,7 +23,7 @@ type NIC struct {
 // NewNIC 新建 TUN 网络接口卡
 // 网卡地址为 ip, 所属子网为 subnet
 func NewNIC(ip, subnet string) (n *NIC) {
-	ifce, err := water.New(water.Config{DeviceType: water.TUN})
+	ifce, err := water.New(tuncfg)
 	if err != nil {
 		panic(err)
 	}

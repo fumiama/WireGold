@@ -32,6 +32,12 @@ github.com/fumiama/water v0.0.0-20211229152936-c7837c176989 h1:ftaxOPIang127djF2
 github.com/fumiama/water v0.0.0-20211229152936-c7837c176989/go.mod h1:BBnNY9PwK+UUn4trAU+H0qsMEypm7+3Bj1bVFuJItlo=
 github.com/fumiama/water v0.0.0-20211229153125-4158c133a4d8 h1:nqcrKTt6+4AO+CXlyz/cqdANke8UOVSLZ50uoofcI0g=
 github.com/fumiama/water v0.0.0-20211229153125-4158c133a4d8/go.mod h1:BBnNY9PwK+UUn4trAU+H0qsMEypm7+3Bj1bVFuJItlo=
+github.com/fumiama/water v0.0.0-20211229153704-aca20df16f4f h1:iUInIzt++weOzl5Rx0qdzQuvDPWbBKn0kUzbLnsbo5I=
+github.com/fumiama/water v0.0.0-20211229153704-aca20df16f4f/go.mod h1:BBnNY9PwK+UUn4trAU+H0qsMEypm7+3Bj1bVFuJItlo=
+github.com/fumiama/water v0.0.0-20211229155016-ed08eb9b3569 h1:UBzWLI/pnCQDfIDvB/P6kmuipkS6WM0jKpP4ZpwzHAs=
+github.com/fumiama/water v0.0.0-20211229155016-ed08eb9b3569/go.mod h1:BBnNY9PwK+UUn4trAU+H0qsMEypm7+3Bj1bVFuJItlo=
+github.com/fumiama/water v0.0.0-20211229155341-82646596a427 h1:6T/Y1o2wrNzJKjhjOsCVkKJwIlU8jfUBfRYFYQ9r3Uc=
+github.com/fumiama/water v0.0.0-20211229155341-82646596a427/go.mod h1:BBnNY9PwK+UUn4trAU+H0qsMEypm7+3Bj1bVFuJItlo=
 github.com/fumiama/wintun v0.0.0-20211229152127-c33dd13d28a5 h1:pkMNtWnrMuqsy+o4y6ur0+lu8gw96I3If61k+9n0sK4=
 github.com/fumiama/wintun v0.0.0-20211229152127-c33dd13d28a5/go.mod h1:dPOG7Af/ArO62RgBz2JJTNFByBn/IXWLo/1kZKcLSe8=
 github.com/fumiama/wintun v0.0.0-20211229152851-8bc97c8034c0 h1:WfrSFlIlCAtg6Rt2IGna0HhJYSDE45YVHiYqO4wwsEw=

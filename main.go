@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 
 	base14 "github.com/fumiama/go-base16384"
@@ -127,7 +128,30 @@ func main() {
 		os.Exit(0)
 	}
 
-	nic := lower.NewNIC(c.IP, c.SubNet)
+	cidrsmap := make(map[string]bool, 32)
+	_, mysubnet, err := net.ParseCIDR(c.SubNet)
+	if err != nil {
+		panic(err)
+	}
+	for _, p := range c.Peers {
+		for _, ip := range p.AllowedIPs {
+			ipnet, _, err := net.ParseCIDR(ip)
+			if err != nil {
+				panic(err)
+			}
+			if !mysubnet.Contains(ipnet) {
+				cidrsmap[ip] = true
+			}
+		}
+	}
+	cidrs := make([]string, len(cidrsmap))
+	i := 0
+	for k := range cidrsmap {
+		cidrs[i] = k
+		i++
+	}
+
+	nic := lower.NewNIC(c.IP, c.SubNet, cidrs...)
 	me := link.NewMe(&key, c.IP+"/32", c.EndPoint, true)
 
 	for _, peer := range c.Peers {

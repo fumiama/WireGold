@@ -8,6 +8,9 @@ func (n *NIC) prepare() {
 	execute("/sbin/ip", "addr", "add", n.ip, "dev", n.ifce.Name())
 	execute("/sbin/ip", "link", "set", "dev", n.ifce.Name(), "up")
 	execute("/sbin/ip", "route", "add", n.subnet, "dev", n.ifce.Name())
+	for _, c := range n.cidrs {
+		execute("/sbin/ip", "route", "add", c, "dev", n.ifce.Name())
+	}
 }
 
 func (n *NIC) Up() {

@@ -18,12 +18,14 @@ type NIC struct {
 	ifce     *water.Interface
 	ip       string
 	subnet   string
+	cidrs    []string
 	hasstart bool
 }
 
 // NewNIC 新建 TUN 网络接口卡
 // 网卡地址为 ip, 所属子网为 subnet
-func NewNIC(ip, subnet string) (n *NIC) {
+// 所有路由为 cidrs
+func NewNIC(ip, subnet string, cidrs ...string) (n *NIC) {
 	ifce, err := water.New(water.Config{DeviceType: water.TUN})
 	if err != nil {
 		panic(err)
@@ -31,6 +33,7 @@ func NewNIC(ip, subnet string) (n *NIC) {
 	n = &NIC{
 		ifce:   ifce,
 		ip:     ip,
+		cidrs:  cidrs,
 		subnet: subnet,
 	}
 	n.prepare()

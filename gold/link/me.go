@@ -32,9 +32,6 @@ type Me struct {
 	pipe chan *head.Packet
 	// 本机路由表
 	router *Router
-	// 虚拟链路网卡 MTU
-	// 默认 30000
-	mtu uint16
 }
 
 // NewMe 设置本机参数
@@ -65,10 +62,5 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nopipei
 	}
 	m.router.SetDefault(nil)
 	m.loop = m.AddPeer(m.me.String(), nil, "127.0.0.1:56789", []string{myipwithmask}, 0, false, nopipeinlink)
-	m.mtu = 30000
 	return
-}
-
-func (m *Me) SetMTU(mtu uint16) {
-	m.mtu = mtu
 }

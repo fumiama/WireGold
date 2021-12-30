@@ -1,6 +1,7 @@
 package lower
 
 import (
+	"encoding/binary"
 	"os"
 	"os/exec"
 	"strconv"
@@ -57,7 +58,7 @@ func (nc *NIC) Start(m *link.Me) {
 			logrus.Infoln("[lower] recv write", n, "bytes packet to nic")
 		}
 	}()
-	buf := make([]byte, 32768) // Ring capacity
+	buf := make([]byte, 32704) // 头部 52 + TEA 加密补足 16倍数
 	for nc.hasstart {          // 从 NIC 发送
 		packet := buf
 		n, err := nc.ifce.Read(packet)
@@ -69,22 +70,9 @@ func (nc *NIC) Start(m *link.Me) {
 			continue
 		}
 		packet = packet[:n]
-		if !waterutil.IsIPv4(packet) {
-			logrus.Warnln("[lower] skip to send", len(packet), "bytes non-ipv4 packet")
-			continue
-		}
-		dst := waterutil.IPv4Destination(packet)
-		srcport := waterutil.IPv4SourcePort(packet)
-		dstport := waterutil.IPv4DestinationPort(packet)
-		logrus.Infoln("[lower] sending", n, "bytes packet from :"+strconv.Itoa(int(srcport)), "to", dst.String()+":"+strconv.Itoa(int(dstport)))
-		lnk, err := m.Connect(dst.String())
-		if err != nil {
-			logrus.Warnln("[lower] connect to peer", dst.String(), "err:", err)
-			continue
-		}
-		_, err = lnk.Write(head.NewPacket(head.ProtoData, srcport, dst, dstport, packet), false)
-		if err != nil {
-			logrus.Warnln("[lower] write to peer", dst.String(), "err:", err)
+		_, rem := send(m, packet)
+		for len(rem) > 0 {
+			_, rem = send(m, rem)
 		}
 	}
 }
@@ -109,4 +97,35 @@ func execute(c string, args ...string) {
 	if err != nil {
 		logrus.Panicln("[lower] failed to exec cmd:", err)
 	}
+}
+
+func send(m *link.Me, packet []byte) (n int, rem []byte) {
+	if !waterutil.IsIPv4(packet) {
+		if waterutil.IsIPv6(packet) {
+			n = int(binary.BigEndian.Uint16(packet[4:6])) + 20
+			rem = packet[n:]
+			logrus.Warnln("[lower] skip to send", n, "bytes ipv6 packet")
+			return
+		}
+		logrus.Warnln("[lower] skip to send", len(packet), "bytes non-ipv4/v6 packet")
+		return len(packet), nil
+	}
+	totl := waterutil.IPv4TotalLength(packet)
+	rem = packet[totl:]
+	packet = packet[:totl]
+	n = int(totl)
+	dst := waterutil.IPv4Destination(packet)
+	srcport := waterutil.IPv4SourcePort(packet)
+	dstport := waterutil.IPv4DestinationPort(packet)
+	logrus.Infoln("[lower] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(srcport)), "to", dst.String()+":"+strconv.Itoa(int(dstport)))
+	lnk, err := m.Connect(dst.String())
+	if err != nil {
+		logrus.Warnln("[lower] connect to peer", dst.String(), "err:", err)
+		return
+	}
+	_, err = lnk.Write(head.NewPacket(head.ProtoData, srcport, dst, dstport, packet), false)
+	if err != nil {
+		logrus.Warnln("[lower] write to peer", dst.String(), "err:", err)
+	}
+	return
 }

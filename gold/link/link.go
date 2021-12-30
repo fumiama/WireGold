@@ -75,20 +75,20 @@ func (l *Link) Read() *head.Packet {
 
 // Write 向 peer 发包
 func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
-	if len(p.Data) <= int(l.me.mtu) {
+	if len(p.Data) <= 32768 {
 		return l.write(p, istransfer)
 	}
 	data := p.Data
 	offset := 0
-	for len(data) > int(l.me.mtu) {
+	for len(data) > 32768 {
 		packet := *p
-		packet.Data = data[offset*int(l.me.mtu) : (offset+1)*int(l.me.mtu)]
+		packet.Data = data[offset*32768 : (offset+1)*32768]
 		i, err := l.write(&packet, istransfer)
 		n += i
 		if err != nil {
 			return n, err
 		}
-		data = data[(offset+1)*int(l.me.mtu):]
+		data = data[(offset+1)*32768:]
 	}
 	return n, nil
 }

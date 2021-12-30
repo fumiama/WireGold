@@ -46,9 +46,13 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 									case head.ProtoHello:
 										switch p.status {
 										case LINK_STATUS_DOWN:
-											_, _ = p.Write(head.NewPacket(head.ProtoHello, 0, p.peerip, 0, nil), false)
-											logrus.Infoln("[link] send hello ack packet")
-											p.status = LINK_STATUS_HALFUP
+											n, err = p.Write(head.NewPacket(head.ProtoHello, 0, p.peerip, 0, nil), false)
+											if err == nil {
+												logrus.Infoln("[link] send", n, "bytes hello ack packet")
+												p.status = LINK_STATUS_HALFUP
+											} else {
+												logrus.Errorln("[link] send hello ack packet error:", err)
+											}
 										case LINK_STATUS_HALFUP:
 											p.status = LINK_STATUS_UP
 										case LINK_STATUS_UP:
@@ -77,8 +81,12 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 							} else if p.Accept(packet.Dst) {
 								if p.allowtrans {
 									// 转发
-									p.Write(&packet, true)
-									logrus.Infoln("[link] trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
+									n, err = p.Write(&packet, true)
+									if err == nil {
+										logrus.Infoln("[link] trans", n, "bytes packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
+									} else {
+										logrus.Errorln("[link] trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)), "err:", err)
+									}
 								} else {
 									logrus.Warnln("[link] refused to trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
 								}

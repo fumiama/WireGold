@@ -86,7 +86,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 	}
 	logrus.Debugln("[link] write", len(d), "bytes data")
 	if err == nil {
-		peerlink := l.me.router.NextHop(l.peerip.String() + "/32")
+		peerlink := l.me.router.NextHop(l.peerip.String())
 		if peerlink != nil {
 			peerep := peerlink.endpoint
 			if peerep == nil {

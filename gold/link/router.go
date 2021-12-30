@@ -40,11 +40,11 @@ func (r *Router) SetDefault(l *Link) {
 }
 
 // NextHop 得到前往 ip 的下一跳的 link
-func (r *Router) NextHop(ip string) *Link {
+func (r *Router) NextHop(ip string) (l *Link) {
 	ipb := net.ParseIP(ip)
 	if ipb == nil {
 		logrus.Errorln("[router] nil ip")
-		return nil
+		return
 	}
 
 	// TODO: 遍历 r.table，得到正确的下一跳
@@ -54,14 +54,15 @@ func (r *Router) NextHop(ip string) *Link {
 
 	for _, c := range r.list {
 		if c.Contains(ipb) {
-			logrus.Infoln("[router] get nexthop to", ipb, "-->", c)
-			return r.table[c.String()]
+			l = r.table[c.String()]
+			logrus.Infoln("[router] get nexthop to", ipb, "-->", c, "link", l)
+			return l
 		}
 	}
 
 	logrus.Errorln("[router] cannot find nexthop for ip:", ipb)
 
-	return nil
+	return
 }
 
 // SetItem 添加一条表项

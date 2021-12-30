@@ -88,11 +88,11 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 	}
 	logrus.Debugln("[link] write", len(d), "bytes data")
 	if err == nil {
-		peerlink := l.me.router.NextHop(l.peerip.String())
+		peerlink := l.me.router.NextHop(p.Dst.String())
 		if peerlink != nil {
 			peerep := peerlink.endpoint
 			if peerep == nil {
-				return 0, errors.New("[link] nil endpoint of " + l.peerip.String())
+				return 0, errors.New("[link] nil endpoint of " + p.Dst.String())
 			}
 			logrus.Infoln("[link] write data from ep", l.me.myconn.LocalAddr(), "to", peerep)
 			n, err = l.me.myconn.WriteToUDP(d, peerep)

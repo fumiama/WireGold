@@ -8,6 +8,7 @@ import (
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/helper"
+	base14 "github.com/fumiama/go-base16384"
 )
 
 // Link 是本机到 peer 的连接抽象
@@ -105,7 +106,12 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 func (l *Link) String() (n string) {
 	n = "default"
 	if l.pubk != nil {
-		n = helper.BytesToString(l.pubk[:24])
+		b, err := base14.UTF16be2utf8(base14.Encode(l.pubk[:21]))
+		if err == nil {
+			n = helper.BytesToString(b)
+		} else {
+			n = err.Error()
+		}
 	}
 	return
 }

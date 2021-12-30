@@ -46,12 +46,12 @@ func (nc *NIC) Start(m *link.Me) {
 	go func() { // 接收到 NIC
 		for nc.hasstart {
 			packet := m.Read()
-			_, err := nc.ifce.Write(packet.Data)
+			n, err := nc.ifce.Write(packet.Data)
 			if err != nil {
 				logrus.Errorln("[lower] recv write to nic err:", err)
 				break
 			}
-			logrus.Infoln("[lower] recv write", len(packet.Data), "bytes packet to nic")
+			logrus.Infoln("[lower] recv write", n, "bytes packet to nic")
 		}
 	}()
 	buf := make([]byte, 4096)

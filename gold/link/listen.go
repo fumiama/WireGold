@@ -60,11 +60,12 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 										logrus.Infoln("[link] recv query")
 										p.onQuery(&packet)
 									case head.ProtoData:
-										logrus.Infoln("[link] deliver to", p.peerip)
 										if p.pipe != nil {
 											p.pipe <- &packet
+											logrus.Infoln("[link] deliver to pipe of", p.peerip)
 										} else {
 											m.pipe <- &packet
+											logrus.Infoln("[link] deliver to pipe of me")
 										}
 									default:
 										break

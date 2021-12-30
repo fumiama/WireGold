@@ -1,5 +1,5 @@
 <div align="center">
-  <img src=".github/rikka.png" width = "150" height = "150" alt="WireGold-Rikka"><br>
+  <img src=".github/rikka.png" width = "360" height = "360" alt="WireGold-Rikka"><br>
   <h1>WireGold</h1>
   Wire Golang Guard = WireGold<br><br>
 </div>

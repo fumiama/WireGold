@@ -46,7 +46,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 									case head.ProtoHello:
 										switch p.status {
 										case LINK_STATUS_DOWN:
-											_, _ = p.Write(head.NewPacket(head.ProtoHello, 0, p.peerip, 0, nil))
+											_, _ = p.Write(head.NewPacket(head.ProtoHello, 0, p.peerip, 0, nil), false)
 											logrus.Infoln("[link] send hello ack packet")
 											p.status = LINK_STATUS_HALFUP
 										case LINK_STATUS_HALFUP:
@@ -77,7 +77,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 							} else if p.Accept(packet.Dst) {
 								if p.allowtrans {
 									// 转发
-									p.Write(&packet)
+									p.Write(&packet, true)
 									logrus.Infoln("[link] trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
 								} else {
 									logrus.Warnln("[link] refused to trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))

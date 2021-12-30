@@ -27,6 +27,6 @@ func (l *Link) SendQuery(peers ...string) error {
 	if err != nil {
 		return err
 	}
-	_, err = l.Write(head.NewPacket(head.ProtoQuery, 0, l.peerip, 0, data))
+	_, err = l.Write(head.NewPacket(head.ProtoQuery, 0, l.peerip, 0, data), false)
 	return err
 }

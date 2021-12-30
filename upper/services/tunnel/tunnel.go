@@ -79,7 +79,7 @@ func (s *Tunnel) handleWrite() {
 		logrus.Debugln("[tunnel] writing", len(b), "bytes...")
 		for len(b) > int(s.mtu) {
 			logrus.Infoln("[tunnel] split buffer")
-			_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.peerip, s.dest, b[:s.mtu]))
+			_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.peerip, s.dest, b[:s.mtu]), false)
 			if err != nil {
 				logrus.Errorln("[tunnel] write err:", err)
 				return
@@ -87,7 +87,7 @@ func (s *Tunnel) handleWrite() {
 			logrus.Debugln("[tunnel] write succeeded")
 			b = b[s.mtu:]
 		}
-		_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.peerip, s.dest, b))
+		_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.peerip, s.dest, b), false)
 		if err != nil {
 			logrus.Errorln("[tunnel] write err:", err)
 			break

@@ -72,10 +72,15 @@ func (l *Link) Read() *head.Packet {
 }
 
 // Write 向 peer 发包
-func (l *Link) Write(p *head.Packet) (n int, err error) {
+func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 	p.FillHash()
 	p.Data = l.Encode(p.Data)
-	d := p.Marshal(l.me.me)
+	var d []byte
+	if istransfer {
+		d = p.Marshal(nil)
+	} else {
+		d = p.Marshal(l.me.me)
+	}
 	if d == nil {
 		return 0, errors.New("[link] ttl exceeded")
 	}

@@ -86,7 +86,9 @@ func (p *Packet) Marshal(src net.IP) []byte {
 	}
 
 	p.DataSZ = uint32(len(p.Data))
-	p.Src = src
+	if src != nil {
+		p.Src = src
+	}
 
 	packet := make([]byte, 52+len(p.Data))
 	binary.LittleEndian.PutUint32(packet[:4], p.DataSZ)

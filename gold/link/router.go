@@ -44,7 +44,17 @@ func (r *Router) NextHop(cidr string) *Link {
 	logrus.Infoln("[router] search for cidr", cidr)
 	// TODO: 遍历 r.table，得到正确的下一跳
 	// 注意使用 r.mu 读写锁避免竞争
-	return r.table[cidr]
+	r.mu.Lock()
+	defnet := &net.IPNet{IP: net.IPv4(0, 0, 0, 0), Mask: net.IPv4Mask(0, 0, 0, 0)}
+	li := r.table[defnet.String()]
+	for ip, l := range r.table {
+		if ip == cidr {
+			li = l
+			break
+		}
+	}
+	r.mu.Unlock()
+	return li
 }
 
 // SetItem 添加一条表项

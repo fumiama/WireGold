@@ -23,6 +23,8 @@ type Me struct {
 	subnet net.IPNet
 	// 本机 endpoint
 	myend *net.UDPAddr
+	// 本机环回 link
+	loop *Link
 	// 本机活跃的所有连接
 	connections map[string]*Link
 	// 读写同步锁
@@ -55,6 +57,7 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nopipei
 	if nopipeinlink {
 		m.pipe = make(chan *head.Packet, 32)
 	}
+	m.loop = m.AddPeer(m.me.String(), nil, "127.0.0.1:56789", []string{myipwithmask}, 0, false, nopipeinlink)
 	return
 }
 

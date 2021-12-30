@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"errors"
+	"net"
 
 	"github.com/sirupsen/logrus"
 
@@ -14,6 +15,7 @@ type Tunnel struct {
 	in       chan []byte
 	out      chan []byte
 	outcache []byte
+	peerip   net.IP
 	src      uint16
 	dest     uint16
 	mtu      uint16
@@ -25,6 +27,7 @@ func Create(me *link.Me, peer string, srcport, destport, mtu uint16) (s Tunnel, 
 	if err == nil {
 		s.in = make(chan []byte, 4)
 		s.out = make(chan []byte, 4)
+		s.peerip = net.ParseIP(peer)
 		s.src = srcport
 		s.dest = destport
 		s.mtu = mtu
@@ -76,7 +79,7 @@ func (s *Tunnel) handleWrite() {
 		logrus.Debugln("[tunnel] writing", len(b), "bytes...")
 		for len(b) > int(s.mtu) {
 			logrus.Infoln("[tunnel] split buffer")
-			_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.dest, b[:s.mtu]))
+			_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.peerip, s.dest, b[:s.mtu]))
 			if err != nil {
 				logrus.Errorln("[tunnel] write err:", err)
 				return
@@ -84,7 +87,7 @@ func (s *Tunnel) handleWrite() {
 			logrus.Debugln("[tunnel] write succeeded")
 			b = b[s.mtu:]
 		}
-		_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.dest, b))
+		_, err := s.l.Write(head.NewPacket(head.ProtoData, s.src, s.peerip, s.dest, b))
 		if err != nil {
 			logrus.Errorln("[tunnel] write err:", err)
 			break

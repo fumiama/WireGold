@@ -75,9 +75,11 @@ func (l *Link) Read() *head.Packet {
 func (l *Link) Write(p *head.Packet) (n int, err error) {
 	p.FillHash()
 	p.Data = l.Encode(p.Data)
-	var d []byte
-	d, err = p.Marshal(l.me.me.String(), l.peerip.String())
-	logrus.Debugln("[link] write data", string(d))
+	d := p.Marshal(l.me.me)
+	if d == nil {
+		return 0, errors.New("ttl exceeded")
+	}
+	logrus.Debugln("[link] write", len(d), "bytes data")
 	if err == nil {
 		peerlink := l.me.router.NextHop(l.peerip.String() + "/32")
 		if peerlink != nil {

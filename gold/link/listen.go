@@ -2,6 +2,7 @@ package link
 
 import (
 	"net"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 
@@ -29,23 +30,23 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 								packet.Data = append(packet.Data, remain...)
 							}
 						}
-						p, ok := m.IsInPeer(packet.Src)
+						p, ok := m.IsInPeer(packet.Src.String())
 						logrus.Infoln("[link] recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
-						logrus.Debugln("[link] recv:", string(lbf))
+						// logrus.Debugln("[link] recv:", hex.EncodeToString(lbf))
 						if ok {
 							if p.pep == "" || p.pep != addr.String() {
 								logrus.Infoln("[link] set endpoint of peer", p.peerip, "to", addr.String())
 								p.endpoint = addr
 								p.pep = addr.String()
 							}
-							if p.IsToMe(net.ParseIP(packet.Dst)) {
+							if p.IsToMe(packet.Dst) {
 								packet.Data = p.Decode(packet.Data)
 								if packet.IsVaildHash() {
 									switch packet.Proto {
 									case head.ProtoHello:
 										switch p.status {
 										case LINK_STATUS_DOWN:
-											_, _ = p.Write(head.NewPacket(head.ProtoHello, 0, 0, nil))
+											_, _ = p.Write(head.NewPacket(head.ProtoHello, 0, p.peerip, 0, nil))
 											logrus.Infoln("[link] send hello ack packet")
 											p.status = LINK_STATUS_HALFUP
 										case LINK_STATUS_HALFUP:
@@ -73,13 +74,13 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 								} else {
 									logrus.Infoln("[link] drop invalid packet")
 								}
-							} else if p.Accept(net.ParseIP(packet.Dst)) && p.allowtrans {
+							} else if p.Accept(packet.Dst) && p.allowtrans {
 								// 转发
 								p.Write(&packet)
-								logrus.Infoln("[link] trans")
+								logrus.Infoln("[link] trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
 							}
 						} else {
-							logrus.Infoln("[link] packet to", packet.Dst, "is refused")
+							logrus.Warnln("[link] packet to", packet.Dst, "is refused")
 						}
 					}
 				}

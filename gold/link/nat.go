@@ -15,7 +15,7 @@ func (l *Link) keepAlive() {
 		go func() {
 			t := time.NewTicker(time.Second * time.Duration(l.keepalive))
 			for range t.C {
-				_, _ = l.Write(head.NewPacket(head.ProtoHello, 0, 0, nil))
+				_, _ = l.Write(head.NewPacket(head.ProtoHello, 0, l.peerip, 0, nil))
 				logrus.Infoln("[link.nat] send keep alive packet")
 			}
 		}()

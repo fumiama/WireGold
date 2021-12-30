@@ -79,7 +79,7 @@ func (nc *NIC) Start(m *link.Me) {
 			logrus.Warnln("[lower] connect to peer", dst.String(), "err:", err)
 			continue
 		}
-		lnk.Write(head.NewPacket(head.ProtoData, srcport, dstport, packet))
+		lnk.Write(head.NewPacket(head.ProtoData, srcport, dst, dstport, packet))
 	}
 }
 

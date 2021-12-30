@@ -43,7 +43,7 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 		l.endpoint = e
 	}
 	if allowedIPs != nil {
-		l.allowedips = make([]*net.IPNet, len(allowedIPs))
+		l.allowedips = make([]*net.IPNet, 0, len(allowedIPs))
 		for _, ipnet := range allowedIPs {
 			_, cidr, err := net.ParseCIDR(ipnet)
 			if err == nil {

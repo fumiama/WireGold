@@ -77,13 +77,16 @@ func (l *Link) Write(p *head.Packet) (n int, err error) {
 	p.Data = l.Encode(p.Data)
 	d := p.Marshal(l.me.me)
 	if d == nil {
-		return 0, errors.New("ttl exceeded")
+		return 0, errors.New("[link] ttl exceeded")
 	}
 	logrus.Debugln("[link] write", len(d), "bytes data")
 	if err == nil {
 		peerlink := l.me.router.NextHop(l.peerip.String() + "/32")
 		if peerlink != nil {
 			peerep := peerlink.endpoint
+			if peerep == nil {
+				return 0, errors.New("[link] nil endpoint of " + l.peerip.String())
+			}
 			logrus.Infoln("[link] write data from ep", l.me.myconn.LocalAddr(), "to", peerep)
 			n, err = l.me.myconn.WriteToUDP(d, peerep)
 		} else {

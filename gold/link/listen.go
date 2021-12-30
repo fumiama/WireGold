@@ -74,10 +74,14 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 								} else {
 									logrus.Infoln("[link] drop invalid packet")
 								}
-							} else if p.Accept(packet.Dst) && p.allowtrans {
-								// 转发
-								p.Write(&packet)
-								logrus.Infoln("[link] trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
+							} else if p.Accept(packet.Dst) {
+								if p.allowtrans {
+									// 转发
+									p.Write(&packet)
+									logrus.Infoln("[link] trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
+								} else {
+									logrus.Warnln("[link] refused to trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
+								}
 							}
 						} else {
 							logrus.Warnln("[link] packet to", packet.Dst, "is refused")

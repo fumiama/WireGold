@@ -8,6 +8,7 @@
 > If you are running in windows, remember to select the `wintun.dll` of your arch in `lower/wintun` and place it alongside the compiled exe
 ```bash
 wg [-c config.yaml] [-g] [-h] [-p]
+
   -c string
         specify conf file (default "config.yaml")
   -g    generate key pair

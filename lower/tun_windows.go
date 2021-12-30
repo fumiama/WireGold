@@ -11,6 +11,13 @@ func (n *NIC) prepare() {
 		panic(err)
 	}
 	execute("cmd", "/c", "netsh interface ip set address name=\""+n.ifce.Name()+"\" source=static addr=\""+n.ip+"\" mask=\""+(net.IP)(ipn.Mask).String()+"\" gateway=none")
+	for _, c := range n.cidrs {
+		ip, cidr, err := net.ParseCIDR(c)
+		if err != nil {
+			panic(err)
+		}
+		execute("cmd", "/c", "route ADD "+ip.String()+" MASK "+(net.IP)(cidr.Mask).String()+" "+n.ip)
+	}
 }
 
 func (n *NIC) Up() {

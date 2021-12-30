@@ -1,2 +1,38 @@
 # WireGold
 Wire Golang Guard = WireGold
+
+# Usage
+
+```bash
+wg [-c config.yaml] [-g] [-h] [-p]
+  -c string
+        specify conf file (default "config.yaml")
+  -g    generate key pair
+  -h    display this help
+  -p    show my publickey
+```
+
+# Config file example
+```yaml
+IP: 192.168.233.1
+SubNet: 192.168.233.0/24
+PrivateKey: 暲菉斂狧污爉窫擸紈卆帞蔩慈睠庮扝憚瞼縀
+EndPoint: 0.0.0.0:56789
+Peers:
+  -
+      IP: "192.168.233.2"
+      SubNet: 192.168.233.0/24
+      PublicKey: 徯萃嵾爻燸攗窍褃冔蒔犡緇袿屿組待族砇嘀
+      EndPoint: that.host2.com:56789
+      AllowedIPs: ["192.168.233.2/32"]
+      KeepAliveSeconds: 0
+      AllowTrans: false
+  -
+      IP: "192.168.233.3"
+      SubNet: 192.168.233.0/24
+      PublicKey: 牢喨粷詸衭譛浾蘹櫠砙杹蟫瑳叩刋橋経挵蘀
+      EndPoint: that.host3.com:56789
+      AllowedIPs: ["192.168.233.3/32"]
+      KeepAliveSeconds: 0
+      AllowTrans: false
+```

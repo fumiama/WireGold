@@ -102,7 +102,7 @@ func execute(c string, args ...string) {
 func send(m *link.Me, packet []byte) (n int, rem []byte) {
 	if !waterutil.IsIPv4(packet) {
 		if waterutil.IsIPv6(packet) {
-			n = int(binary.BigEndian.Uint16(packet[4:6])) + 20
+			n = int(binary.BigEndian.Uint16(packet[4:6])) + 40
 			rem = packet[n:]
 			logrus.Warnln("[lower] skip to send", n, "bytes ipv6 packet")
 			return

@@ -75,12 +75,12 @@ func (l *Link) Read() *head.Packet {
 
 // Write 向 peer 发包
 func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
-	p.FillHash()
-	p.Data = l.Encode(p.Data)
 	var d []byte
 	if istransfer {
 		d = p.Marshal(nil)
 	} else {
+		p.FillHash()
+		p.Data = l.Encode(p.Data)
 		d = p.Marshal(l.me.me)
 	}
 	if d == nil {

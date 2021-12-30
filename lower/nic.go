@@ -57,8 +57,8 @@ func (nc *NIC) Start(m *link.Me) {
 			logrus.Infoln("[lower] recv write", n, "bytes packet to nic")
 		}
 	}()
-	buf := make([]byte, 4096)
-	for nc.hasstart { // 从 NIC 发送
+	buf := make([]byte, 32768) // Ring capacity
+	for nc.hasstart {          // 从 NIC 发送
 		packet := buf
 		n, err := nc.ifce.Read(packet)
 		if err != nil {

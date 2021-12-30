@@ -75,6 +75,39 @@ func (l *Link) Read() *head.Packet {
 
 // Write 向 peer 发包
 func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
+	if len(p.Data) <= int(l.me.mtu) {
+		return l.write(p, istransfer)
+	}
+	data := p.Data
+	offset := 0
+	for len(data) > int(l.me.mtu) {
+		packet := *p
+		packet.Data = data[offset*int(l.me.mtu) : (offset+1)*int(l.me.mtu)]
+		i, err := l.write(&packet, istransfer)
+		n += i
+		if err != nil {
+			return n, err
+		}
+		data = data[(offset+1)*int(l.me.mtu):]
+	}
+	return n, nil
+}
+
+func (l *Link) String() (n string) {
+	n = "default"
+	if l.pubk != nil {
+		b, err := base14.UTF16be2utf8(base14.Encode(l.pubk[:10]))
+		if err == nil {
+			n = helper.BytesToString(b)
+		} else {
+			n = err.Error()
+		}
+	}
+	return
+}
+
+// write 向 peer 发一个包
+func (l *Link) write(p *head.Packet, istransfer bool) (n int, err error) {
 	var d []byte
 	if istransfer {
 		d = p.Marshal(nil)
@@ -98,19 +131,6 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 			n, err = l.me.myconn.WriteToUDP(d, peerep)
 		} else {
 			logrus.Warnln("[link] drop packet: nil peerlink")
-		}
-	}
-	return
-}
-
-func (l *Link) String() (n string) {
-	n = "default"
-	if l.pubk != nil {
-		b, err := base14.UTF16be2utf8(base14.Encode(l.pubk[:10]))
-		if err == nil {
-			n = helper.BytesToString(b)
-		} else {
-			n = err.Error()
 		}
 	}
 	return

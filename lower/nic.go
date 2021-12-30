@@ -58,7 +58,7 @@ func (nc *NIC) Start(m *link.Me) {
 			logrus.Infoln("[lower] recv write", n, "bytes packet to nic")
 		}
 	}()
-	buf := make([]byte, 32704) // 头部 52 + TEA 加密补足 16倍数
+	buf := make([]byte, 65536) // 永远不可能超界
 	for nc.hasstart {          // 从 NIC 发送
 		packet := buf
 		n, err := nc.ifce.Read(packet)

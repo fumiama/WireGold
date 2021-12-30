@@ -5,7 +5,6 @@ import (
 	"net"
 	"sync"
 
-	"github.com/fumiama/WireGold/helper"
 	"github.com/sirupsen/logrus"
 )
 
@@ -85,11 +84,7 @@ func (r *Router) SetItem(ip *net.IPNet, l *Link) {
 			copy(r.list[i+1:], r.list[i:len(r.list)-1])
 			r.list[i] = ip
 			r.table[ip.String()] = l
-			lnkname := "default"
-			if l.pubk != nil {
-				lnkname = helper.BytesToString(l.pubk[:24])
-			}
-			logrus.Infoln("[router] add route in link", lnkname, "to", ip, "-->", l.peerip)
+			logrus.Infoln("[router] add route in link", l, "to", ip, "-->", l.peerip)
 			break
 		}
 	}

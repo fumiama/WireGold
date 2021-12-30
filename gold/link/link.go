@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/helper"
 )
 
 // Link 是本机到 peer 的连接抽象
@@ -97,6 +98,14 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 		} else {
 			logrus.Warnln("[link] drop packet: nil peerlink")
 		}
+	}
+	return
+}
+
+func (l *Link) String() (n string) {
+	n = "default"
+	if l.pubk != nil {
+		n = helper.BytesToString(l.pubk[:24])
 	}
 	return
 }

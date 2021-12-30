@@ -1,7 +1,10 @@
-# WireGold
-Wire Golang Guard = WireGold
+<div align="center">
+  <img src=".github/rikka.jpg" width = "150" height = "150" alt="WireGold-Rikka"><br>
+  <h1>WireGold</h1>
+  Wire Golang Guard = WireGold<br><br>
+</div>
 
-# Usage
+## Usage
 > If you are running in windows, remember to select the `wintun.dll` of your arch in `lower/wintun` and place it alongside the compiled exe
 ```bash
 wg [-c config.yaml] [-g] [-h] [-p]
@@ -12,7 +15,7 @@ wg [-c config.yaml] [-g] [-h] [-p]
   -p    show my publickey
 ```
 
-# Config file example
+## Config file example
 ```yaml
 IP: 192.168.233.1
 SubNet: 192.168.233.0/24

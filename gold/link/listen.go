@@ -69,7 +69,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 											logrus.Infoln("[link] deliver to pipe of me")
 										}
 									default:
-										break
+										logrus.Warnln("[link] recv unknown proto:", packet.Proto)
 									}
 								} else {
 									logrus.Infoln("[link] drop invalid packet")
@@ -82,6 +82,8 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 								} else {
 									logrus.Warnln("[link] refused to trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
 								}
+							} else {
+								logrus.Warnln("[link] packet dst", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)), "is not in peers")
 							}
 						} else {
 							logrus.Warnln("[link] packet to", packet.Dst, "is refused")

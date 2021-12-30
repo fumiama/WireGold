@@ -38,6 +38,8 @@ type Link struct {
 	key *[32]byte
 	// 本机信息
 	me *Me
+	// 本连接路由表
+	router *Router
 }
 
 const (
@@ -88,7 +90,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 	}
 	logrus.Debugln("[link] write", len(d), "bytes data")
 	if err == nil {
-		peerlink := l.me.router.NextHop(l.peerip.String())
+		peerlink := l.router.NextHop(l.peerip.String())
 		if peerlink != nil {
 			peerep := peerlink.endpoint
 			if peerep == nil {
@@ -106,7 +108,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 func (l *Link) String() (n string) {
 	n = "default"
 	if l.pubk != nil {
-		b, err := base14.UTF16be2utf8(base14.Encode(l.pubk[:21]))
+		b, err := base14.UTF16be2utf8(base14.Encode(l.pubk[:10]))
 		if err == nil {
 			n = helper.BytesToString(b)
 		} else {

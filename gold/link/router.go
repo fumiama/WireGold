@@ -84,7 +84,7 @@ func (r *Router) SetItem(ip *net.IPNet, l *Link) {
 			copy(r.list[i+1:], r.list[i:len(r.list)-1])
 			r.list[i] = ip
 			r.table[ip.String()] = l
-			logrus.Infoln("[router] add route in link", l, "to", ip, "-->", l.peerip)
+			logrus.Infoln("[router] add route in link", l, ip, "-->", l.peerip)
 			break
 		}
 	}

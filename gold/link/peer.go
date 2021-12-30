@@ -23,7 +23,13 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 		peerip:     net.ParseIP(peerip),
 		allowtrans: allowTrans,
 		me:         m,
+		router: &Router{
+			list:  make([]*net.IPNet, 1, 16),
+			table: make(map[string]*Link, 16),
+		},
 	}
+	l.router.SetDefault(l)
+
 	if !nopipe {
 		l.pipe = make(chan *head.Packet, 32)
 	}
@@ -48,7 +54,7 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 			_, cidr, err := net.ParseCIDR(ipnet)
 			if err == nil {
 				l.allowedips = append(l.allowedips, cidr)
-				l.me.router.SetItem(cidr, l)
+				l.router.SetItem(cidr, l)
 			} else {
 				panic(err)
 			}

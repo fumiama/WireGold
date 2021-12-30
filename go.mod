@@ -9,6 +9,5 @@ require (
 	github.com/fumiama/water v0.0.0-20211229155341-82646596a427
 	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1
 	github.com/sirupsen/logrus v1.8.1
-	golang.zx2c4.com/wintun v0.0.0-20211104114900-415007cec224 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )

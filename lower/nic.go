@@ -3,6 +3,7 @@ package lower
 import (
 	"os"
 	"os/exec"
+	"strconv"
 
 	"github.com/fumiama/water"
 	"github.com/fumiama/water/waterutil"
@@ -45,16 +46,12 @@ func (nc *NIC) Start(m *link.Me) {
 	go func() { // 接收到 NIC
 		for nc.hasstart {
 			packet := m.Read()
-			logrus.Infoln("[lower] recv", len(packet.Data), "bytes packet")
-			if !waterutil.IsIPv4(packet.Data) {
-				logrus.Warnln("[lower] recv recv non-ipv4 packet")
-				continue
-			}
 			_, err := nc.ifce.Write(packet.Data)
 			if err != nil {
 				logrus.Errorln("[lower] recv write to nic err:", err)
 				break
 			}
+			logrus.Infoln("[lower] recv write", len(packet.Data), "bytes packet to nic")
 		}
 	}()
 	buf := make([]byte, 4096)
@@ -70,16 +67,16 @@ func (nc *NIC) Start(m *link.Me) {
 		}
 		packet = packet[:n]
 		if !waterutil.IsIPv4(packet) {
-			logrus.Warnln("[lower] send recv non-ipv4 packet")
+			logrus.Warnln("[lower] skip to send", len(packet), "bytes non-ipv4 packet")
 			continue
 		}
-		logrus.Infoln("[lower] send", n, "bytes packet")
 		dst := waterutil.IPv4Destination(packet)
 		srcport := waterutil.IPv4SourcePort(packet)
 		dstport := waterutil.IPv4DestinationPort(packet)
+		logrus.Infoln("[lower] sending", n, "bytes packet from :"+strconv.Itoa(int(srcport)), "to", dst.String()+":"+strconv.Itoa(int(dstport)))
 		lnk, err := m.Connect(dst.String())
 		if err != nil {
-			logrus.Errorln("[lower] connect to peer err:", err)
+			logrus.Warnln("[lower] connect to peer", dst.String(), "err:", err)
 			continue
 		}
 		lnk.Write(head.NewPacket(head.ProtoData, srcport, dstport, packet))

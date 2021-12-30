@@ -40,11 +40,28 @@ func (r *Router) SetDefault(l *Link) {
 }
 
 // NextHop 得到前往 ip 的下一跳的 link
-func (r *Router) NextHop(cidr string) *Link {
-	logrus.Infoln("[router] search for cidr", cidr)
+func (r *Router) NextHop(ip string) *Link {
+	ipb := net.ParseIP(ip)
+	logrus.Infoln("[router] search for ip", ipb)
+	if ipb == nil {
+		return nil
+	}
+
 	// TODO: 遍历 r.table，得到正确的下一跳
 	// 注意使用 r.mu 读写锁避免竞争
-	return r.table[cidr]
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	for c, l := range r.table {
+		_, cdr, err := net.ParseCIDR(c)
+		if err == nil {
+			if cdr.Contains(ipb) {
+				return l
+			}
+		}
+	}
+
+	return nil
 }
 
 // SetItem 添加一条表项

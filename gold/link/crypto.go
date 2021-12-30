@@ -33,6 +33,8 @@ type Me struct {
 	myconn *net.UDPConn
 	// 不分目的 link 的接收队列
 	pipe chan *head.Packet
+	// 本机路由表
+	router *Router
 }
 
 // NewMe 设置本机参数
@@ -57,6 +59,11 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nopipei
 	if nopipeinlink {
 		m.pipe = make(chan *head.Packet, 32)
 	}
+	m.router = &Router{
+		list:  make([]*net.IPNet, 1, 16),
+		table: make(map[string]*Link, 16),
+	}
+	m.router.SetDefault(nil)
 	m.loop = m.AddPeer(m.me.String(), nil, "127.0.0.1:56789", []string{myipwithmask}, 0, false, nopipeinlink)
 	return
 }

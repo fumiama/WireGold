@@ -52,13 +52,10 @@ func (r *Router) NextHop(ip string) *Link {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	for c, l := range r.table {
-		_, cdr, err := net.ParseCIDR(c)
-		if err == nil {
-			if cdr.Contains(ipb) {
-				logrus.Infoln("[router] get nexthop to", ipb, "-->", cdr)
-				return l
-			}
+	for _, c := range r.list {
+		if c.Contains(ipb) {
+			logrus.Infoln("[router] get nexthop to", ipb, "-->", c)
+			return r.table[c.String()]
 		}
 	}
 

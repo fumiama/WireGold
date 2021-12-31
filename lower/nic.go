@@ -81,11 +81,12 @@ func (nc *NIC) Start(m *link.Me) {
 			continue
 		}
 		packet = packet[:n]
-		n, rem := send(m, packet)
+		n, rem := nc.send(m, packet)
 		for len(rem) > 20 && n > 0 {
-			n, rem = send(m, rem)
+			n, rem = nc.send(m, rem)
 		}
 		if len(rem) > 0 {
+			logrus.Infoln("[lower] remain", len(rem), "bytes to send")
 			if off > 0 {
 				off = copy(buf, rem)
 				isrev = true
@@ -120,12 +121,17 @@ func execute(c string, args ...string) {
 	}
 }
 
-func send(m *link.Me, packet []byte) (n int, rem []byte) {
+func (nc *NIC) send(m *link.Me, packet []byte) (n int, rem []byte) {
 	if !waterutil.IsIPv4(packet) {
 		if waterutil.IsIPv6(packet) {
 			n = int(binary.BigEndian.Uint16(packet[4:6])) + 40
-			rem = packet[n:]
-			logrus.Warnln("[lower] skip to send", n, "bytes ipv6 packet")
+			if n > len(packet) {
+				rem = packet
+				logrus.Warnln("[lower] skip to send", len(packet), "bytes ipv6 packet head")
+			} else {
+				rem = packet[n:]
+				logrus.Warnln("[lower] skip to send", n, "bytes ipv6 packet")
+			}
 			return
 		}
 		logrus.Warnln("[lower] skip to send", len(packet), "bytes non-ipv4/v6 packet")
@@ -133,8 +139,10 @@ func send(m *link.Me, packet []byte) (n int, rem []byte) {
 	}
 	totl := waterutil.IPv4TotalLength(packet)
 	if int(totl) > len(packet) {
-		rem = packet
-		return
+		buf := make([]byte, int(totl))
+		copy(buf, packet)
+		nc.ifce.Read(buf[len(packet):])
+		packet = buf
 	}
 	rem = packet[totl:]
 	packet = packet[:totl]

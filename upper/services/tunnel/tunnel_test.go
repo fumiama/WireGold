@@ -27,18 +27,20 @@ func TestTunnel(t *testing.T) {
 	t.Log("peer priv key:", hex.EncodeToString(peerpk.Private()[:]))
 	t.Log("peer publ key:", hex.EncodeToString(peerpk.Public()[:]))
 
-	m := link.NewMe(selfpk.Private(), "192.168.1.2/32", "127.0.0.1:1236", false)
+	m := link.NewMe(selfpk.Private(), "192.168.1.2/32", "127.0.0.1:1236", false, 1, 1, 4096)
 	m.AddPeer("192.168.1.3", peerpk.Public(), "127.0.0.1:1237", []string{"192.168.1.3/32"}, 0, false, false)
-	p := link.NewMe(peerpk.Private(), "192.168.1.3/32", "127.0.0.1:1237", false)
+	p := link.NewMe(peerpk.Private(), "192.168.1.3/32", "127.0.0.1:1237", false, 1, 1, 4096)
 	p.AddPeer("192.168.1.2", selfpk.Public(), "127.0.0.1:1236", []string{"192.168.1.2/32"}, 0, false, false)
-	tunnme, err := Create(&m, "192.168.1.3", 1, 1, 4096)
+	tunnme, err := Create(&m, "192.168.1.3")
 	if err != nil {
 		t.Fatal(err)
 	}
-	tunnpeer, err := Create(&p, "192.168.1.2", 1, 1, 4096)
+	tunnme.Start(1, 1, 4096)
+	tunnpeer, err := Create(&p, "192.168.1.2")
 	if err != nil {
 		t.Fatal(err)
 	}
+	tunnpeer.Start(1, 1, 4096)
 
 	sendb := ([]byte)("1234")
 	tunnme.Write(sendb)
@@ -68,4 +70,7 @@ func TestTunnel(t *testing.T) {
 	if string(sendb) != string(buf) {
 		t.Fatal("error: recv 131072 bytes data")
 	}
+
+	tunnme.Stop()
+	tunnpeer.Stop()
 }

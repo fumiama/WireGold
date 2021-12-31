@@ -58,8 +58,8 @@ func (nc *NIC) Start(m *link.Me) {
 			logrus.Infoln("[lower] recv write", n, "bytes packet to nic")
 		}
 	}()
-	buf := make([]byte, 65536) // 永远不可能超界
-	for nc.hasstart {          // 从 NIC 发送
+	buf := make([]byte, m.MTU()+64) // 增加报头长度与 TEA 冗余
+	for nc.hasstart {               // 从 NIC 发送
 		packet := buf
 		n, err := nc.ifce.Read(packet)
 		if err != nil {
@@ -115,15 +115,13 @@ func send(m *link.Me, packet []byte) (n int, rem []byte) {
 	packet = packet[:totl]
 	n = int(totl)
 	dst := waterutil.IPv4Destination(packet)
-	srcport := waterutil.IPv4SourcePort(packet)
-	dstport := waterutil.IPv4DestinationPort(packet)
-	logrus.Infoln("[lower] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(srcport)), "to", dst.String()+":"+strconv.Itoa(int(dstport)))
+	logrus.Infoln("[lower] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())))
 	lnk, err := m.Connect(dst.String())
 	if err != nil {
 		logrus.Warnln("[lower] connect to peer", dst.String(), "err:", err)
 		return
 	}
-	_, err = lnk.Write(head.NewPacket(head.ProtoData, srcport, dst, dstport, packet), false)
+	_, err = lnk.Write(head.NewPacket(head.ProtoData, m.SrcPort(), dst, m.DstPort(), packet), false)
 	if err != nil {
 		logrus.Warnln("[lower] write to peer", dst.String(), "err:", err)
 	}

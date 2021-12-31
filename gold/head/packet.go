@@ -12,9 +12,11 @@ import (
 
 // Packet 是发送和接收的最小单位
 type Packet struct {
+	// Ver 协议版本
+	Ver uint16
 	// DataSZ len(Data)
 	// 不得超过 65507-head 字节
-	DataSZ uint32
+	DataSZ uint16
 	// Proto 详见 head
 	Proto uint8
 	// TTL is time to live
@@ -23,9 +25,11 @@ type Packet struct {
 	SrcPort uint16
 	// DstPort 目的端口
 	DstPort uint16
-	// Src 源 ip
+	// Flags 高3位为标志(xDM)，低13位为分片偏移
+	Flags uint16
+	// Src 源 ip (ipv4)
 	Src net.IP
-	// Dst 目的 ip
+	// Dst 目的 ip (ipv4)
 	Dst net.IP
 	// Hash 使用 BLAKE2 生成加密前 Packet 的摘要
 	// 生成时 Hash 全 0
@@ -33,12 +37,15 @@ type Packet struct {
 	Hash [32]byte
 	// Data 承载的数据
 	Data []byte
+	// 记录还有多少字节未到达
+	rembytes uint16
 }
 
 // NewPacket 生成一个新包
 func NewPacket(proto uint8, srcPort uint16, dst net.IP, dstPort uint16, data []byte) *Packet {
 	logrus.Debugln("[packet] new: [proto:", proto, ", srcport:", srcPort, ", dstport:", dstPort, ", dst:", dst, ", data:", data)
 	return &Packet{
+		Ver:     1,
 		Proto:   proto,
 		TTL:     16,
 		SrcPort: srcPort,
@@ -49,53 +56,69 @@ func NewPacket(proto uint8, srcPort uint16, dst net.IP, dstPort uint16, data []b
 }
 
 // Unmarshal 将 data 的数据解码到自身
-func (p *Packet) Unmarshal(data []byte) error {
+func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 	if len(data) < 12 {
-		return errors.New("data len < 12")
+		err = errors.New("data len < 12")
+		return
 	}
-	p.DataSZ = binary.LittleEndian.Uint32(data[:4])
-	pt := binary.LittleEndian.Uint16(data[4:6])
-	p.Proto = uint8(pt)
-	p.TTL = uint8(pt >> 8)
-	p.SrcPort = binary.LittleEndian.Uint16(data[6:8])
-	p.DstPort = binary.LittleEndian.Uint16(data[8:10])
-	sdl := binary.LittleEndian.Uint16(data[10:12])
-	srclen := uint8(sdl)
-	dstlen := uint8(sdl >> 8)
-	if len(data) < int(12+srclen+dstlen) {
-		return errors.New("data src or dst len mismatch")
+	if p.DataSZ == 0 && len(p.Data) == 0 {
+		p.Ver = binary.LittleEndian.Uint16(data[:2])
+		if p.Ver != 1 {
+			err = errors.New("unknown protocol version")
+			return
+		}
+		p.DataSZ = binary.LittleEndian.Uint16(data[2:4])
+		p.Data = make([]byte, p.DataSZ)
+		pt := binary.LittleEndian.Uint16(data[4:6])
+		p.Proto = uint8(pt)
+		p.TTL = uint8(pt >> 8)
+		p.SrcPort = binary.LittleEndian.Uint16(data[6:8])
+		p.DstPort = binary.LittleEndian.Uint16(data[8:10])
+		p.rembytes = p.DataSZ
 	}
-	if srclen > 0 {
-		p.Src = make(net.IP, srclen)
-		copy(p.Src, data[12:12+srclen])
-	}
-	if dstlen > 0 {
-		p.Dst = make(net.IP, dstlen)
-		copy(p.Dst, data[12+srclen:12+srclen+dstlen])
-	}
-	copy(p.Hash[:], data[12+srclen+dstlen:12+srclen+dstlen+32])
-	p.Data = data[12+srclen+dstlen+32:]
-	return nil
+
+	p.Flags = binary.LittleEndian.Uint16(data[10:12])
+
+	p.Src = make(net.IP, 4)
+	copy(p.Src, data[12:16])
+	p.Dst = make(net.IP, 4)
+	copy(p.Dst, data[16:20])
+	copy(p.Hash[:], data[20:52])
+	p.rembytes -= uint16(copy(p.Data[p.Flags<<3:], data[52:]))
+
+	complete = p.rembytes == 0
+
+	return
 }
 
 // Marshal 将自身数据编码为 []byte
-func (p *Packet) Marshal(src net.IP) []byte {
+// offset 必须为 8 的倍数，表示偏移的 8 位
+func (p *Packet) Marshal(src net.IP, offset uint16, dontfrag, hasmore bool) []byte {
 	p.TTL--
 	if p.TTL == 0 {
 		return nil
 	}
 
-	p.DataSZ = uint32(len(p.Data))
+	p.DataSZ = uint16(len(p.Data))
 	if src != nil {
 		p.Src = src
+		offset >>= 3
+		if dontfrag {
+			offset |= 0x4000
+		}
+		if hasmore {
+			offset |= 0x2000
+		}
+		p.Flags = offset
 	}
 
 	packet := make([]byte, 52+len(p.Data))
-	binary.LittleEndian.PutUint32(packet[:4], p.DataSZ)
+	binary.LittleEndian.PutUint16(packet[:2], p.Ver)
+	binary.LittleEndian.PutUint16(packet[2:4], p.DataSZ)
 	binary.LittleEndian.PutUint16(packet[4:6], (uint16(p.TTL)<<8)|uint16(p.Proto))
 	binary.LittleEndian.PutUint16(packet[6:8], p.SrcPort)
 	binary.LittleEndian.PutUint16(packet[8:10], p.DstPort)
-	binary.LittleEndian.PutUint16(packet[10:12], 0x0404)
+	binary.LittleEndian.PutUint16(packet[10:12], p.Flags)
 	copy(packet[12:16], p.Src.To4())
 	copy(packet[16:20], p.Dst.To4())
 	copy(packet[20:52], p.Hash[:])

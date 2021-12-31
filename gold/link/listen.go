@@ -20,9 +20,8 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 				n, addr, err := conn.ReadFromUDP(lbf)
 				if err == nil {
 					lbf = lbf[:n]
-					packet := head.Packet{}
-					err = packet.Unmarshal(lbf)
-					if err == nil {
+					packet := m.wait(lbf)
+					if packet != nil {
 						r := int(packet.DataSZ) - len(packet.Data)
 						if r > 0 {
 							remain, err := readAll(conn, r)
@@ -60,16 +59,16 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 										}
 									case head.ProtoNotify:
 										logrus.Infoln("[link] recv notify")
-										p.onNotify(&packet)
+										p.onNotify(packet)
 									case head.ProtoQuery:
 										logrus.Infoln("[link] recv query")
-										p.onQuery(&packet)
+										p.onQuery(packet)
 									case head.ProtoData:
 										if p.pipe != nil {
-											p.pipe <- &packet
+											p.pipe <- packet
 											logrus.Infoln("[link] deliver to pipe of", p.peerip)
 										} else {
-											m.pipe <- &packet
+											m.pipe <- packet
 											logrus.Infoln("[link] deliver to pipe of me")
 										}
 									default:
@@ -81,7 +80,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 							} else if p.Accept(packet.Dst) {
 								if p.allowtrans {
 									// 转发
-									n, err = p.Write(&packet, true)
+									n, err = p.Write(packet, true)
 									if err == nil {
 										logrus.Infoln("[link] trans", n, "bytes packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
 									} else {

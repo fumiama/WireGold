@@ -21,22 +21,34 @@ type Tunnel struct {
 	mtu      uint16
 }
 
-func Create(me *link.Me, peer string, srcport, destport, mtu uint16) (s Tunnel, err error) {
-	logrus.Infoln("[tunnel] create from", srcport, "to", destport)
+func Create(me *link.Me, peer string) (s Tunnel, err error) {
 	s.l, err = me.Connect(peer)
 	if err == nil {
 		s.in = make(chan []byte, 4)
 		s.out = make(chan []byte, 4)
 		s.peerip = net.ParseIP(peer)
-		s.src = srcport
-		s.dest = destport
-		s.mtu = mtu
-		go s.handleWrite()
-		go s.handleRead()
 	} else {
 		logrus.Errorln("[tunnel] create err:", err)
 	}
 	return
+}
+
+func (s *Tunnel) Start(srcport, destport, mtu uint16) {
+	logrus.Infoln("[tunnel] start from", srcport, "to", destport)
+	s.src = srcport
+	s.dest = destport
+	s.mtu = mtu
+	go s.handleWrite()
+	go s.handleRead()
+}
+
+func (s *Tunnel) Run(srcport, destport, mtu uint16) {
+	logrus.Infoln("[tunnel] start from", srcport, "to", destport)
+	s.src = srcport
+	s.dest = destport
+	s.mtu = mtu
+	go s.handleWrite()
+	s.handleRead()
 }
 
 func (s *Tunnel) Write(p []byte) (int, error) {
@@ -63,10 +75,9 @@ func (s *Tunnel) Read(p []byte) (int, error) {
 	return 0, errors.New("reading reaches nil")
 }
 
-func (s *Tunnel) Close() error {
+func (s *Tunnel) Stop() {
 	s.l.Close()
 	close(s.in)
-	return nil
 }
 
 func (s *Tunnel) handleWrite() {

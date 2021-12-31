@@ -1,21 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
-	"net"
 	"os"
 
 	base14 "github.com/fumiama/go-base16384"
 	curve "github.com/fumiama/go-x25519"
 
 	"github.com/fumiama/WireGold/config"
-	"github.com/fumiama/WireGold/gold/link"
 	"github.com/fumiama/WireGold/helper"
-	"github.com/fumiama/WireGold/lower"
+	"github.com/fumiama/WireGold/upper"
+	"github.com/fumiama/WireGold/upper/services/wg"
 )
-
-const suffix32 = "㴄"
 
 func main() {
 	help := flag.Bool("h", false, "display this help")
@@ -44,16 +42,11 @@ func main() {
 		os.Exit(0)
 	}
 	if helper.IsNotExist(*file) {
-		f, err := os.Create(*file)
-		if err != nil {
-			panic(err)
-		}
+		f := new(bytes.Buffer)
 		var r string
 		fmt.Print("IP: ")
 		fmt.Scanln(&r)
 		if r == "" {
-			f.Close()
-			os.Remove(*file)
 			fmt.Println("nil ip")
 			return
 		}
@@ -63,8 +56,6 @@ func main() {
 		fmt.Print("SubNet: ")
 		fmt.Scanln(&r)
 		if r == "" {
-			f.Close()
-			os.Remove(*file)
 			fmt.Println("nil subnet")
 			return
 		}
@@ -74,8 +65,6 @@ func main() {
 		fmt.Print("PrivateKey: ")
 		fmt.Scanln(&r)
 		if r == "" {
-			f.Close()
-			os.Remove(*file)
 			fmt.Println("nil private key")
 			return
 		}
@@ -85,15 +74,18 @@ func main() {
 		fmt.Print("EndPoint: ")
 		fmt.Scanln(&r)
 		if r == "" {
-			f.Close()
-			os.Remove(*file)
 			fmt.Println("nil endpoint")
 			return
 		}
 		f.WriteString("EndPoint: " + r + "\n")
 		r = ""
 
-		f.Close()
+		cfgf, err := os.Create(*file)
+		if err != nil {
+			panic(err)
+		}
+		cfgf.Write(f.Bytes())
+		cfgf.Close()
 	}
 	c := config.Parse(*file)
 	if c.IP == "" {
@@ -108,73 +100,18 @@ func main() {
 	if c.EndPoint == "" {
 		displayHelp("nil endpoint")
 	}
-	var key [32]byte
-	k, err := base14.UTF82utf16be(helper.StringToBytes(c.PrivateKey + suffix32))
+	w, err := wg.NewWireGold(&c)
 	if err != nil {
 		panic(err)
-	}
-	n := copy(key[:], base14.Decode(k))
-	if n != 32 {
-		displayHelp("private key length is not 32")
 	}
 
 	if *showp {
-		c := curve.Get(key[:])
-		pubk, err := base14.UTF16be2utf8(base14.Encode((*c.Public())[:]))
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("PublicKey:", helper.BytesToString(pubk[:57]))
+		fmt.Println("PublicKey:", w.PublicKey)
 		os.Exit(0)
 	}
 
-	cidrsmap := make(map[string]bool, 32)
-	_, mysubnet, err := net.ParseCIDR(c.SubNet)
-	if err != nil {
-		panic(err)
-	}
-	for _, p := range c.Peers {
-		for _, ip := range p.AllowedIPs {
-			ipnet, _, err := net.ParseCIDR(ip)
-			if err != nil {
-				panic(err)
-			}
-			if !mysubnet.Contains(ipnet) {
-				cidrsmap[ip] = true
-			}
-		}
-	}
-	cidrs := make([]string, len(cidrsmap))
-	i := 0
-	for k := range cidrsmap {
-		cidrs[i] = k
-		i++
-	}
-
-	nic := lower.NewNIC(c.IP, c.SubNet, cidrs...)
-	me := link.NewMe(&key, c.IP+"/32", c.EndPoint, true)
-
-	for _, peer := range c.Peers {
-		var peerkey [32]byte
-		k, err := base14.UTF82utf16be(helper.StringToBytes(peer.PublicKey + suffix32))
-		if err != nil {
-			panic(err)
-		}
-		n := copy(peerkey[:], base14.Decode(k))
-		if n != 32 {
-			panic("peer public key length is not 32")
-		}
-		me.AddPeer(peer.IP, &peerkey, peer.EndPoint, peer.AllowedIPs, peer.KeepAliveSeconds, peer.AllowTrans, true)
-	}
-
-	nic.Up()
-	defer func() {
-		nic.Stop()
-		nic.Down()
-		nic.Destroy()
-	}()
-
-	nic.Start(&me)
+	defer w.Stop()
+	w.Run(upper.ServiceWireGold, upper.ServiceWireGold, 32768-64)
 }
 
 func displayHelp(hint string) {

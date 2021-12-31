@@ -32,10 +32,17 @@ type Me struct {
 	pipe chan *head.Packet
 	// 本机路由表
 	router *Router
+	// 本机未接收完全分片池
+	recving map[[32]byte]*head.Packet
+	recvmu  sync.Mutex
+	// 超时定时器
+	clock map[*head.Packet]uint8
+	// 本机上层配置
+	srcport, dstport, mtu uint16
 }
 
 // NewMe 设置本机参数
-func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nopipeinlink bool) (m Me) {
+func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nopipeinlink bool, srcport, dstport, mtu uint16) (m Me) {
 	m.privKey = *privateKey
 	var err error
 	m.myend, err = net.ResolveUDPAddr("udp", myEndpoint)
@@ -62,5 +69,20 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nopipei
 	}
 	m.router.SetDefault(nil)
 	m.loop = m.AddPeer(m.me.String(), nil, "127.0.0.1:56789", []string{myipwithmask}, 0, false, nopipeinlink)
+	m.srcport = srcport
+	m.dstport = dstport
+	m.mtu = mtu
 	return
+}
+
+func (m *Me) SrcPort() uint16 {
+	return m.srcport
+}
+
+func (m *Me) DstPort() uint16 {
+	return m.dstport
+}
+
+func (m *Me) MTU() uint16 {
+	return m.mtu
 }

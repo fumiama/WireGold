@@ -75,20 +75,20 @@ func (l *Link) Read() *head.Packet {
 
 // Write 向 peer 发包
 func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
-	if len(p.Data) <= (32768 - 64) {
-		return l.write(p, istransfer)
+	if len(p.Data) <= int(l.me.mtu) {
+		return l.write(p, 0, istransfer, false)
 	}
 	data := p.Data
 	offset := 0
-	for len(data) > (32768 - 64) {
+	for len(data) > int(l.me.mtu) {
 		packet := *p
-		packet.Data = data[offset*(32768-64) : (offset+1)*(32768-64)]
-		i, err := l.write(&packet, istransfer)
+		packet.Data = data[offset*int(l.me.mtu) : (offset+1)*int(l.me.mtu)]
+		i, err := l.write(&packet, uint16(offset), istransfer, true)
 		n += i
 		if err != nil {
 			return n, err
 		}
-		data = data[(offset+1)*(32768-64):]
+		data = data[(offset+1)*int(l.me.mtu):]
 	}
 	return n, nil
 }
@@ -107,14 +107,17 @@ func (l *Link) String() (n string) {
 }
 
 // write 向 peer 发一个包
-func (l *Link) write(p *head.Packet, istransfer bool) (n int, err error) {
+func (l *Link) write(p *head.Packet, offset uint16, istransfer, hasmore bool) (n int, err error) {
 	var d []byte
 	if istransfer {
-		d = p.Marshal(nil)
+		if p.Flags&0x4000 == 0x4000 && len(p.Data) > int(l.me.mtu) {
+			return len(p.Data), errors.New("drop dont fragmnet big trans packet")
+		}
+		d = p.Marshal(nil, 0, false, false)
 	} else {
 		p.FillHash()
 		p.Data = l.Encode(p.Data)
-		d = p.Marshal(l.me.me)
+		d = p.Marshal(l.me.me, offset, false, hasmore)
 	}
 	if d == nil {
 		return 0, errors.New("[link] ttl exceeded")

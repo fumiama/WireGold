@@ -16,6 +16,8 @@ github.com/fumiama/water v0.0.0-20211231093704-80ce1934600d h1:XMKhQfj3vQkOCFJha
 github.com/fumiama/water v0.0.0-20211231093704-80ce1934600d/go.mod h1:BBnNY9PwK+UUn4trAU+H0qsMEypm7+3Bj1bVFuJItlo=
 github.com/fumiama/water v0.0.0-20211231094148-0c176c6cfb9c h1:iUiK3OX2REWOaxiEtIRbruGF16ugP+5iJlEllOd7H0I=
 github.com/fumiama/water v0.0.0-20211231094148-0c176c6cfb9c/go.mod h1:BBnNY9PwK+UUn4trAU+H0qsMEypm7+3Bj1bVFuJItlo=
+github.com/fumiama/water v0.0.0-20211231094422-8a0b0fd8ed4d h1:34xXCAysY3v92o6lLaUqCp/BD7OaS5cdPsB9JHrLQt8=
+github.com/fumiama/water v0.0.0-20211231094422-8a0b0fd8ed4d/go.mod h1:BBnNY9PwK+UUn4trAU+H0qsMEypm7+3Bj1bVFuJItlo=
 github.com/fumiama/wintun v0.0.0-20211229152851-8bc97c8034c0 h1:WfrSFlIlCAtg6Rt2IGna0HhJYSDE45YVHiYqO4wwsEw=
 github.com/fumiama/wintun v0.0.0-20211229152851-8bc97c8034c0/go.mod h1:dPOG7Af/ArO62RgBz2JJTNFByBn/IXWLo/1kZKcLSe8=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=

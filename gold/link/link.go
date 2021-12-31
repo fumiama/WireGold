@@ -79,22 +79,22 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 		return l.write(p, 0, istransfer, false)
 	}
 	data := p.Data
-	offset := 0
-	for len(data) > int(l.me.mtu) {
+	totl := len(data)
+	i := 0
+	for ; totl > int(l.me.mtu); i += int(l.me.mtu) {
 		packet := *p
-		packet.Data = data[offset*int(l.me.mtu) : (offset+1)*int(l.me.mtu)]
-		i, err := l.write(&packet, uint16(offset), istransfer, true)
-		n += i
+		packet.Data = data[i : i+int(l.me.mtu)]
+		cnt, err := l.write(&packet, uint16(i), istransfer, true)
+		n += cnt
 		if err != nil {
 			return n, err
 		}
-		data = data[(offset+1)*int(l.me.mtu):]
-		offset++
+		data = data[i+int(l.me.mtu):]
+		totl -= int(l.me.mtu)
 	}
-	packet := *p
-	packet.Data = data
-	i, err := l.write(&packet, uint16(offset), istransfer, false)
-	n += i
+	p.Data = data
+	cnt, err := l.write(p, uint16(i), istransfer, false)
+	n += cnt
 	if err != nil {
 		return n, err
 	}

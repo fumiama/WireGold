@@ -80,12 +80,12 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 			p.FillHash()
 			p.Data = l.Encode(p.Data)
 		}
-		return l.write(p, uint16(len(p.Data)), 0, istransfer, false)
+		return l.write(p, uint32(len(p.Data)), 0, istransfer, false)
 	}
 	p.FillHash()
 	p.Data = l.Encode(p.Data)
 	data := p.Data
-	totl := uint16(len(data))
+	totl := uint32(len(data))
 	i := 0
 	for ; int(totl)-i > int(l.me.mtu); i += int(l.me.mtu) {
 		logrus.Infoln("[link] split frag", i, ":", i+int(l.me.mtu), ", remain:", int(totl)-i)
@@ -121,7 +121,7 @@ func (l *Link) String() (n string) {
 }
 
 // write 向 peer 发一个包
-func (l *Link) write(p *head.Packet, datasz, offset uint16, istransfer, hasmore bool) (n int, err error) {
+func (l *Link) write(p *head.Packet, datasz uint32, offset uint16, istransfer, hasmore bool) (n int, err error) {
 	var d []byte
 	if istransfer {
 		if p.Flags&0x4000 == 0x4000 && len(p.Data) > int(l.me.mtu) {

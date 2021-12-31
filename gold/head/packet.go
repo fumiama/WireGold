@@ -12,11 +12,9 @@ import (
 
 // Packet 是发送和接收的最小单位
 type Packet struct {
-	// Ver 协议版本
-	Ver uint16
 	// DataSZ len(Data)
 	// 不得超过 65507-head 字节
-	DataSZ uint16
+	DataSZ uint32
 	// Proto 详见 head
 	Proto uint8
 	// TTL is time to live
@@ -38,14 +36,13 @@ type Packet struct {
 	// Data 承载的数据
 	Data []byte
 	// 记录还有多少字节未到达
-	rembytes uint16
+	rembytes uint32
 }
 
 // NewPacket 生成一个新包
 func NewPacket(proto uint8, srcPort uint16, dst net.IP, dstPort uint16, data []byte) *Packet {
 	logrus.Debugln("[packet] new: [proto:", proto, ", srcport:", srcPort, ", dstport:", dstPort, ", dst:", dst, ", data:", data)
 	return &Packet{
-		Ver:     1,
 		Proto:   proto,
 		TTL:     16,
 		SrcPort: srcPort,
@@ -62,12 +59,7 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		return
 	}
 	if p.DataSZ == 0 && len(p.Data) == 0 {
-		p.Ver = binary.LittleEndian.Uint16(data[:2])
-		if p.Ver != 1 {
-			err = errors.New("unknown protocol version")
-			return
-		}
-		p.DataSZ = binary.LittleEndian.Uint16(data[2:4])
+		p.DataSZ = binary.LittleEndian.Uint32(data[:4])
 		p.Data = make([]byte, p.DataSZ)
 		pt := binary.LittleEndian.Uint16(data[4:6])
 		p.Proto = uint8(pt)
@@ -87,7 +79,7 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		copy(p.Dst, data[16:20])
 		copy(p.Hash[:], data[20:52])
 	}
-	p.rembytes -= uint16(copy(p.Data[flags<<3:], data[52:]))
+	p.rembytes -= uint32(copy(p.Data[flags<<3:], data[52:]))
 
 	complete = p.rembytes == 0
 
@@ -96,7 +88,7 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 
 // Marshal 将自身数据编码为 []byte
 // offset 必须为 8 的倍数，表示偏移的 8 位
-func (p *Packet) Marshal(src net.IP, datasz, offset uint16, dontfrag, hasmore bool) []byte {
+func (p *Packet) Marshal(src net.IP, datasz uint32, offset uint16, dontfrag, hasmore bool) []byte {
 	p.TTL--
 	if p.TTL == 0 {
 		return nil
@@ -116,8 +108,7 @@ func (p *Packet) Marshal(src net.IP, datasz, offset uint16, dontfrag, hasmore bo
 	}
 
 	packet := make([]byte, 52+len(p.Data))
-	binary.LittleEndian.PutUint16(packet[:2], p.Ver)
-	binary.LittleEndian.PutUint16(packet[2:4], p.DataSZ)
+	binary.LittleEndian.PutUint32(packet[:4], p.DataSZ)
 	binary.LittleEndian.PutUint16(packet[4:6], (uint16(p.TTL)<<8)|uint16(p.Proto))
 	binary.LittleEndian.PutUint16(packet[6:8], p.SrcPort)
 	binary.LittleEndian.PutUint16(packet[8:10], p.DstPort)

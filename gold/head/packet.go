@@ -77,14 +77,17 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		p.rembytes = p.DataSZ
 	}
 
-	p.Flags = binary.LittleEndian.Uint16(data[10:12])
+	flags := binary.LittleEndian.Uint16(data[10:12])
 
-	p.Src = make(net.IP, 4)
-	copy(p.Src, data[12:16])
-	p.Dst = make(net.IP, 4)
-	copy(p.Dst, data[16:20])
-	copy(p.Hash[:], data[20:52])
-	p.rembytes -= uint16(copy(p.Data[p.Flags<<3:], data[52:]))
+	if flags&0x1fff == 0 {
+		p.Flags = flags
+		p.Src = make(net.IP, 4)
+		copy(p.Src, data[12:16])
+		p.Dst = make(net.IP, 4)
+		copy(p.Dst, data[16:20])
+		copy(p.Hash[:], data[20:52])
+	}
+	p.rembytes -= uint16(copy(p.Data[flags<<3:], data[52:]))
 
 	complete = p.rembytes == 0
 
@@ -93,14 +96,14 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 
 // Marshal 将自身数据编码为 []byte
 // offset 必须为 8 的倍数，表示偏移的 8 位
-func (p *Packet) Marshal(src net.IP, offset uint16, dontfrag, hasmore bool) []byte {
+func (p *Packet) Marshal(src net.IP, datasz, offset uint16, dontfrag, hasmore bool) []byte {
 	p.TTL--
 	if p.TTL == 0 {
 		return nil
 	}
 
-	p.DataSZ = uint16(len(p.Data))
 	if src != nil {
+		p.DataSZ = datasz
 		p.Src = src
 		offset >>= 3
 		if dontfrag {

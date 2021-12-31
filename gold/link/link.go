@@ -78,6 +78,8 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 	if len(p.Data) <= int(l.me.mtu) {
 		return l.write(p, 0, istransfer, false)
 	}
+	p.FillHash()
+	p.Data = l.Encode(p.Data)
 	data := p.Data
 	totl := len(data)
 	i := 0
@@ -121,11 +123,9 @@ func (l *Link) write(p *head.Packet, offset uint16, istransfer, hasmore bool) (n
 		if p.Flags&0x4000 == 0x4000 && len(p.Data) > int(l.me.mtu) {
 			return len(p.Data), errors.New("drop dont fragmnet big trans packet")
 		}
-		d = p.Marshal(nil, 0, false, false)
+		d = p.Marshal(nil, 0, 0, false, false)
 	} else {
-		p.FillHash()
-		p.Data = l.Encode(p.Data)
-		d = p.Marshal(l.me.me, offset, false, hasmore)
+		d = p.Marshal(l.me.me, uint16(len(p.Data)), offset, false, hasmore)
 	}
 	if d == nil {
 		return 0, errors.New("[link] ttl exceeded")

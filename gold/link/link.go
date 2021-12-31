@@ -76,6 +76,10 @@ func (l *Link) Read() *head.Packet {
 // Write 向 peer 发包
 func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 	if len(p.Data) <= int(l.me.mtu) {
+		if !istransfer {
+			p.FillHash()
+			p.Data = l.Encode(p.Data)
+		}
 		return l.write(p, 0, istransfer, false)
 	}
 	p.FillHash()

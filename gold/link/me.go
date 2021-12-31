@@ -72,6 +72,7 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nopipei
 	m.srcport = srcport
 	m.dstport = dstport
 	m.mtu = mtu
+	go m.initrecvpool()
 	return
 }
 

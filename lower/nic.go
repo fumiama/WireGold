@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/fumiama/water"
 	"github.com/fumiama/water/waterutil"
@@ -62,7 +63,11 @@ func (nc *NIC) Start(m *link.Me) {
 	buf2 := make([]byte, m.MTU()+68) // 增加报头长度与 TEA 冗余
 	off := 0
 	isrev := false
-	for nc.hasstart { // 从 NIC 发送
+	t := time.NewTimer(time.Millisecond)
+	for range t.C { // 从 NIC 发送
+		if !nc.hasstart {
+			break
+		}
 		var packet []byte
 		if off > 0 && !isrev {
 			packet = buf2
@@ -141,8 +146,12 @@ func (nc *NIC) send(m *link.Me, packet []byte) (n int, rem []byte) {
 	if int(totl) > len(packet) {
 		buf := make([]byte, int(totl))
 		copy(buf, packet)
-		nc.ifce.Read(buf[len(packet):])
-		packet = buf
+		cnt, err := nc.ifce.Read(buf[len(packet):])
+		if err != nil {
+			rem = packet
+			return
+		}
+		packet = buf[:cnt+len(packet)]
 	}
 	rem = packet[totl:]
 	packet = packet[:totl]

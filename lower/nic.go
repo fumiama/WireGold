@@ -92,6 +92,8 @@ func (nc *NIC) Start(m *link.Me) {
 			} else {
 				off = copy(buf2, rem)
 			}
+		} else {
+			off = 0
 		}
 	}
 }

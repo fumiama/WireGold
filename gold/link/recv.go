@@ -2,6 +2,7 @@ package link
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"time"
 	"unsafe"
 
@@ -54,6 +55,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 	hsh := *(*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&hashd)))
 	h, ok := m.recving[hsh]
 	if ok {
+		logrus.Infoln("[recv] get another frag part of", hex.EncodeToString(hashd))
 		ok, err := h.Unmarshal(data)
 		if err == nil {
 			if ok {
@@ -65,6 +67,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 		}
 		return nil
 	}
+	logrus.Infoln("[recv] get new frag part of", hex.EncodeToString(hashd))
 	h = &head.Packet{}
 	_, err := h.Unmarshal(data)
 	if err != nil {

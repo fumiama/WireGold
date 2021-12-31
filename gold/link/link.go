@@ -82,13 +82,15 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 		}
 		return l.write(p, uint32(len(p.Data)), 0, istransfer, false)
 	}
-	p.FillHash()
-	p.Data = l.Encode(p.Data)
+	if !istransfer {
+		p.FillHash()
+		p.Data = l.Encode(p.Data)
+	}
 	data := p.Data
 	totl := uint32(len(data))
 	i := 0
 	for ; int(totl)-i > int(l.me.mtu); i += int(l.me.mtu) {
-		logrus.Infoln("[link] split frag", i, ":", i+int(l.me.mtu), ", remain:", int(totl)-i)
+		logrus.Infoln("[link] split frag", i, ":", i+int(l.me.mtu), ", remain:", int(totl)-i-int(l.me.mtu))
 		packet := *p
 		packet.Data = data[:int(l.me.mtu)]
 		cnt, err := l.write(&packet, totl, uint16(i), istransfer, true)
@@ -110,7 +112,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 func (l *Link) String() (n string) {
 	n = "default"
 	if l.pubk != nil {
-		b, err := base14.UTF16be2utf8(base14.Encode(l.pubk[:10]))
+		b, err := base14.UTF16be2utf8(base14.Encode(l.pubk[:7]))
 		if err == nil {
 			n = helper.BytesToString(b)
 		} else {

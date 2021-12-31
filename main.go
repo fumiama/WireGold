@@ -20,6 +20,7 @@ func main() {
 	gen := flag.Bool("g", false, "generate key pair")
 	showp := flag.Bool("p", false, "show my publickey")
 	file := flag.String("c", "config.yaml", "specify conf file")
+	mtu := flag.Int("m", 32768-68, "mtu")
 	flag.Parse()
 	if *help {
 		displayHelp("")
@@ -111,7 +112,7 @@ func main() {
 	}
 
 	defer w.Stop()
-	w.Run(upper.ServiceWireGold, upper.ServiceWireGold, 32768-68)
+	w.Run(upper.ServiceWireGold, upper.ServiceWireGold, uint16(*mtu))
 }
 
 func displayHelp(hint string) {

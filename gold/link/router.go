@@ -55,7 +55,7 @@ func (r *Router) NextHop(ip string) (l *Link) {
 	for _, c := range r.list {
 		if c.Contains(ipb) {
 			l = r.table[c.String()]
-			logrus.Infoln("[router] get nexthop to", ipb, "-->", c, "link", l)
+			logrus.Debugln("[router] get nexthop to", ipb, "-->", c, "link", l)
 			return l
 		}
 	}

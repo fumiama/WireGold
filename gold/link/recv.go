@@ -39,7 +39,7 @@ func (m *Me) initrecvpool() {
 
 func (m *Me) wait(data []byte) *head.Packet {
 	flags := binary.LittleEndian.Uint16(data[10:12])
-	logrus.Infoln("[recv]", len(data), "bytes data with flag", hex.EncodeToString(data[10:12]))
+	logrus.Debugln("[recv]", len(data), "bytes data with flag", hex.EncodeToString(data[10:12]))
 	if flags == 0 || flags == 0x4000 {
 		h := &head.Packet{}
 		_, err := h.Unmarshal(data)
@@ -56,13 +56,13 @@ func (m *Me) wait(data []byte) *head.Packet {
 	hsh := *(*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&hashd)))
 	h, ok := m.recving[hsh]
 	if ok {
-		logrus.Infoln("[recv] get another frag part of", hex.EncodeToString(hashd))
+		logrus.Debugln("[recv] get another frag part of", hex.EncodeToString(hashd))
 		ok, err := h.Unmarshal(data)
 		if err == nil {
 			if ok {
 				delete(m.clock, h)
 				delete(m.recving, hsh)
-				logrus.Infoln("[recv] all parts of", hex.EncodeToString(hashd), "is reached")
+				logrus.Debugln("[recv] all parts of", hex.EncodeToString(hashd), "is reached")
 				return h
 			}
 			m.clock[h] = 0
@@ -71,7 +71,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 		}
 		return nil
 	}
-	logrus.Infoln("[recv] get new frag part of", hex.EncodeToString(hashd))
+	logrus.Debugln("[recv] get new frag part of", hex.EncodeToString(hashd))
 	h = &head.Packet{}
 	_, err := h.Unmarshal(data)
 	if err != nil {

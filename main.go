@@ -8,6 +8,7 @@ import (
 
 	base14 "github.com/fumiama/go-base16384"
 	curve "github.com/fumiama/go-x25519"
+	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/helper"
@@ -20,8 +21,15 @@ func main() {
 	gen := flag.Bool("g", false, "generate key pair")
 	showp := flag.Bool("p", false, "show my publickey")
 	file := flag.String("c", "config.yaml", "specify conf file")
-	mtu := flag.Int("m", 32768-68, "mtu")
+	mtu := flag.Int("m", 32768-68, "set the mtu of wg")
+	debug := flag.Bool("d", false, "print debug logs")
+	warn := flag.Bool("w", false, "only show logs above warn level")
 	flag.Parse()
+	if *debug {
+		logrus.SetLevel(logrus.DebugLevel)
+	} else if *warn {
+		logrus.SetLevel(logrus.WarnLevel)
+	}
 	if *help {
 		displayHelp("")
 	}

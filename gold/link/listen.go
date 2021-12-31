@@ -30,7 +30,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 							}
 						}
 						p, ok := m.IsInPeer(packet.Src.String())
-						logrus.Infoln("[link] recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
+						logrus.Debugln("[link] recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
 						// logrus.Debugln("[link] recv:", hex.EncodeToString(lbf))
 						if ok {
 							if p.pep == "" || p.pep != addr.String() {
@@ -47,7 +47,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 										case LINK_STATUS_DOWN:
 											n, err = p.Write(head.NewPacket(head.ProtoHello, 0, p.peerip, 0, nil), false)
 											if err == nil {
-												logrus.Infoln("[link] send", n, "bytes hello ack packet")
+												logrus.Debugln("[link] send", n, "bytes hello ack packet")
 												p.status = LINK_STATUS_HALFUP
 											} else {
 												logrus.Errorln("[link] send hello ack packet error:", err)
@@ -58,31 +58,31 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 											break
 										}
 									case head.ProtoNotify:
-										logrus.Infoln("[link] recv notify")
+										logrus.Debugln("[link] recv notify")
 										p.onNotify(packet)
 									case head.ProtoQuery:
-										logrus.Infoln("[link] recv query")
+										logrus.Debugln("[link] recv query")
 										p.onQuery(packet)
 									case head.ProtoData:
 										if p.pipe != nil {
 											p.pipe <- packet
-											logrus.Infoln("[link] deliver to pipe of", p.peerip)
+											logrus.Debugln("[link] deliver to pipe of", p.peerip)
 										} else {
 											m.pipe <- packet.Data
-											logrus.Infoln("[link] deliver", len(packet.Data), "bytes data to pipe of me")
+											logrus.Debugln("[link] deliver", len(packet.Data), "bytes data to pipe of me")
 										}
 									default:
 										logrus.Warnln("[link] recv unknown proto:", packet.Proto)
 									}
 								} else {
-									logrus.Infoln("[link] drop invalid packet")
+									logrus.Debugln("[link] drop invalid packet")
 								}
 							} else if p.Accept(packet.Dst) {
 								if p.allowtrans {
 									// 转发
 									n, err = p.Write(packet, true)
 									if err == nil {
-										logrus.Infoln("[link] trans", n, "bytes packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
+										logrus.Debugln("[link] trans", n, "bytes packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
 									} else {
 										logrus.Errorln("[link] trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)), "err:", err)
 									}

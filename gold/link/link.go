@@ -91,7 +91,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 	totl := uint32(len(data))
 	i := 0
 	for ; int(totl)-i > int(l.me.mtu); i += int(l.me.mtu) {
-		logrus.Infoln("[link] split frag", i, ":", i+int(l.me.mtu), ", remain:", int(totl)-i-int(l.me.mtu))
+		logrus.Debugln("[link] split frag", i, ":", i+int(l.me.mtu), ", remain:", int(totl)-i-int(l.me.mtu))
 		packet := *p
 		packet.Data = data[:int(l.me.mtu)]
 		cnt, err := l.write(&packet, totl, uint16(uint(i)>>3), istransfer, true)
@@ -144,7 +144,7 @@ func (l *Link) write(p *head.Packet, datasz uint32, offset uint16, istransfer, h
 			if peerep == nil {
 				return 0, errors.New("[link] nil endpoint of " + p.Dst.String())
 			}
-			logrus.Infoln("[link] write", len(d), "bytes data from ep", l.me.myconn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
+			logrus.Debugln("[link] write", len(d), "bytes data from ep", l.me.myconn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
 			n, err = l.me.myconn.WriteToUDP(d, peerep)
 		} else {
 			logrus.Warnln("[link] drop packet: nil peerlink")

@@ -55,7 +55,7 @@ func (nc *NIC) Start(m *link.Me) {
 				logrus.Errorln("[lower] recv write to nic err:", err)
 				break
 			}
-			logrus.Infoln("[lower] recv write", n, "bytes packet to nic")
+			logrus.Debugln("[lower] recv write", n, "bytes packet to nic")
 		}
 	}()
 	buf := make([]byte, (m.MTU()+68)*4096)  // 增加报头长度与 TEA 冗余
@@ -86,7 +86,7 @@ func (nc *NIC) Start(m *link.Me) {
 			n, rem = nc.send(m, rem)
 		}
 		if len(rem) > 0 {
-			logrus.Infoln("[lower] remain", len(rem), "bytes to send")
+			logrus.Debugln("[lower] remain", len(rem), "bytes to send")
 			if off > 0 {
 				off = copy(buf, rem)
 				isrev = true
@@ -152,7 +152,7 @@ func (nc *NIC) send(m *link.Me, packet []byte) (n int, rem []byte) {
 	packet = packet[:totl]
 	n = int(totl)
 	dst := waterutil.IPv4Destination(packet)
-	logrus.Infoln("[lower] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())))
+	logrus.Debugln("[lower] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())))
 	lnk, err := m.Connect(dst.String())
 	if err != nil {
 		logrus.Warnln("[lower] connect to peer", dst.String(), "err:", err)

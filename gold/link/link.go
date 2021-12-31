@@ -93,7 +93,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 		logrus.Infoln("[link] split frag", i, ":", i+int(l.me.mtu), ", remain:", int(totl)-i-int(l.me.mtu))
 		packet := *p
 		packet.Data = data[:int(l.me.mtu)]
-		cnt, err := l.write(&packet, totl, uint16(i), istransfer, true)
+		cnt, err := l.write(&packet, totl, uint16(uint(i)>>3), istransfer, true)
 		n += cnt
 		if err != nil {
 			return n, err
@@ -101,7 +101,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 		data = data[int(l.me.mtu):]
 	}
 	p.Data = data
-	cnt, err := l.write(p, totl, uint16(i), istransfer, false)
+	cnt, err := l.write(p, totl, uint16(uint(i)>>3), istransfer, false)
 	n += cnt
 	if err != nil {
 		return n, err

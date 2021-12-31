@@ -97,7 +97,6 @@ func (p *Packet) Marshal(src net.IP, datasz uint32, offset uint16, dontfrag, has
 	if src != nil {
 		p.DataSZ = datasz
 		p.Src = src
-		offset >>= 3
 		if dontfrag {
 			offset |= 0x4000
 		}

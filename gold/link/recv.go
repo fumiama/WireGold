@@ -39,6 +39,7 @@ func (m *Me) initrecvpool() {
 
 func (m *Me) wait(data []byte) *head.Packet {
 	flags := binary.LittleEndian.Uint16(data[10:12])
+	logrus.Infoln("[recv]", len(data), "bytes data with flag", hex.EncodeToString(data[10:12]))
 	if flags == 0 || flags == 0x4000 {
 		h := &head.Packet{}
 		_, err := h.Unmarshal(data)

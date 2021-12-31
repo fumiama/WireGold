@@ -61,8 +61,8 @@ func (nc *NIC) Start(m *link.Me) {
 	buf := make([]byte, m.MTU()+64) // 增加报头长度与 TEA 冗余
 	off := 0
 	for nc.hasstart { // 从 NIC 发送
-		packet := buf[off:]
-		n, err := nc.ifce.Read(packet)
+		packet := buf
+		n, err := nc.ifce.Read(packet[off:])
 		if err != nil {
 			logrus.Errorln("[lower] send read from nic err:", err)
 			break

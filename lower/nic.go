@@ -58,8 +58,8 @@ func (nc *NIC) Start(m *link.Me) {
 			logrus.Infoln("[lower] recv write", n, "bytes packet to nic")
 		}
 	}()
-	buf := make([]byte, m.MTU()+64)  // 增加报头长度与 TEA 冗余
-	buf2 := make([]byte, m.MTU()+64) // 增加报头长度与 TEA 冗余
+	buf := make([]byte, m.MTU()+68)  // 增加报头长度与 TEA 冗余
+	buf2 := make([]byte, m.MTU()+68) // 增加报头长度与 TEA 冗余
 	off := 0
 	isrev := false
 	for nc.hasstart { // 从 NIC 发送

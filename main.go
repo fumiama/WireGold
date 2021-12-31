@@ -111,7 +111,7 @@ func main() {
 	}
 
 	defer w.Stop()
-	w.Run(upper.ServiceWireGold, upper.ServiceWireGold, 32768-64)
+	w.Run(upper.ServiceWireGold, upper.ServiceWireGold, 32768-68)
 }
 
 func displayHelp(hint string) {

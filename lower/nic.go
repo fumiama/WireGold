@@ -58,11 +58,21 @@ func (nc *NIC) Start(m *link.Me) {
 			logrus.Infoln("[lower] recv write", n, "bytes packet to nic")
 		}
 	}()
-	buf := make([]byte, m.MTU()+64) // 增加报头长度与 TEA 冗余
+	buf := make([]byte, m.MTU()+64)  // 增加报头长度与 TEA 冗余
+	buf2 := make([]byte, m.MTU()+64) // 增加报头长度与 TEA 冗余
 	off := 0
+	isrev := false
 	for nc.hasstart { // 从 NIC 发送
-		packet := buf
+		var packet []byte
+		if off > 0 && !isrev {
+			packet = buf2
+		} else {
+			packet = buf
+		}
 		n, err := nc.ifce.Read(packet[off:])
+		if isrev {
+			off = 0
+		}
 		if err != nil {
 			logrus.Errorln("[lower] send read from nic err:", err)
 			break
@@ -76,7 +86,12 @@ func (nc *NIC) Start(m *link.Me) {
 			n, rem = send(m, rem)
 		}
 		if len(rem) > 0 {
-			off = copy(buf, rem)
+			if off > 0 {
+				off = copy(buf, rem)
+				isrev = true
+			} else {
+				off = copy(buf2, rem)
+			}
 		}
 	}
 }

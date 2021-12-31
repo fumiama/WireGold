@@ -63,7 +63,7 @@ func (nc *NIC) Start(m *link.Me) {
 	buf2 := make([]byte, m.MTU()+68) // 增加报头长度与 TEA 冗余
 	off := 0
 	isrev := false
-	t := time.NewTimer(time.Millisecond)
+	t := time.NewTicker(time.Millisecond)
 	for range t.C { // 从 NIC 发送
 		if !nc.hasstart {
 			break

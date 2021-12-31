@@ -71,9 +71,9 @@ func (nc *NIC) Start(m *link.Me) {
 			continue
 		}
 		packet = packet[:n]
-		_, rem := send(m, packet)
-		for len(rem) > 20 {
-			_, rem = send(m, rem)
+		n, rem := send(m, packet)
+		for len(rem) > 20 && n > 0 {
+			n, rem = send(m, rem)
 		}
 		if len(rem) > 0 {
 			off = copy(buf, rem)
@@ -115,6 +115,10 @@ func send(m *link.Me, packet []byte) (n int, rem []byte) {
 		return len(packet), nil
 	}
 	totl := waterutil.IPv4TotalLength(packet)
+	if int(totl) > len(packet) {
+		rem = packet
+		return
+	}
 	rem = packet[totl:]
 	packet = packet[:totl]
 	n = int(totl)

@@ -71,7 +71,7 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nopipei
 	m.loop = m.AddPeer(m.me.String(), nil, "127.0.0.1:56789", []string{myipwithmask}, 0, false, nopipeinlink)
 	m.srcport = srcport
 	m.dstport = dstport
-	m.mtu = mtu
+	m.mtu = mtu & 0xfff8
 	go m.initrecvpool()
 	return
 }

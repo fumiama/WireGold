@@ -7,13 +7,19 @@
 ## Usage
 > If you are running in windows, remember to select the `wintun.dll` of your arch in `lower/wintun` and place it alongside the compiled exe
 ```bash
-wg [-c config.yaml] [-g] [-h] [-p]
-
+wg [-c config.yaml] [-d|w] [-g] [-h] [-m mtu] [-p]
+```
+#### Instructions
+```bash
   -c string
         specify conf file (default "config.yaml")
+  -d    print debug logs
   -g    generate key pair
   -h    display this help
+  -m int
+        set the mtu of wg (default 32700)
   -p    show my publickey
+  -w    only show logs above warn level
 ```
 
 ## Config file example

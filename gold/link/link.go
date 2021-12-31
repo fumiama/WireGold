@@ -92,7 +92,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 		offset++
 	}
 	packet := *p
-	packet.Data = data[offset*int(l.me.mtu):]
+	packet.Data = data
 	i, err := l.write(&packet, uint16(offset), istransfer, false)
 	n += i
 	if err != nil {

@@ -29,7 +29,7 @@ type Me struct {
 	// 本机监听的 endpoint
 	myconn *net.UDPConn
 	// 不分目的 link 的接收队列
-	pipe chan *head.Packet
+	pipe chan []byte
 	// 本机路由表
 	router *Router
 	// 本机未接收完全分片池
@@ -62,7 +62,7 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nopipei
 	}
 	m.connections = make(map[string]*Link)
 	if nopipeinlink {
-		m.pipe = make(chan *head.Packet, 32)
+		m.pipe = make(chan []byte, 32)
 	}
 	m.router = &Router{
 		list:  make([]*net.IPNet, 1, 16),

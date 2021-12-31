@@ -68,8 +68,8 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 											p.pipe <- packet
 											logrus.Infoln("[link] deliver to pipe of", p.peerip)
 										} else {
-											m.pipe <- packet
-											logrus.Infoln("[link] deliver to pipe of me")
+											m.pipe <- packet.Data
+											logrus.Infoln("[link] deliver", len(packet.Data), "bytes data to pipe of me")
 										}
 									default:
 										logrus.Warnln("[link] recv unknown proto:", packet.Proto)
@@ -105,23 +105,8 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 
 // Read 接收所有发送给本机的报文
 // 需要开启 nopipe
-func (m *Me) Read(p []byte) (n int, err error) {
-	if len(m.readptr) > 0 {
-		n = copy(p, m.readptr)
-		m.readptr = m.readptr[n:]
-		if n == len(p) {
-			return
-		}
-		p = p[n:]
-	}
-	data := (<-m.pipe).Data
-	c := copy(p, data)
-	n += c
-	if c == len(data) {
-		return
-	}
-	m.readptr = data[c:]
-	return
+func (m *Me) Read() []byte {
+	return <-m.pipe
 }
 
 // 从 conn 读取 sz 字节数据

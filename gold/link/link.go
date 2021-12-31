@@ -2,6 +2,7 @@ package link
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/sirupsen/logrus"
@@ -143,7 +144,7 @@ func (l *Link) write(p *head.Packet, datasz uint32, offset uint16, istransfer, h
 			if peerep == nil {
 				return 0, errors.New("[link] nil endpoint of " + p.Dst.String())
 			}
-			logrus.Infoln("[link] write", len(d), "bytes data from ep", l.me.myconn.LocalAddr(), "to", peerep)
+			logrus.Infoln("[link] write", len(d), "bytes data from ep", l.me.myconn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
 			n, err = l.me.myconn.WriteToUDP(d, peerep)
 		} else {
 			logrus.Warnln("[link] drop packet: nil peerlink")

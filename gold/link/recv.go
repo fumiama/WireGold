@@ -60,6 +60,9 @@ func (m *Me) wait(data []byte) *head.Packet {
 		ok, err := h.Unmarshal(data)
 		if err == nil {
 			if ok {
+				delete(m.clock, h)
+				delete(m.recving, hsh)
+				logrus.Infoln("[recv] all parts of", hex.EncodeToString(hashd), "is reached")
 				return h
 			}
 			m.clock[h] = 0

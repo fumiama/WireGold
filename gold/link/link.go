@@ -80,18 +80,18 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 			p.FillHash()
 			p.Data = l.Encode(p.Data)
 		}
-		return l.write(p, 0, istransfer, false)
+		return l.write(p, uint16(len(p.Data)), 0, istransfer, false)
 	}
 	p.FillHash()
 	p.Data = l.Encode(p.Data)
 	data := p.Data
-	totl := len(data)
+	totl := uint16(len(data))
 	i := 0
-	for ; totl-i > int(l.me.mtu); i += int(l.me.mtu) {
-		logrus.Infoln("[link] split frag", i, ":", i+int(l.me.mtu), ", remain:", totl-i)
+	for ; int(totl)-i > int(l.me.mtu); i += int(l.me.mtu) {
+		logrus.Infoln("[link] split frag", i, ":", i+int(l.me.mtu), ", remain:", int(totl)-i)
 		packet := *p
 		packet.Data = data[:int(l.me.mtu)]
-		cnt, err := l.write(&packet, uint16(i), istransfer, true)
+		cnt, err := l.write(&packet, totl, uint16(i), istransfer, true)
 		n += cnt
 		if err != nil {
 			return n, err
@@ -99,7 +99,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 		data = data[int(l.me.mtu):]
 	}
 	p.Data = data
-	cnt, err := l.write(p, uint16(i), istransfer, false)
+	cnt, err := l.write(p, totl, uint16(i), istransfer, false)
 	n += cnt
 	if err != nil {
 		return n, err
@@ -121,7 +121,7 @@ func (l *Link) String() (n string) {
 }
 
 // write 向 peer 发一个包
-func (l *Link) write(p *head.Packet, offset uint16, istransfer, hasmore bool) (n int, err error) {
+func (l *Link) write(p *head.Packet, datasz, offset uint16, istransfer, hasmore bool) (n int, err error) {
 	var d []byte
 	if istransfer {
 		if p.Flags&0x4000 == 0x4000 && len(p.Data) > int(l.me.mtu) {
@@ -129,7 +129,7 @@ func (l *Link) write(p *head.Packet, offset uint16, istransfer, hasmore bool) (n
 		}
 		d = p.Marshal(nil, 0, 0, false, false)
 	} else {
-		d = p.Marshal(l.me.me, uint16(len(p.Data)), offset, false, hasmore)
+		d = p.Marshal(l.me.me, datasz, offset, false, hasmore)
 	}
 	if d == nil {
 		return 0, errors.New("[link] ttl exceeded")

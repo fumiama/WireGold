@@ -2,6 +2,7 @@ package lower
 
 import (
 	"encoding/binary"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -49,8 +50,7 @@ func (nc *NIC) Start(m *link.Me) {
 	nc.hasstart = true
 	go func() { // 接收到 NIC
 		for nc.hasstart {
-			packet := m.Read()
-			n, err := nc.ifce.Write(packet.Data)
+			n, err := io.Copy(nc.ifce, m)
 			if err != nil {
 				logrus.Errorln("[lower] recv write to nic err:", err)
 				break

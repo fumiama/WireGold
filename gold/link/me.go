@@ -39,6 +39,7 @@ type Me struct {
 	clock map[*head.Packet]uint8
 	// 本机上层配置
 	srcport, dstport, mtu uint16
+	readptr               []byte
 }
 
 // NewMe 设置本机参数

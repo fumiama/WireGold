@@ -105,8 +105,23 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 
 // Read 接收所有发送给本机的报文
 // 需要开启 nopipe
-func (m *Me) Read() *head.Packet {
-	return <-m.pipe
+func (m *Me) Read(p []byte) (n int, err error) {
+	if len(m.readptr) > 0 {
+		n = copy(p, m.readptr)
+		m.readptr = m.readptr[n:]
+		if n == len(p) {
+			return
+		}
+		p = p[n:]
+	}
+	data := (<-m.pipe).Data
+	c := copy(p, data)
+	n += c
+	if c == len(data) {
+		return
+	}
+	m.readptr = data[c:]
+	return
 }
 
 // 从 conn 读取 sz 字节数据

@@ -32,11 +32,9 @@ type LogFormat struct{}
 // Format implements logrus.Formatter
 func (f LogFormat) Format(entry *logrus.Entry) ([]byte, error) {
 	buf := new(bytes.Buffer)
-	buf.WriteByte('[')
 	buf.WriteString(getLogLevelColorCode(entry.Level))
 	buf.WriteString(strings.ToUpper(entry.Level.String()))
 	buf.WriteString(colorReset)
-	buf.WriteString("] ")
 	buf.WriteString(entry.Message)
 	buf.WriteString(" \n")
 	return buf.Bytes(), nil

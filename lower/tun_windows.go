@@ -11,7 +11,7 @@ func (n *NIC) Up() {
 	if err != nil {
 		panic(err)
 	}
-	execute("cmd", "/c", "netsh interface ip set address name=\""+n.ifce.Name()+"\" source=static addr=\""+n.ip+"\" mask=\""+(net.IP)(ipn.Mask).String()+"\" gateway=none")
+	execute("cmd", "/c", "netsh interface ip set address name=\""+n.ifce.Name()+"\" source=static addr=\""+n.ip+"\" mask=\""+(net.IP)(ipn.Mask).String()+"\" gateway=none mtu="+n.mtu)
 	for _, c := range n.cidrs {
 		ip, cidr, err := net.ParseCIDR(c)
 		if err != nil {

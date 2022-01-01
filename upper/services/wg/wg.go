@@ -2,6 +2,7 @@ package wg
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
 	base14 "github.com/fumiama/go-base16384"
@@ -92,7 +93,7 @@ func (wg *WG) init(srcport, destport, mtu uint16) {
 		&wg.key,
 		wg.c.IP+"/32",
 		wg.c.EndPoint,
-		lower.NewNIC(wg.c.IP, wg.c.SubNet, cidrs...),
+		lower.NewNIC(wg.c.IP, wg.c.SubNet, fmt.Sprintf("%d", mtu), cidrs...),
 		srcport, destport, mtu,
 	)
 

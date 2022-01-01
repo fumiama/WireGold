@@ -20,6 +20,7 @@ type NIC struct {
 	ifce   *water.Interface
 	ip     string
 	subnet string
+	mtu    string
 	cidrs  []string
 }
 
@@ -27,7 +28,7 @@ type NIC struct {
 // 网卡地址为 ip, 所属子网为 subnet
 // 以本网卡为下一跳的所有子网为 cidrs
 // cidrs 不包括本网卡 subnet
-func NewNIC(ip, subnet string, cidrs ...string) NICIO {
+func NewNIC(ip, subnet, mtu string, cidrs ...string) NICIO {
 	ifce, err := water.New(water.Config{DeviceType: water.TUN})
 	if err != nil {
 		panic(err)
@@ -35,8 +36,9 @@ func NewNIC(ip, subnet string, cidrs ...string) NICIO {
 	n := &NIC{
 		ifce:   ifce,
 		ip:     ip,
-		cidrs:  cidrs,
 		subnet: subnet,
+		mtu:    mtu,
+		cidrs:  cidrs,
 	}
 	return n
 }

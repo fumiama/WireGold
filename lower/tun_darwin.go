@@ -4,7 +4,7 @@
 package lower
 
 func (n *NIC) Up() {
-	execute("ifconfig", n.ifce.Name(), "mtu", n.mtu)
+	execute("ifconfig", n.ifce.Name(), "mtu", n.mtu) // max: 9159
 	execute("ifconfig", n.ifce.Name(), "inet", n.ip, n.ip, "up")
 	execute("route", "add", n.subnet, "-interface", n.ifce.Name())
 	for _, c := range n.cidrs {

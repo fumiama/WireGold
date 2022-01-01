@@ -21,6 +21,7 @@ wg [-c config.yaml] [-d|w] [-g] [-h] [-m mtu] [-p]
   -p    show my publickey
   -w    only show logs above warn level
 ```
+- *especially*: in macos mojave, max value of mtu is `9159`
 
 ## Config file example
 ```yaml

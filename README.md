@@ -38,7 +38,7 @@ Peers:
       AllowedIPs: ["192.168.233.2/32"]
       KeepAliveSeconds: 0
       QueryList: ["192.168.233.3"]
-	    QuerySeconds: 10
+      QuerySeconds: 10
       AllowTrans: false
   -
       IP: "192.168.233.3"

@@ -173,7 +173,7 @@ func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
 	logrus.Debugln("[me] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), "remain:", len(rem), "bytes")
 	lnk := m.router.NextHop(dst.String())
 	if lnk == nil {
-		logrus.Warnln("[me] drop packet: nil nexthop")
+		logrus.Warnln("[me] drop packet to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), ": nil nexthop")
 		return
 	}
 	_, err := lnk.Write(head.NewPacket(head.ProtoData, m.SrcPort(), lnk.peerip, m.DstPort(), packet), false)

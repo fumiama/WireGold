@@ -45,7 +45,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 									case head.ProtoHello:
 										switch p.status {
 										case LINK_STATUS_DOWN:
-											n, err = p.Write(head.NewPacket(head.ProtoHello, 0, p.peerip, 0, nil), false)
+											n, err = p.Write(head.NewPacket(head.ProtoHello, m.SrcPort(), p.peerip, m.DstPort(), nil), false)
 											if err == nil {
 												logrus.Debugln("[link] send", n, "bytes hello ack packet")
 												p.status = LINK_STATUS_HALFUP
@@ -58,11 +58,11 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 											break
 										}
 									case head.ProtoNotify:
-										logrus.Debugln("[link] recv notify")
-										p.onNotify(packet)
+										logrus.Infoln("[link] recv notify from", packet.Src)
+										go p.onNotify(packet.Data)
 									case head.ProtoQuery:
-										logrus.Debugln("[link] recv query")
-										p.onQuery(packet)
+										logrus.Infoln("[link] recv query from", packet.Src)
+										go p.onQuery(packet.Data)
 									case head.ProtoData:
 										if p.pipe != nil {
 											p.pipe <- packet

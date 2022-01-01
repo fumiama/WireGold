@@ -14,7 +14,7 @@ func (l *Link) keepAlive() {
 		logrus.Infoln("[link.nat] start to keep alive")
 		t := time.NewTicker(time.Second * time.Duration(l.keepalive))
 		for range t.C {
-			n, err := l.Write(head.NewPacket(head.ProtoHello, 0, l.peerip, 0, nil), false)
+			n, err := l.Write(head.NewPacket(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, nil), false)
 			if err == nil {
 				logrus.Infoln("[link] send", n, "bytes keep alive packet")
 			} else {

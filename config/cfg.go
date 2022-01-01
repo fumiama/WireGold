@@ -25,6 +25,8 @@ type Peer struct {
 	EndPoint         string   `yaml:"EndPoint"`
 	AllowedIPs       []string `yaml:"AllowedIPs"`
 	KeepAliveSeconds int64    `yaml:"KeepAliveSeconds"`
+	QueryList        []string `yaml:"QueryList"`
+	QuerySeconds     int64    `yaml:"QuerySeconds"`
 	AllowTrans       bool     `yaml:"AllowTrans"`
 }
 

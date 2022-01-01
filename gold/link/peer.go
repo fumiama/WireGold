@@ -2,6 +2,7 @@ package link
 
 import (
 	"net"
+	"time"
 	"unsafe"
 
 	"github.com/fumiama/WireGold/gold/head"
@@ -10,7 +11,7 @@ import (
 )
 
 // AddPeer 添加一个 peer
-func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowedIPs []string, keepAlive int64, allowTrans, nopipe bool) (l *Link) {
+func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowedIPs, querys []string, keepAlive, queryTick int64, allowTrans, nopipe bool) (l *Link) {
 	peerip = net.ParseIP(peerip).String()
 	var ok bool
 	l, ok = m.IsInPeer(peerip)
@@ -60,6 +61,7 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 	}
 	logrus.Infoln("[peer] add peer:", peerip, "allow:", allowedIPs)
 	go l.keepAlive()
+	go l.sendquery(time.Second*time.Duration(queryTick), querys...)
 	return
 }
 

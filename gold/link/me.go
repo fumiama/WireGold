@@ -75,7 +75,7 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nic low
 		table: make(map[string]*Link, 16),
 	}
 	m.router.SetDefault(nil)
-	m.loop = m.AddPeer(m.me.String(), nil, "127.0.0.1:56789", []string{myipwithmask}, 0, false, nic != nil)
+	m.loop = m.AddPeer(m.me.String(), nil, "127.0.0.1:56789", []string{myipwithmask}, nil, 0, 0, false, nic != nil)
 	m.srcport = srcport
 	m.dstport = dstport
 	m.mtu = mtu & 0xfff8

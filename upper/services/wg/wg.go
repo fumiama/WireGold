@@ -107,6 +107,6 @@ func (wg *WG) init(srcport, destport, mtu uint16) {
 		if n != 32 {
 			panic("peer public key length is not 32")
 		}
-		wg.me.AddPeer(peer.IP, &peerkey, peer.EndPoint, peer.AllowedIPs, peer.KeepAliveSeconds, peer.AllowTrans, true)
+		wg.me.AddPeer(peer.IP, &peerkey, peer.EndPoint, peer.AllowedIPs, peer.QueryList, peer.KeepAliveSeconds, peer.QuerySeconds, peer.AllowTrans, true)
 	}
 }

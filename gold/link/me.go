@@ -155,7 +155,7 @@ func (p PacketID) issame(packet []byte) bool {
 func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
 	rem = packet
 	if !waterutil.IsIPv4(packet) {
-		for waterutil.IsIPv6(rem) {
+		for len(rem) > 20 && waterutil.IsIPv6(rem) {
 			pktl := int(binary.BigEndian.Uint16(packet[4:6])) + 40
 			if pktl > len(rem) {
 				return

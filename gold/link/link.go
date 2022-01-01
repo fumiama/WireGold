@@ -22,6 +22,8 @@ type Link struct {
 	// 以秒为单位，小于等于 0 不发送
 	keepalive int64
 	// 收到的包的队列
+	// 没有下层 nic 时
+	// 包会分发到此
 	pipe chan *head.Packet
 	// peer 的虚拟 ip
 	peerip net.IP

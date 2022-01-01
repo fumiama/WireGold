@@ -68,7 +68,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 											p.pipe <- packet
 											logrus.Debugln("[link] deliver to pipe of", p.peerip)
 										} else {
-											m.pipe <- packet.Data
+											m.nic.Write(packet.Data)
 											logrus.Debugln("[link] deliver", len(packet.Data), "bytes data to pipe of me")
 										}
 									default:
@@ -101,12 +101,6 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 		}()
 	}
 	return
-}
-
-// Read 接收所有发送给本机的报文
-// 需要开启 nopipe
-func (m *Me) Read() []byte {
-	return <-m.pipe
 }
 
 // 从 conn 读取 sz 字节数据

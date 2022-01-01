@@ -1,111 +1,57 @@
 package lower
 
 import (
-	"encoding/binary"
+	"io"
 	"os"
 	"os/exec"
-	"strconv"
 
 	"github.com/fumiama/water"
-	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
-
-	"github.com/fumiama/WireGold/gold/head"
-	"github.com/fumiama/WireGold/gold/link"
 )
+
+type NICIO interface {
+	io.ReadWriteCloser
+	Up()
+	Down()
+}
 
 // NIC 虚拟网卡
 type NIC struct {
-	ifce     *water.Interface
-	ip       string
-	subnet   string
-	cidrs    []string
-	hasstart bool
+	ifce   *water.Interface
+	ip     string
+	subnet string
+	cidrs  []string
 }
 
 // NewNIC 新建 TUN 网络接口卡
 // 网卡地址为 ip, 所属子网为 subnet
-// 所有路由为 cidrs
-func NewNIC(ip, subnet string, cidrs ...string) (n *NIC) {
+// 以本网卡为下一跳的所有子网为 cidrs
+// cidrs 不包括本网卡 subnet
+func NewNIC(ip, subnet string, cidrs ...string) NICIO {
 	ifce, err := water.New(water.Config{DeviceType: water.TUN})
 	if err != nil {
 		panic(err)
 	}
-	n = &NIC{
+	n := &NIC{
 		ifce:   ifce,
 		ip:     ip,
 		cidrs:  cidrs,
 		subnet: subnet,
 	}
-	n.prepare()
-	return
+	return n
 }
 
-// Start 开始处理网卡消息，阻塞
-func (nc *NIC) Start(m *link.Me) {
-	if nc.hasstart {
-		return
-	}
-	nc.hasstart = true
-	go func() { // 接收到 NIC
-		for nc.hasstart {
-			data := m.Read()
-			n, err := nc.ifce.Write(data)
-			if err != nil {
-				logrus.Errorln("[lower] recv write to nic err:", err)
-				break
-			}
-			logrus.Debugln("[lower] recv write", n, "bytes packet to nic")
-		}
-	}()
-	buf := make([]byte, (m.MTU()+68)*4096)  // 增加报头长度与 TEA 冗余
-	buf2 := make([]byte, (m.MTU()+68)*4096) // 增加报头长度与 TEA 冗余
-	off := 0
-	isrev := false
-	for nc.hasstart { // 从 NIC 发送
-		var packet []byte
-		if off > 0 && !isrev {
-			packet = buf2
-		} else {
-			packet = buf
-		}
-		n, err := nc.ifce.Read(packet[off:])
-		if isrev {
-			off = 0
-		}
-		if err != nil {
-			logrus.Errorln("[lower] send read from nic err:", err)
-			break
-		}
-		if n == 0 {
-			continue
-		}
-		packet = packet[:n]
-		n, rem := nc.send(m, packet)
-		for len(rem) > 20 && n > 0 {
-			n, rem = nc.send(m, rem)
-		}
-		if len(rem) > 0 {
-			logrus.Debugln("[lower] remain", len(rem), "bytes to send")
-			if off > 0 {
-				off = copy(buf, rem)
-				isrev = true
-			} else {
-				off = copy(buf2, rem)
-			}
-		} else {
-			off = 0
-		}
-	}
+// Read 匹配 PacketsIO Interface
+func (nc *NIC) Read(buf []byte) (int, error) {
+	return nc.ifce.Read(buf)
 }
 
-// Stop 停止处理
-func (n *NIC) Stop() {
-	n.hasstart = false
+func (nc *NIC) Write(packet []byte) (int, error) {
+	return nc.ifce.Write(packet)
 }
 
-// Destroy 关闭网卡
-func (n *NIC) Destroy() error {
+// Close 关闭网卡
+func (n *NIC) Close() error {
 	return n.ifce.Close()
 }
 
@@ -119,48 +65,4 @@ func execute(c string, args ...string) {
 	if err != nil {
 		logrus.Panicln("[lower] failed to exec cmd:", err)
 	}
-}
-
-func (nc *NIC) send(m *link.Me, packet []byte) (n int, rem []byte) {
-	if !waterutil.IsIPv4(packet) {
-		if waterutil.IsIPv6(packet) {
-			n = int(binary.BigEndian.Uint16(packet[4:6])) + 40
-			if n > len(packet) {
-				rem = packet
-				logrus.Warnln("[lower] skip to send", len(packet), "bytes ipv6 packet head")
-			} else {
-				rem = packet[n:]
-				logrus.Warnln("[lower] skip to send", n, "bytes ipv6 packet")
-			}
-			return
-		}
-		logrus.Warnln("[lower] skip to send", len(packet), "bytes non-ipv4/v6 packet")
-		return len(packet), nil
-	}
-	totl := waterutil.IPv4TotalLength(packet)
-	if int(totl) > len(packet) {
-		buf := make([]byte, int(totl))
-		copy(buf, packet)
-		cnt, err := nc.ifce.Read(buf[len(packet):])
-		if err != nil {
-			rem = packet
-			return
-		}
-		packet = buf[:cnt+len(packet)]
-	}
-	rem = packet[totl:]
-	packet = packet[:totl]
-	n = int(totl)
-	dst := waterutil.IPv4Destination(packet)
-	logrus.Debugln("[lower] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())))
-	lnk, err := m.Connect(dst.String())
-	if err != nil {
-		logrus.Warnln("[lower] connect to peer", dst.String(), "err:", err)
-		return
-	}
-	_, err = lnk.Write(head.NewPacket(head.ProtoData, m.SrcPort(), dst, m.DstPort(), packet), false)
-	if err != nil {
-		logrus.Warnln("[lower] write to peer", dst.String(), "err:", err)
-	}
-	return
 }

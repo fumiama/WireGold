@@ -19,7 +19,7 @@ type WG struct {
 	c         *config.Config
 	key       [32]byte
 	PublicKey string
-	nic       *lower.NIC
+	nic       lower.NICIO
 	me        link.Me
 }
 
@@ -50,19 +50,18 @@ func NewWireGold(c *config.Config) (wg WG, err error) {
 func (wg *WG) Start(srcport, destport, mtu uint16) {
 	wg.init(srcport, destport, mtu)
 	wg.nic.Up()
-	go wg.nic.Start(&wg.me)
+	go wg.me.ListenFromNIC()
 }
 
 func (wg *WG) Run(srcport, destport, mtu uint16) {
 	wg.init(srcport, destport, mtu)
 	wg.nic.Up()
-	wg.nic.Start(&wg.me)
+	wg.me.ListenFromNIC()
 }
 
 func (wg *WG) Stop() {
-	wg.nic.Stop()
+	wg.nic.Close()
 	wg.nic.Down()
-	wg.nic.Destroy()
 }
 
 func (wg *WG) init(srcport, destport, mtu uint16) {
@@ -89,8 +88,13 @@ func (wg *WG) init(srcport, destport, mtu uint16) {
 		i++
 	}
 
-	wg.nic = lower.NewNIC(wg.c.IP, wg.c.SubNet, cidrs...)
-	wg.me = link.NewMe(&wg.key, wg.c.IP+"/32", wg.c.EndPoint, true, srcport, destport, mtu)
+	wg.me = link.NewMe(
+		&wg.key,
+		wg.c.IP+"/32",
+		wg.c.EndPoint,
+		lower.NewNIC(wg.c.IP, wg.c.SubNet, cidrs...),
+		srcport, destport, mtu,
+	)
 
 	for _, peer := range wg.c.Peers {
 		var peerkey [32]byte

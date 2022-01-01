@@ -5,7 +5,8 @@ package lower
 
 import "net"
 
-func (n *NIC) prepare() {
+func (n *NIC) Up() {
+	// execute("netsh", "interface", "set", "interface", n.ifce.Name(), "enabled")
 	_, ipn, err := net.ParseCIDR(n.subnet)
 	if err != nil {
 		panic(err)
@@ -20,12 +21,13 @@ func (n *NIC) prepare() {
 	}
 }
 
-func (n *NIC) Up() {
-	// execute("netsh", "interface", "set", "interface", n.ifce.Name(), "enabled")
-	// don't need to bring up the device by hand
-}
-
 func (n *NIC) Down() {
 	// execute("netsh", "interface", "set", "interface", n.ifce.Name(), "disabled")
-	// don't need to bring up the device by hand
+	for _, c := range n.cidrs {
+		ip, _, err := net.ParseCIDR(c)
+		if err != nil {
+			panic(err)
+		}
+		execute("cmd", "/c", "route DELETE "+ip.String())
+	}
 }

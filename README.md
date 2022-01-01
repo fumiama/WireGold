@@ -2,6 +2,17 @@
   <img src=".github/rikka.png" width = "360" height = "360" alt="WireGold-Rikka"><br>
   <h1>WireGold</h1>
   Wire Golang Guard = WireGold<br><br>
+
+| folder | line count |
+| --- | --- |
+| config | 43 |
+| gold | 1025 |
+| helper | 202 |
+| lower | 159 |
+| upper | 331 |
+| ./ | 194 |
+
+
 </div>
 
 ## Usage

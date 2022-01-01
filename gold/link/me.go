@@ -113,6 +113,7 @@ func (m *Me) ListenFromNIC() {
 			packet = buf
 		}
 		n, err := m.nic.Read(packet[off:])
+		logrus.Debugln("[me] recv", n, "bytes to send from nic")
 		if isrev {
 			off = 0
 		}

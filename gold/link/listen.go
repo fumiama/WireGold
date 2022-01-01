@@ -98,7 +98,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 								logrus.Warnln("[link] packet dst", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)), "is not in peers")
 							}
 						} else {
-							logrus.Warnln("[link] packet to", packet.Dst, "is refused")
+							logrus.Warnln("[link] packet from", packet.Src, "to", packet.Dst, "is refused")
 						}
 					}
 				}

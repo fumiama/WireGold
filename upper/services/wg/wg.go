@@ -19,7 +19,6 @@ type WG struct {
 	c         *config.Config
 	key       [32]byte
 	PublicKey string
-	nic       lower.NICIO
 	me        link.Me
 }
 
@@ -49,19 +48,16 @@ func NewWireGold(c *config.Config) (wg WG, err error) {
 
 func (wg *WG) Start(srcport, destport, mtu uint16) {
 	wg.init(srcport, destport, mtu)
-	wg.nic.Up()
 	go wg.me.ListenFromNIC()
 }
 
 func (wg *WG) Run(srcport, destport, mtu uint16) {
 	wg.init(srcport, destport, mtu)
-	wg.nic.Up()
 	wg.me.ListenFromNIC()
 }
 
 func (wg *WG) Stop() {
-	wg.nic.Close()
-	wg.nic.Down()
+	_ = wg.me.Close()
 }
 
 func (wg *WG) init(srcport, destport, mtu uint16) {

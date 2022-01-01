@@ -92,7 +92,14 @@ func (m *Me) MTU() uint16 {
 	return m.mtu
 }
 
+func (m *Me) Close() error {
+	m.nic.Down()
+	return m.nic.Close()
+}
+
 func (m *Me) ListenFromNIC() {
+	m.nic.Up()
+
 	// 双缓冲区
 	buf := make([]byte, m.MTU()+68)  // 增加报头长度与 TEA 冗余
 	buf2 := make([]byte, m.MTU()+68) // 增加报头长度与 TEA 冗余

@@ -69,7 +69,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 											logrus.Debugln("[link] deliver to pipe of", p.peerip)
 										} else {
 											m.nic.Write(packet.Data)
-											logrus.Debugln("[link] deliver", len(packet.Data), "bytes data to pipe of me")
+											logrus.Debugln("[link] deliver", len(packet.Data), "bytes data to nic")
 										}
 									default:
 										logrus.Warnln("[link] recv unknown proto:", packet.Proto)

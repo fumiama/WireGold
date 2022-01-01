@@ -6,6 +6,7 @@ import (
 	"net"
 	"unsafe"
 
+	"github.com/fumiama/WireGold/helper"
 	blake2b "github.com/minio/blake2b-simd"
 )
 
@@ -57,15 +58,21 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		err = errors.New("data len < 12")
 		return
 	}
+
 	if p.DataSZ == 0 && len(p.Data) == 0 {
 		p.DataSZ = binary.LittleEndian.Uint32(data[:4])
-		p.Data = make([]byte, p.DataSZ)
+		if int(p.DataSZ)+52 == len(data) {
+			p.Data = data[52:]
+			p.rembytes = 0
+		} else {
+			p.Data = make([]byte, p.DataSZ)
+			p.rembytes = p.DataSZ
+		}
 		pt := binary.LittleEndian.Uint16(data[4:6])
 		p.Proto = uint8(pt)
 		p.TTL = uint8(pt >> 8)
 		p.SrcPort = binary.LittleEndian.Uint16(data[6:8])
 		p.DstPort = binary.LittleEndian.Uint16(data[8:10])
-		p.rembytes = p.DataSZ
 	}
 
 	flags := binary.LittleEndian.Uint16(data[10:12])
@@ -78,7 +85,10 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		copy(p.Dst, data[16:20])
 		copy(p.Hash[:], data[20:52])
 	}
-	p.rembytes -= uint32(copy(p.Data[flags<<3:], data[52:]))
+
+	if p.rembytes > 0 {
+		p.rembytes -= uint32(copy(p.Data[flags<<3:], data[52:]))
+	}
 
 	complete = p.rembytes == 0
 
@@ -87,10 +97,10 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 
 // Marshal 将自身数据编码为 []byte
 // offset 必须为 8 的倍数，表示偏移的 8 位
-func (p *Packet) Marshal(src net.IP, datasz uint32, offset uint16, dontfrag, hasmore bool) []byte {
+func (p *Packet) Marshal(src net.IP, datasz uint32, offset uint16, dontfrag, hasmore bool) ([]byte, func()) {
 	p.TTL--
 	if p.TTL == 0 {
-		return nil
+		return nil, nil
 	}
 
 	if src != nil {
@@ -105,20 +115,17 @@ func (p *Packet) Marshal(src net.IP, datasz uint32, offset uint16, dontfrag, has
 		p.Flags = offset
 	}
 
-	packet := make([]byte, 52+len(p.Data))
-	binary.LittleEndian.PutUint32(packet[:4], p.DataSZ)
-	binary.LittleEndian.PutUint16(packet[4:6], (uint16(p.TTL)<<8)|uint16(p.Proto))
-	binary.LittleEndian.PutUint16(packet[6:8], p.SrcPort)
-	binary.LittleEndian.PutUint16(packet[8:10], p.DstPort)
-	binary.LittleEndian.PutUint16(packet[10:12], p.Flags)
-	copy(packet[12:16], p.Src.To4())
-	copy(packet[16:20], p.Dst.To4())
-	copy(packet[20:52], p.Hash[:])
-	copy(packet[52:], p.Data)
-
-	// logrus.Debugln("[packet] marshaled packet:", hex.EncodeToString(packet))
-
-	return packet
+	return helper.OpenWriterF(func(w *helper.Writer) {
+		w.WriteUInt32(p.DataSZ)
+		w.WriteUInt16((uint16(p.TTL) << 8) | uint16(p.Proto))
+		w.WriteUInt16(p.SrcPort)
+		w.WriteUInt16(p.DstPort)
+		w.WriteUInt16(p.Flags)
+		w.Write(p.Src.To4())
+		w.Write(p.Dst.To4())
+		w.Write(p.Hash[:])
+		w.Write(p.Data)
+	})
 }
 
 // FillHash 生成 p.Data 的 Hash

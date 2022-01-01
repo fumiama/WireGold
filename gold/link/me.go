@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/helper"
 	"github.com/fumiama/WireGold/lower"
 	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
@@ -38,6 +39,8 @@ type Me struct {
 	nic lower.NICIO
 	// 本机路由表
 	router *Router
+	// 本机发送缓冲区
+	writer *helper.Writer
 	// 本机未接收完全分片池
 	recving map[[32]byte]*head.Packet
 	recvmu  sync.Mutex
@@ -76,6 +79,7 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nic low
 	m.srcport = srcport
 	m.dstport = dstport
 	m.mtu = mtu & 0xfff8
+	m.writer = helper.SelectWriter()
 	go m.initrecvpool()
 	return
 }
@@ -97,51 +101,27 @@ func (m *Me) Close() error {
 	return m.nic.Close()
 }
 
-func (m *Me) ListenFromNIC() {
-	m.nic.Up()
-
-	// 双缓冲区
-	buf := make([]byte, m.MTU()+68)  // 增加报头长度与 TEA 冗余
-	buf2 := make([]byte, m.MTU()+68) // 增加报头长度与 TEA 冗余
-
-	off := 0
-	isrev := false
-	for { // 从 NIC 发送
-		var packet []byte
-		if off > 0 && !isrev {
-			packet = buf2
-		} else {
-			packet = buf
-		}
-		n, err := m.nic.Read(packet[off:])
-		logrus.Debugln("[me] recv", n, "bytes to send from nic")
-		if isrev {
-			off = 0
-		}
-		if err != nil {
-			logrus.Errorln("[me] send read from nic err:", err)
-			break
-		}
-		if n == 0 {
-			continue
-		}
-		packet = packet[:n]
-		n, rem := m.sendAllSameDst(packet)
-		for len(rem) > 20 && n > 0 {
-			n, rem = m.sendAllSameDst(rem)
-		}
-		if len(rem) > 0 {
-			logrus.Debugln("[me] remain", len(rem), "bytes to send")
-			if off > 0 {
-				off = copy(buf, rem)
-				isrev = true
-			} else {
-				off = copy(buf2, rem)
-			}
-		} else {
-			off = 0
-		}
+func (m *Me) Write(packet []byte) (n int, err error) {
+	m.writer.Write(packet)
+	packet = m.writer.Bytes()
+	logrus.Debugln("[me] writer eating", len(packet), "bytes...")
+	n, packet = m.sendAllSameDst(packet)
+	if len(packet) > 0 {
+		w := helper.SelectWriter()
+		w.Write(packet)
+		helper.PutWriter(m.writer)
+		m.writer = w
+		logrus.Debugln("[me] writer remain", w.Len(), "bytes")
+	} else if n > 0 {
+		m.writer.Reset()
+		logrus.Debugln("[me] writer becomes empty")
 	}
+	return
+}
+
+func (m *Me) ListenFromNIC() (written int64, err error) {
+	m.nic.Up()
+	return io.Copy(m, m.nic)
 }
 
 type PacketID [2]byte
@@ -172,28 +152,25 @@ func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
 		}
 	}
 	p := newpacketid(rem)
-	for len(rem) > 20 && p.issame(rem) {
-		totl := waterutil.IPv4TotalLength(rem)
-		if int(totl) > len(rem) {
-			suffix := make([]byte, int(totl)-len(rem))
-			_, err := io.ReadFull(m.nic, suffix)
-			if err != nil {
-				return len(packet), nil
-			}
-			packet = append(packet, suffix...)
-			n = len(packet)
+	ptr := rem
+	i := 0
+	for len(ptr) > 20 && p.issame(ptr) {
+		totl := waterutil.IPv4TotalLength(ptr)
+		if int(totl) > len(ptr) {
 			break
 		}
-		n += int(totl)
-		rem = packet[n:]
+		i += int(totl)
+		ptr = rem[i:]
 		logrus.Debugln("[me] wrap", totl, "bytes packet to send together")
 	}
-	if n == 0 {
+	if i == 0 {
 		return
 	}
-	packet = packet[:n]
+	n += i
+	packet = rem[:i]
+	rem = rem[i:]
 	dst := waterutil.IPv4Destination(packet)
-	logrus.Debugln("[me] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())))
+	logrus.Debugln("[me] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), "remain:", len(rem), "bytes")
 	lnk := m.router.NextHop(dst.String())
 	if lnk == nil {
 		logrus.Warnln("[me] drop packet: nil nexthop")

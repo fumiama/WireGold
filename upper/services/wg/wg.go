@@ -6,6 +6,7 @@ import (
 
 	base14 "github.com/fumiama/go-base16384"
 	curve "github.com/fumiama/go-x25519"
+	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/link"
@@ -53,7 +54,10 @@ func (wg *WG) Start(srcport, destport, mtu uint16) {
 
 func (wg *WG) Run(srcport, destport, mtu uint16) {
 	wg.init(srcport, destport, mtu)
-	wg.me.ListenFromNIC()
+	_, err := wg.me.ListenFromNIC()
+	if err != nil {
+		logrus.Panicln(err)
+	}
 }
 
 func (wg *WG) Stop() {

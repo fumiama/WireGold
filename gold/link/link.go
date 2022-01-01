@@ -125,13 +125,14 @@ func (l *Link) String() (n string) {
 // write 向 peer 发一个包
 func (l *Link) write(p *head.Packet, datasz uint32, offset uint16, istransfer, hasmore bool) (n int, err error) {
 	var d []byte
+	var cl func()
 	if istransfer {
 		if p.Flags&0x4000 == 0x4000 && len(p.Data) > int(l.me.mtu) {
 			return len(p.Data), errors.New("drop dont fragmnet big trans packet")
 		}
-		d = p.Marshal(nil, 0, 0, false, false)
+		d, cl = p.Marshal(nil, 0, 0, false, false)
 	} else {
-		d = p.Marshal(l.me.me, datasz, offset, false, hasmore)
+		d, cl = p.Marshal(l.me.me, datasz, offset, false, hasmore)
 	}
 	if d == nil {
 		return 0, errors.New("[link] ttl exceeded")
@@ -143,6 +144,7 @@ func (l *Link) write(p *head.Packet, datasz uint32, offset uint16, istransfer, h
 		}
 		logrus.Debugln("[link] write", len(d), "bytes data from ep", l.me.myconn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
 		n, err = l.me.myconn.WriteToUDP(d, peerep)
+		cl()
 	}
 	return
 }

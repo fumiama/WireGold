@@ -27,8 +27,10 @@ func (l *Link) onNotify(packet []byte) {
 		if err == nil {
 			p, ok := l.me.IsInPeer(peer)
 			if ok {
-				p.endpoint = addr
-				logrus.Infoln("[notify] set ep of peer", peer, "to", ep)
+				if p.endpoint.String() != ep {
+					p.endpoint = addr
+					logrus.Infoln("[notify] set ep of peer", peer, "to", ep)
+				}
 				continue
 			}
 		}

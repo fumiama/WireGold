@@ -33,10 +33,9 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 						logrus.Debugln("[link] recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
 						// logrus.Debugln("[link] recv:", hex.EncodeToString(lbf))
 						if ok {
-							if p.pep == "" || p.pep != addr.String() {
+							if p.peerip == nil || p.peerip.String() != addr.String() {
 								logrus.Infoln("[link] set endpoint of peer", p.peerip, "to", addr.String())
 								p.endpoint = addr
-								p.pep = addr.String()
 							}
 							if p.IsToMe(packet.Dst) {
 								packet.Data = p.Decode(packet.Data)

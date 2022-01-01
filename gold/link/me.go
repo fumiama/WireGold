@@ -34,7 +34,7 @@ type Me struct {
 	// 读写同步锁
 	connmapmu sync.RWMutex
 	// 本机监听的 endpoint
-	myconn *net.UDPConn
+	myep *net.UDPConn
 	// 本机网卡
 	nic lower.NICIO
 	// 本机路由表
@@ -43,8 +43,9 @@ type Me struct {
 	writer *helper.Writer
 	// 本机未接收完全分片池
 	recving map[[32]byte]*head.Packet
-	recvmu  sync.Mutex
-	// 超时定时器
+	// 接收锁
+	recvmu sync.Mutex
+	// 收包超时定时器
 	clock map[*head.Packet]uint8
 	// 本机上层配置
 	srcport, dstport, mtu uint16
@@ -64,7 +65,7 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nic low
 	}
 	m.me = ip
 	m.subnet = *cidr
-	m.myconn, err = m.listen()
+	m.myep, err = m.listen()
 	if err != nil {
 		panic(err)
 	}

@@ -10,6 +10,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Read 从 peer 收包
+func (l *Link) Read() *head.Packet {
+	return <-l.pipe
+}
+
 func (m *Me) initrecvpool() {
 	if m.recving == nil {
 		m.recving = make(map[[32]byte]*head.Packet, 128)

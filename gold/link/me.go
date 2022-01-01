@@ -162,9 +162,10 @@ func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
 			}
 			n += pktl
 			rem = packet[n:]
+			logrus.Debugln("[me] skip to send", len(packet), "bytes ipv6 packet")
 		}
 		if len(rem) == 0 || !waterutil.IsIPv4(rem) {
-			logrus.Warnln("[me] skip to send", len(packet), "bytes non-ipv4/v6 packet")
+			logrus.Warnln("[me] skip to send", len(packet), "bytes full packet")
 			return len(packet), nil
 		}
 	}
@@ -176,6 +177,7 @@ func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
 		}
 		n += int(totl)
 		rem = packet[n:]
+		logrus.Debugln("[me] wrap", totl, "bytes packet to send together")
 	}
 	if n == 0 {
 		return

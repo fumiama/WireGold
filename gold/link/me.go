@@ -118,7 +118,7 @@ func (m *Me) ListenFromNIC() {
 			off = 0
 		}
 		if err != nil {
-			logrus.Errorln("[lower] send read from nic err:", err)
+			logrus.Errorln("[me] send read from nic err:", err)
 			break
 		}
 		if n == 0 {
@@ -130,7 +130,7 @@ func (m *Me) ListenFromNIC() {
 			n, rem = m.send(m.nic, rem)
 		}
 		if len(rem) > 0 {
-			logrus.Debugln("[lower] remain", len(rem), "bytes to send")
+			logrus.Debugln("[me] remain", len(rem), "bytes to send")
 			if off > 0 {
 				off = copy(buf, rem)
 				isrev = true
@@ -149,14 +149,14 @@ func (m *Me) send(nc io.Reader, packet []byte) (n int, rem []byte) {
 			n = int(binary.BigEndian.Uint16(packet[4:6])) + 40
 			if n > len(packet) {
 				rem = packet
-				logrus.Warnln("[lower] skip to send", len(packet), "bytes ipv6 packet head")
+				logrus.Warnln("[me] skip to send", len(packet), "bytes ipv6 packet head")
 			} else {
 				rem = packet[n:]
-				logrus.Warnln("[lower] skip to send", n, "bytes ipv6 packet")
+				logrus.Warnln("[me] skip to send", n, "bytes ipv6 packet")
 			}
 			return
 		}
-		logrus.Warnln("[lower] skip to send", len(packet), "bytes non-ipv4/v6 packet")
+		logrus.Warnln("[me] skip to send", len(packet), "bytes non-ipv4/v6 packet")
 		return len(packet), nil
 	}
 	totl := waterutil.IPv4TotalLength(packet)
@@ -174,15 +174,15 @@ func (m *Me) send(nc io.Reader, packet []byte) (n int, rem []byte) {
 	packet = packet[:totl]
 	n = int(totl)
 	dst := waterutil.IPv4Destination(packet)
-	logrus.Debugln("[lower] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())))
-	lnk, err := m.Connect(dst.String())
-	if err != nil {
-		logrus.Warnln("[lower] connect to peer", dst.String(), "err:", err)
+	logrus.Debugln("[me] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())))
+	lnk := m.router.NextHop(dst.String())
+	if lnk == nil {
+		logrus.Warnln("[me] drop packet: nil nexthop")
 		return
 	}
-	_, err = lnk.Write(head.NewPacket(head.ProtoData, m.SrcPort(), dst, m.DstPort(), packet), false)
+	_, err := lnk.Write(head.NewPacket(head.ProtoData, m.SrcPort(), dst, m.DstPort(), packet), false)
 	if err != nil {
-		logrus.Warnln("[lower] write to peer", dst.String(), "err:", err)
+		logrus.Warnln("[me] write to peer", dst.String(), "err:", err)
 	}
 	return
 }

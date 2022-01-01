@@ -7,7 +7,6 @@ import (
 	"unsafe"
 
 	blake2b "github.com/minio/blake2b-simd"
-	"github.com/sirupsen/logrus"
 )
 
 // Packet 是发送和接收的最小单位
@@ -41,7 +40,7 @@ type Packet struct {
 
 // NewPacket 生成一个新包
 func NewPacket(proto uint8, srcPort uint16, dst net.IP, dstPort uint16, data []byte) *Packet {
-	logrus.Debugln("[packet] new: [proto:", proto, ", srcport:", srcPort, ", dstport:", dstPort, ", dst:", dst, ", data:", data)
+	// logrus.Debugln("[packet] new: [proto:", proto, ", srcport:", srcPort, ", dstport:", dstPort, ", dst:", dst, ", data:", data)
 	return &Packet{
 		Proto:   proto,
 		TTL:     16,

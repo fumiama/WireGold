@@ -49,15 +49,15 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 			_, cidr, err := net.ParseCIDR(ipnet)
 			if err == nil {
 				l.allowedips = append(l.allowedips, cidr)
+				l.me.router.SetItem(cidr, l)
+				l.me.connmapmu.Lock()
+				l.me.connections[peerip] = l
+				l.me.connmapmu.Unlock()
 			} else {
 				panic(err)
 			}
 		}
 	}
-	l.me.router.SetItem(&net.IPNet{IP: l.peerip, Mask: net.IPMask(net.IPv4bcast)}, l)
-	l.me.connmapmu.Lock()
-	l.me.connections[peerip] = l
-	l.me.connmapmu.Unlock()
 	logrus.Infoln("[peer] add peer:", peerip, "allow:", allowedIPs)
 	go l.keepAlive()
 	return

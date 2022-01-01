@@ -80,11 +80,16 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 							} else if p.Accept(packet.Dst) {
 								if p.allowtrans {
 									// 转发
-									n, err = p.Write(packet, true)
-									if err == nil {
-										logrus.Debugln("[link] trans", n, "bytes packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
+									lnk := m.router.NextHop(packet.Dst.String())
+									if lnk != nil {
+										n, err = lnk.Write(packet, true)
+										if err == nil {
+											logrus.Debugln("[link] trans", n, "bytes packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
+										} else {
+											logrus.Errorln("[link] trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)), "err:", err)
+										}
 									} else {
-										logrus.Errorln("[link] trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)), "err:", err)
+										logrus.Warnln("[link] transfer drop packet: nil nexthop")
 									}
 								} else {
 									logrus.Warnln("[link] refused to trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))

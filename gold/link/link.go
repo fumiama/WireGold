@@ -137,17 +137,12 @@ func (l *Link) write(p *head.Packet, datasz uint32, offset uint16, istransfer, h
 		return 0, errors.New("[link] ttl exceeded")
 	}
 	if err == nil {
-		peerlink := l.me.router.NextHop(p.Dst.String())
-		if peerlink != nil {
-			peerep := peerlink.endpoint
-			if peerep == nil {
-				return 0, errors.New("[link] nil endpoint of " + p.Dst.String())
-			}
-			logrus.Debugln("[link] write", len(d), "bytes data from ep", l.me.myconn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
-			n, err = l.me.myconn.WriteToUDP(d, peerep)
-		} else {
-			logrus.Warnln("[link] drop packet: nil peerlink")
+		peerep := l.endpoint
+		if peerep == nil {
+			return 0, errors.New("[link] nil endpoint of " + p.Dst.String())
 		}
+		logrus.Debugln("[link] write", len(d), "bytes data from ep", l.me.myconn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
+		n, err = l.me.myconn.WriteToUDP(d, peerep)
 	}
 	return
 }

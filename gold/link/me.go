@@ -2,7 +2,6 @@ package link
 
 import (
 	"encoding/binary"
-	"io"
 	"net"
 	"strconv"
 	"sync"
@@ -125,9 +124,9 @@ func (m *Me) ListenFromNIC() {
 			continue
 		}
 		packet = packet[:n]
-		n, rem := m.send(m.nic, packet)
+		n, rem := m.sendAllSameDst(packet)
 		for len(rem) > 20 && n > 0 {
-			n, rem = m.send(m.nic, rem)
+			n, rem = m.sendAllSameDst(rem)
 		}
 		if len(rem) > 0 {
 			logrus.Debugln("[me] remain", len(rem), "bytes to send")
@@ -143,36 +142,45 @@ func (m *Me) ListenFromNIC() {
 	}
 }
 
-func (m *Me) send(nc io.Reader, packet []byte) (n int, rem []byte) {
+type PacketID [2]byte
+
+func newpacketid(packet []byte) PacketID {
+	return waterutil.IPv4Identification(packet)
+}
+
+func (p PacketID) issame(packet []byte) bool {
+	return p == waterutil.IPv4Identification(packet)
+}
+
+func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
+	rem = packet
 	if !waterutil.IsIPv4(packet) {
-		if waterutil.IsIPv6(packet) {
-			n = int(binary.BigEndian.Uint16(packet[4:6])) + 40
-			if n > len(packet) {
-				rem = packet
-				logrus.Warnln("[me] skip to send", len(packet), "bytes ipv6 packet head")
-			} else {
-				rem = packet[n:]
-				logrus.Warnln("[me] skip to send", n, "bytes ipv6 packet")
+		for waterutil.IsIPv6(rem) {
+			pktl := int(binary.BigEndian.Uint16(packet[4:6])) + 40
+			if pktl > len(rem) {
+				return
 			}
-			return
+			n += pktl
+			rem = packet[n:]
 		}
-		logrus.Warnln("[me] skip to send", len(packet), "bytes non-ipv4/v6 packet")
-		return len(packet), nil
-	}
-	totl := waterutil.IPv4TotalLength(packet)
-	if int(totl) > len(packet) {
-		buf := make([]byte, int(totl))
-		copy(buf, packet)
-		cnt, err := m.nic.Read(buf[len(packet):])
-		if err != nil {
-			rem = packet
-			return
+		if !waterutil.IsIPv4(rem) {
+			logrus.Warnln("[me] skip to send", len(rem), "bytes non-ipv4/v6 packet")
+			return len(packet), nil
 		}
-		packet = buf[:cnt+len(packet)]
 	}
-	rem = packet[totl:]
-	packet = packet[:totl]
-	n = int(totl)
+	p := newpacketid(rem)
+	for len(rem) > 20 && p.issame(rem) {
+		totl := waterutil.IPv4TotalLength(rem)
+		if int(totl) > len(rem) {
+			break
+		}
+		n += int(totl)
+		rem = packet[n:]
+	}
+	if n == 0 {
+		return
+	}
+	packet = packet[:n]
 	dst := waterutil.IPv4Destination(packet)
 	logrus.Debugln("[me] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())))
 	lnk := m.router.NextHop(dst.String())

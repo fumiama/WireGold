@@ -2,6 +2,7 @@ package link
 
 import (
 	"encoding/binary"
+	"io"
 	"net"
 	"strconv"
 	"sync"
@@ -174,6 +175,13 @@ func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
 	for len(rem) > 20 && p.issame(rem) {
 		totl := waterutil.IPv4TotalLength(rem)
 		if int(totl) > len(rem) {
+			suffix := make([]byte, int(totl)-len(rem))
+			_, err := io.ReadFull(m.nic, suffix)
+			if err != nil {
+				return len(packet), nil
+			}
+			packet = append(packet, suffix...)
+			n = len(packet)
 			break
 		}
 		n += int(totl)

@@ -164,7 +164,7 @@ func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
 			rem = packet[n:]
 		}
 		if len(rem) == 0 || !waterutil.IsIPv4(rem) {
-			logrus.Warnln("[me] skip to send", len(rem), "bytes non-ipv4/v6 packet")
+			logrus.Warnln("[me] skip to send", len(packet), "bytes non-ipv4/v6 packet")
 			return len(packet), nil
 		}
 	}

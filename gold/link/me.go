@@ -180,9 +180,9 @@ func (m *Me) send(nc io.Reader, packet []byte) (n int, rem []byte) {
 		logrus.Warnln("[me] drop packet: nil nexthop")
 		return
 	}
-	_, err := lnk.Write(head.NewPacket(head.ProtoData, m.SrcPort(), dst, m.DstPort(), packet), false)
+	_, err := lnk.Write(head.NewPacket(head.ProtoData, m.SrcPort(), lnk.peerip, m.DstPort(), packet), false)
 	if err != nil {
-		logrus.Warnln("[me] write to peer", dst.String(), "err:", err)
+		logrus.Warnln("[me] write to peer", lnk.peerip, "err:", err)
 	}
 	return
 }

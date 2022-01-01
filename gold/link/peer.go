@@ -59,6 +59,7 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 	l.me.connections[peerip] = l
 	l.me.connmapmu.Unlock()
 	logrus.Infoln("[peer] add peer:", peerip, "allow:", allowedIPs)
+	go l.keepAlive()
 	return
 }
 

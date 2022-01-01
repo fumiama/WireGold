@@ -10,19 +10,16 @@ import (
 
 // 保持 NAT
 func (l *Link) keepAlive() {
-	if l.keepalive > 0 && !l.haskeepruning {
-		l.haskeepruning = true
-		go func() {
-			t := time.NewTicker(time.Second * time.Duration(l.keepalive))
-			for range t.C {
-				n, err := l.Write(head.NewPacket(head.ProtoHello, 0, l.peerip, 0, nil), false)
-				if err == nil {
-					logrus.Infoln("[link] send", n, "bytes keep alive packet")
-				} else {
-					logrus.Errorln("[link] send keep alive packet error:", err)
-				}
-			}
-		}()
+	if l.keepalive > 0 {
 		logrus.Infoln("[link.nat] start to keep alive")
+		t := time.NewTicker(time.Second * time.Duration(l.keepalive))
+		for range t.C {
+			n, err := l.Write(head.NewPacket(head.ProtoHello, 0, l.peerip, 0, nil), false)
+			if err == nil {
+				logrus.Infoln("[link] send", n, "bytes keep alive packet")
+			} else {
+				logrus.Errorln("[link] send keep alive packet error:", err)
+			}
+		}
 	}
 }

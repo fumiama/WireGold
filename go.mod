@@ -3,11 +3,11 @@ module github.com/fumiama/WireGold
 go 1.16
 
 require (
+	github.com/fumiama/blake2b-simd v0.0.0-20220412092318-c99573b3b2b1
 	github.com/fumiama/go-base16384 v1.3.0
 	github.com/fumiama/go-x25519 v1.0.0
 	github.com/fumiama/gofastTEA v0.0.9
 	github.com/fumiama/water v0.0.0-20211231134027-da391938d6ac
-	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1
 	github.com/sirupsen/logrus v1.8.1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )

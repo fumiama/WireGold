@@ -22,7 +22,8 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 					lbf = lbf[:n]
 					packet := m.wait(lbf)
 					if packet != nil {
-						r := int(packet.DataSZ) - len(packet.Data)
+						sz := packet.TeaTypeDataSZ & 0x00ffffff
+						r := int(sz) - len(packet.Data)
 						if r > 0 {
 							remain, err := readAll(conn, r)
 							if err == nil {
@@ -38,7 +39,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 								p.endpoint = addr
 							}
 							if p.IsToMe(packet.Dst) {
-								packet.Data = p.Decode(packet.Data)
+								packet.Data = p.Decode(uint8(packet.TeaTypeDataSZ>>24), packet.Data)
 								if packet.IsVaildHash() {
 									switch packet.Proto {
 									case head.ProtoHello:

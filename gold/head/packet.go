@@ -7,15 +7,16 @@ import (
 	"net"
 
 	"github.com/fumiama/WireGold/helper"
-	blake2b "github.com/minio/blake2b-simd"
+	blake2b "github.com/fumiama/blake2b-simd"
 	"github.com/sirupsen/logrus"
 )
 
 // Packet 是发送和接收的最小单位
 type Packet struct {
-	// DataSZ len(Data)
+	// TeaTypeDataSZ len(Data)
+	// 高 8 位指定加密所用 tea key
 	// 不得超过 65507-head 字节
-	DataSZ uint32
+	TeaTypeDataSZ uint32
 	// Proto 详见 head
 	Proto uint8
 	// TTL is time to live
@@ -32,7 +33,7 @@ type Packet struct {
 	Dst net.IP
 	// Hash 使用 BLAKE2 生成加密前 Packet 的摘要
 	// 生成时 Hash 全 0
-	// https://github.com/minio/blake2b-simd
+	// https://github.com/fumiama/blake2b-simd
 	Hash [32]byte
 	// Data 承载的数据
 	Data []byte
@@ -60,14 +61,16 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		return
 	}
 
-	if p.DataSZ == 0 && len(p.Data) == 0 {
-		p.DataSZ = binary.LittleEndian.Uint32(data[:4])
-		if int(p.DataSZ)+52 == len(data) {
+	sz := p.TeaTypeDataSZ & 0x00ffffff
+	if sz == 0 && len(p.Data) == 0 {
+		p.TeaTypeDataSZ = binary.LittleEndian.Uint32(data[:4])
+		sz = p.TeaTypeDataSZ & 0x00ffffff
+		if int(sz)+52 == len(data) {
 			p.Data = data[52:]
 			p.rembytes = 0
 		} else {
-			p.Data = make([]byte, p.DataSZ)
-			p.rembytes = p.DataSZ
+			p.Data = make([]byte, sz)
+			p.rembytes = sz
 		}
 		pt := binary.LittleEndian.Uint16(data[4:6])
 		p.Proto = uint8(pt)
@@ -98,14 +101,14 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 
 // Marshal 将自身数据编码为 []byte
 // offset 必须为 8 的倍数，表示偏移的 8 位
-func (p *Packet) Marshal(src net.IP, datasz uint32, offset uint16, dontfrag, hasmore bool) ([]byte, func()) {
+func (p *Packet) Marshal(src net.IP, teatype uint8, datasz uint32, offset uint16, dontfrag, hasmore bool) ([]byte, func()) {
 	p.TTL--
 	if p.TTL == 0 {
 		return nil, nil
 	}
 
 	if src != nil {
-		p.DataSZ = datasz
+		p.TeaTypeDataSZ = uint32(teatype)<<24 | datasz
 		p.Src = src
 		if dontfrag {
 			offset |= 0x4000
@@ -117,7 +120,7 @@ func (p *Packet) Marshal(src net.IP, datasz uint32, offset uint16, dontfrag, has
 	}
 
 	return helper.OpenWriterF(func(w *helper.Writer) {
-		w.WriteUInt32(p.DataSZ)
+		w.WriteUInt32(p.TeaTypeDataSZ)
 		w.WriteUInt16((uint16(p.TTL) << 8) | uint16(p.Proto))
 		w.WriteUInt16(p.SrcPort)
 		w.WriteUInt16(p.DstPort)
@@ -138,6 +141,7 @@ func (p *Packet) FillHash() {
 		return
 	}
 	_ = h.Sum(p.Hash[:0])
+	logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(p.Hash[:]))
 }
 
 // IsVaildHash 验证 packet 合法性

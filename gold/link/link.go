@@ -7,6 +7,7 @@ import (
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/helper"
 	base14 "github.com/fumiama/go-base16384"
+	tea "github.com/fumiama/gofastTEA"
 )
 
 // Link 是本机到 peer 的连接抽象
@@ -28,7 +29,7 @@ type Link struct {
 	// 连接的状态，详见下方 const
 	status int
 	// 连接所用对称加密密钥
-	key *[32]byte
+	key []tea.TEA
 	// 本机信息
 	me *Me
 }

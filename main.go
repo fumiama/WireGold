@@ -21,7 +21,7 @@ func main() {
 	gen := flag.Bool("g", false, "generate key pair")
 	showp := flag.Bool("p", false, "show my publickey")
 	file := flag.String("c", "config.yaml", "specify conf file")
-	mtu := flag.Int("m", 32768-68, "set the mtu of wg")
+	mtu := flag.Int("m", 1500-68, "set the mtu of wg")
 	debug := flag.Bool("d", false, "print debug logs")
 	warn := flag.Bool("w", false, "only show logs above warn level")
 	flag.Parse()

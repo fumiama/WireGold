@@ -3,6 +3,7 @@ package link
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/sirupsen/logrus"
@@ -10,16 +11,17 @@ import (
 
 // Write 向 peer 发包
 func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
+	teatype := uint8(rand.Intn(16))
 	if len(p.Data) <= int(l.me.mtu) {
 		if !istransfer {
 			p.FillHash()
-			p.Data = l.Encode(p.Data)
+			p.Data = l.Encode(teatype, p.Data)
 		}
-		return l.write(p, uint32(len(p.Data)), 0, istransfer, false)
+		return l.write(p, teatype, uint32(len(p.Data)), 0, istransfer, false)
 	}
 	if !istransfer {
 		p.FillHash()
-		p.Data = l.Encode(p.Data)
+		p.Data = l.Encode(teatype, p.Data)
 	}
 	data := p.Data
 	totl := uint32(len(data))
@@ -28,7 +30,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 		logrus.Debugln("[link] split frag", i, ":", i+int(l.me.mtu), ", remain:", int(totl)-i-int(l.me.mtu))
 		packet := *p
 		packet.Data = data[:int(l.me.mtu)]
-		cnt, err := l.write(&packet, totl, uint16(uint(i)>>3), istransfer, true)
+		cnt, err := l.write(&packet, teatype, totl, uint16(uint(i)>>3), istransfer, true)
 		n += cnt
 		if err != nil {
 			return n, err
@@ -36,7 +38,7 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 		data = data[int(l.me.mtu):]
 	}
 	p.Data = data
-	cnt, err := l.write(p, totl, uint16(uint(i)>>3), istransfer, false)
+	cnt, err := l.write(p, teatype, totl, uint16(uint(i)>>3), istransfer, false)
 	n += cnt
 	if err != nil {
 		return n, err
@@ -45,16 +47,16 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 }
 
 // write 向 peer 发一个包
-func (l *Link) write(p *head.Packet, datasz uint32, offset uint16, istransfer, hasmore bool) (n int, err error) {
+func (l *Link) write(p *head.Packet, teatype uint8, datasz uint32, offset uint16, istransfer, hasmore bool) (n int, err error) {
 	var d []byte
 	var cl func()
 	if istransfer {
 		if p.Flags&0x4000 == 0x4000 && len(p.Data) > int(l.me.mtu) {
 			return len(p.Data), errors.New("drop dont fragmnet big trans packet")
 		}
-		d, cl = p.Marshal(nil, 0, 0, false, false)
+		d, cl = p.Marshal(nil, teatype, 0, 0, false, false)
 	} else {
-		d, cl = p.Marshal(l.me.me, datasz, offset, false, hasmore)
+		d, cl = p.Marshal(l.me.me, teatype, datasz, offset, false, hasmore)
 	}
 	if d == nil {
 		return 0, errors.New("[link] ttl exceeded")

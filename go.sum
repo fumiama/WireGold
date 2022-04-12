@@ -1,5 +1,7 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/fumiama/blake2b-simd v0.0.0-20220412092318-c99573b3b2b1 h1:bCiKcUQoZk2E68CPRYROZ9/N1BC21jtjxfqGc+5aoRs=
+github.com/fumiama/blake2b-simd v0.0.0-20220412092318-c99573b3b2b1/go.mod h1:Olmv2uLdFllRsvwhzOvG/O/Nvgzg0ViokUL4+hiaRSE=
 github.com/fumiama/go-base16384 v1.3.0 h1:J5Xtwh/3alGJt/z/0IFralo5UQA89iFWQqbxj5ZQZi8=
 github.com/fumiama/go-base16384 v1.3.0/go.mod h1:RGA715p34BiLoZvPRtaxuo2q25Kq9jFsgUsJb8dwy14=
 github.com/fumiama/go-x25519 v1.0.0 h1:hiGg9EhseVmGCc8T1jECVkj8Keu/aJ1ZK05RM8Vuavo=
@@ -10,8 +12,6 @@ github.com/fumiama/water v0.0.0-20211231134027-da391938d6ac h1:A/5A0rODsg+EQHH61
 github.com/fumiama/water v0.0.0-20211231134027-da391938d6ac/go.mod h1:BBnNY9PwK+UUn4trAU+H0qsMEypm7+3Bj1bVFuJItlo=
 github.com/fumiama/wintun v0.0.0-20211229152851-8bc97c8034c0 h1:WfrSFlIlCAtg6Rt2IGna0HhJYSDE45YVHiYqO4wwsEw=
 github.com/fumiama/wintun v0.0.0-20211229152851-8bc97c8034c0/go.mod h1:dPOG7Af/ArO62RgBz2JJTNFByBn/IXWLo/1kZKcLSe8=
-github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1 h1:lYpkrQH5ajf0OXOcUbGjvZxxijuBwbbmlSxLiuofa+g=
-github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1/go.mod h1:pD8RvIylQ358TN4wwqatJ8rNavkEINozVn9DtGI3dfQ=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sirupsen/logrus v1.8.1 h1:dJKuHgqk1NNQlqoA6BTlM1Wf9DOH3NBjQyu0h9+AZZE=

@@ -3,10 +3,10 @@ package link
 import (
 	"net"
 	"time"
-	"unsafe"
 
 	"github.com/fumiama/WireGold/gold/head"
 	curve "github.com/fumiama/go-x25519"
+	tea "github.com/fumiama/gofastTEA"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,7 +32,10 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 		c := curve.Get(m.privKey[:])
 		k, err := c.Shared(pubicKey)
 		if err == nil {
-			l.key = (*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&k)))
+			l.key = make([]tea.TEA, 16)
+			for i := range l.key {
+				l.key[i] = tea.NewTeaCipherLittleEndian(k[i : 16+i])
+			}
 		}
 	}
 	if endPoint != "" {

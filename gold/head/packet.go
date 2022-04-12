@@ -137,7 +137,7 @@ func (p *Packet) FillHash() {
 		logrus.Error("[packet] err when fill hash:", err)
 		return
 	}
-	_ = h.Sum(p.Hash[:])
+	_ = h.Sum(p.Hash[:0])
 }
 
 // IsVaildHash 验证 packet 合法性
@@ -149,7 +149,8 @@ func (p *Packet) IsVaildHash() bool {
 		return false
 	}
 	var sum [32]byte
-	_ = h.Sum(sum[:])
-	logrus.Debugln("[packet] sum really:", hex.EncodeToString(sum[:]), "sum in hash:", hex.EncodeToString(p.Hash[:]))
+	_ = h.Sum(sum[:0])
+	logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(sum[:]))
+	logrus.Debugln("[packet] sum in packet:", hex.EncodeToString(p.Hash[:]))
 	return sum == p.Hash
 }

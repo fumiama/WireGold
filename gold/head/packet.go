@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"net"
-	"unsafe"
 
 	"github.com/fumiama/WireGold/helper"
 	blake2b "github.com/minio/blake2b-simd"
@@ -132,13 +131,25 @@ func (p *Packet) Marshal(src net.IP, datasz uint32, offset uint16, dontfrag, has
 
 // FillHash 生成 p.Data 的 Hash
 func (p *Packet) FillHash() {
-	sum := blake2b.New256().Sum(p.Data)
-	p.Hash = *(*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&sum)))
+	h := blake2b.New256()
+	_, err := h.Write(p.Data)
+	if err != nil {
+		logrus.Error("[packet] err when fill hash:", err)
+		return
+	}
+	_ = h.Sum(p.Hash[:])
 }
 
 // IsVaildHash 验证 packet 合法性
 func (p *Packet) IsVaildHash() bool {
-	sum := blake2b.New256().Sum(p.Data)
-	logrus.Debugln("[packet] sum really:", hex.EncodeToString(sum), "sum in hash:", hex.EncodeToString(p.Hash[:]))
-	return *(*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&sum))) == p.Hash
+	h := blake2b.New256()
+	_, err := h.Write(p.Data)
+	if err != nil {
+		logrus.Error("[packet] err when check hash:", err)
+		return false
+	}
+	var sum [32]byte
+	_ = h.Sum(sum[:])
+	logrus.Debugln("[packet] sum really:", hex.EncodeToString(sum[:]), "sum in hash:", hex.EncodeToString(p.Hash[:]))
+	return sum == p.Hash
 }

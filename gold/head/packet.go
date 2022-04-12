@@ -2,12 +2,14 @@ package head
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"net"
 	"unsafe"
 
 	"github.com/fumiama/WireGold/helper"
 	blake2b "github.com/minio/blake2b-simd"
+	"github.com/sirupsen/logrus"
 )
 
 // Packet 是发送和接收的最小单位
@@ -137,5 +139,6 @@ func (p *Packet) FillHash() {
 // IsVaildHash 验证 packet 合法性
 func (p *Packet) IsVaildHash() bool {
 	sum := blake2b.New256().Sum(p.Data)
+	logrus.Debugln("[packet] sum really:", hex.EncodeToString(sum), "sum in hash:", hex.EncodeToString(p.Hash[:]))
 	return *(*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&sum))) == p.Hash
 }

@@ -18,7 +18,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 		return
 	}
 	var mu sync.Mutex
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < runtime.NumCPU()*4; i++ {
 		go m.listenthread(conn, &mu)
 	}
 	return

@@ -46,7 +46,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 	flags := binary.LittleEndian.Uint16(data[10:12])
 	logrus.Debugln("[recv]", len(data), "bytes data with flag", hex.EncodeToString(data[10:12]))
 	if flags == 0 || flags == 0x4000 {
-		h := &head.Packet{}
+		h := head.SelectPacket()
 		_, err := h.Unmarshal(data)
 		if err != nil {
 			logrus.Errorln("[recv] unmarshal err:", err)
@@ -77,7 +77,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 		return nil
 	}
 	logrus.Debugln("[recv] get new frag part of", hex.EncodeToString(hashd))
-	h = &head.Packet{}
+	h = head.SelectPacket()
 	_, err := h.Unmarshal(data)
 	if err != nil {
 		logrus.Errorln("[recv] unmarshal err:", err)

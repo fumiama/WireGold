@@ -19,7 +19,7 @@ func (l *Link) keepAlive(dur int64) {
 		logrus.Infoln("[link.nat] start to keep alive")
 		t := time.NewTicker(time.Second * time.Duration(dur))
 		for range t.C {
-			n, err := l.Write(head.NewPacket(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, nil), false)
+			n, err := l.WriteAndPut(head.NewPacket(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, nil), false)
 			if err == nil {
 				logrus.Infoln("[link] send", n, "bytes keep alive packet")
 			} else {
@@ -87,7 +87,7 @@ func (l *Link) onQuery(packet []byte) {
 		logrus.Infoln("[query] wrap", len(notify), "notify")
 		w := helper.SelectWriter()
 		json.NewEncoder(w).Encode(&notify)
-		l.Write(head.NewPacket(head.ProtoNotify, l.me.srcport, l.peerip, l.me.dstport, w.Bytes()), false)
+		l.WriteAndPut(head.NewPacket(head.ProtoNotify, l.me.srcport, l.peerip, l.me.dstport, w.Bytes()), false)
 		helper.PutWriter(w)
 	}
 }
@@ -104,7 +104,7 @@ func (l *Link) sendquery(tick time.Duration, peers ...string) {
 	t := time.NewTicker(tick)
 	for range t.C {
 		logrus.Infoln("[query] send query to", l.peerip)
-		_, err = l.Write(head.NewPacket(head.ProtoQuery, l.me.srcport, l.peerip, l.me.dstport, data), false)
+		_, err = l.WriteAndPut(head.NewPacket(head.ProtoQuery, l.me.srcport, l.peerip, l.me.dstport, data), false)
 		if err != nil {
 			logrus.Errorln("[query] write err:", err)
 		}

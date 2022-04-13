@@ -60,17 +60,6 @@ func TestTunnel(t *testing.T) {
 		t.Fatal("error: recv 4096 bytes data")
 	}
 
-	sendb = make([]byte, 131072)
-	rand.Read(sendb)
-	tunnme.Write(sendb)
-	buf = make([]byte, 131072)
-	for i := 0; i < 32; i++ {
-		tunnpeer.Read(buf[i*4096:])
-	}
-	if string(sendb) != string(buf) {
-		t.Fatal("error: recv 131072 bytes data")
-	}
-
 	tunnme.Stop()
 	tunnpeer.Stop()
 }

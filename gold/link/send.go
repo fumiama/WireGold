@@ -9,14 +9,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Write 向 peer 发包
-func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
+// WriteAndPut 向 peer 发包并将包放回缓存池
+func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	teatype := uint8(rand.Intn(16))
 	if len(p.Data) <= int(l.me.mtu) {
 		if !istransfer {
 			p.FillHash()
 			p.Data = l.Encode(teatype, p.Data)
 		}
+		defer p.Put()
 		return l.write(p, teatype, uint32(len(p.Data)), 0, istransfer, false)
 	}
 	if !istransfer {
@@ -24,26 +25,28 @@ func (l *Link) Write(p *head.Packet, istransfer bool) (n int, err error) {
 		p.Data = l.Encode(teatype, p.Data)
 	}
 	data := p.Data
+	ttl := p.TTL
 	totl := uint32(len(data))
 	i := 0
+	packet := head.SelectPacket()
+	*packet = *p
 	for ; int(totl)-i > int(l.me.mtu); i += int(l.me.mtu) {
 		logrus.Debugln("[link] split frag", i, ":", i+int(l.me.mtu), ", remain:", int(totl)-i-int(l.me.mtu))
-		packet := *p
 		packet.Data = data[:int(l.me.mtu)]
-		cnt, err := l.write(&packet, teatype, totl, uint16(uint(i)>>3), istransfer, true)
+		cnt, err := l.write(packet, teatype, totl, uint16(uint(i)>>3), istransfer, true)
 		n += cnt
 		if err != nil {
 			return n, err
 		}
 		data = data[int(l.me.mtu):]
+		packet.TTL = ttl
 	}
+	packet.Put()
 	p.Data = data
 	cnt, err := l.write(p, teatype, totl, uint16(uint(i)>>3), istransfer, false)
+	p.Put()
 	n += cnt
-	if err != nil {
-		return n, err
-	}
-	return n, nil
+	return n, err
 }
 
 // write 向 peer 发一个包

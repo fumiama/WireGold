@@ -42,16 +42,16 @@ type Packet struct {
 }
 
 // NewPacket 生成一个新包
-func NewPacket(proto uint8, srcPort uint16, dst net.IP, dstPort uint16, data []byte) *Packet {
+func NewPacket(proto uint8, srcPort uint16, dst net.IP, dstPort uint16, data []byte) (p *Packet) {
 	// logrus.Debugln("[packet] new: [proto:", proto, ", srcport:", srcPort, ", dstport:", dstPort, ", dst:", dst, ", data:", data)
-	return &Packet{
-		Proto:   proto,
-		TTL:     16,
-		SrcPort: srcPort,
-		DstPort: dstPort,
-		Dst:     dst,
-		Data:    data,
-	}
+	p = SelectPacket()
+	p.Proto = proto
+	p.TTL = 16
+	p.SrcPort = srcPort
+	p.DstPort = dstPort
+	p.Dst = dst
+	p.Data = data
+	return
 }
 
 // Unmarshal 将 data 的数据解码到自身
@@ -157,4 +157,9 @@ func (p *Packet) IsVaildHash() bool {
 	logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(sum[:]))
 	logrus.Debugln("[packet] sum in packet:", hex.EncodeToString(p.Hash[:]))
 	return sum == p.Hash
+}
+
+// Put 将自己放回池中
+func (p *Packet) Put() {
+	PutPacket(p)
 }

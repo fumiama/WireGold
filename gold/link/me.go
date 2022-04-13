@@ -177,7 +177,7 @@ func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
 		logrus.Warnln("[me] drop packet to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), ": nil nexthop")
 		return
 	}
-	_, err := lnk.Write(head.NewPacket(head.ProtoData, m.SrcPort(), lnk.peerip, m.DstPort(), packet), false)
+	_, err := lnk.WriteAndPut(head.NewPacket(head.ProtoData, m.SrcPort(), lnk.peerip, m.DstPort(), packet), false)
 	if err != nil {
 		logrus.Warnln("[me] write to peer", lnk.peerip, "err:", err)
 	}

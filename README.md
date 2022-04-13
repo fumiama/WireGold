@@ -2,18 +2,6 @@
   <img src=".github/rikka.png" width = "360" height = "360" alt="WireGold-Rikka"><br>
   <h1>WireGold</h1>
   Wire Golang Guard = WireGold<br><br>
-
-| folder | line count |
-| --- | --- |
-| config | 43 |
-| gold | 1025 |
-| helper | 202 |
-| lower | 159 |
-| upper | 331 |
-| ./ | 194 |
-| total | 1954 |
-
-
 </div>
 
 ## Usage
@@ -33,7 +21,8 @@ wg [-c config.yaml] [-d|w] [-g] [-h] [-m mtu] [-p]
   -p    show my publickey
   -w    only show logs above warn level
 ```
-- *especially*: in macos mojave, max value of mtu is `9159`
+- *macos mojave*: in macos mojave, max mtu (ipv4 endpoint) is `9159`
+- *ipv6 endpoint*: the recommand mtu is `1280` to prevent the big segments from being dropped
 
 ## Config file example
 ```yaml

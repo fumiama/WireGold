@@ -38,11 +38,11 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		pubk, err := base14.UTF16be2utf8(base14.Encode((*k.Public())[:]))
+		pubk, err := base14.UTF16BE2UTF8(base14.Encode((*k.Public())[:]))
 		if err != nil {
 			panic(err)
 		}
-		prvk, err := base14.UTF16be2utf8(base14.Encode((*k.Private())[:]))
+		prvk, err := base14.UTF16BE2UTF8(base14.Encode((*k.Private())[:]))
 		if err != nil {
 			panic(err)
 		}

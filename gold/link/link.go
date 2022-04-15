@@ -64,7 +64,7 @@ func (l *Link) Destroy() {
 func (l *Link) String() (n string) {
 	n = "default"
 	if l.pubk != nil {
-		b, err := base14.UTF16be2utf8(base14.Encode(l.pubk[:7]))
+		b, err := base14.UTF16BE2UTF8(base14.Encode(l.pubk[:7]))
 		if err == nil {
 			n = helper.BytesToString(b)
 		} else {

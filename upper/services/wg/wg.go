@@ -28,7 +28,7 @@ func NewWireGold(c *config.Config) (wg WG, err error) {
 	wg.c = c
 
 	var k []byte
-	k, err = base14.UTF82utf16be(helper.StringToBytes(c.PrivateKey + suffix32))
+	k, err = base14.UTF82UTF16BE(helper.StringToBytes(c.PrivateKey + suffix32))
 	if err != nil {
 		return
 	}
@@ -39,7 +39,7 @@ func NewWireGold(c *config.Config) (wg WG, err error) {
 	}
 
 	cur := curve.Get(wg.key[:])
-	pubk, err := base14.UTF16be2utf8(base14.Encode((*cur.Public())[:]))
+	pubk, err := base14.UTF16BE2UTF8(base14.Encode((*cur.Public())[:]))
 	if err != nil {
 		return
 	}
@@ -101,7 +101,7 @@ func (wg *WG) init(srcport, dstport, mtu uint16) {
 
 	for _, peer := range wg.c.Peers {
 		var peerkey [32]byte
-		k, err := base14.UTF82utf16be(helper.StringToBytes(peer.PublicKey + suffix32))
+		k, err := base14.UTF82UTF16BE(helper.StringToBytes(peer.PublicKey + suffix32))
 		if err != nil {
 			panic(err)
 		}

@@ -44,11 +44,7 @@ type Me struct {
 	// 本机发送缓冲区
 	writer *helper.Writer
 	// 本机未接收完全分片池
-	recving map[[32]byte]*head.Packet
-	// 接收锁
-	recvmu sync.Mutex
-	// 收包超时定时器
-	clock map[*head.Packet]uint8
+	recving *ttl.Cache[[32]byte, *head.Packet]
 	// 本机上层配置
 	srcport, dstport, mtu uint16
 }

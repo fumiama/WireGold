@@ -10,9 +10,9 @@ import (
 )
 
 type Router struct {
+	sync.RWMutex
 	// map[cidr]*Link
 	table map[string]*Link
-	mu    sync.RWMutex
 	list  []*net.IPNet
 	cache *ttl.Cache[string, *Link]
 }
@@ -35,10 +35,10 @@ func (l *Link) IsToMe(ip net.IP) bool {
 // SetDefault 设置默认网关
 func (r *Router) SetDefault(l *Link) {
 	defnet := &net.IPNet{IP: net.IPv4(0, 0, 0, 0), Mask: net.IPv4Mask(0, 0, 0, 0)}
-	r.mu.Lock()
+	r.Lock()
 	r.list[len(r.list)-1] = defnet
 	r.table[defnet.String()] = l
-	r.mu.Unlock()
+	r.Unlock()
 }
 
 // NextHop 得到前往 ip 的下一跳的 link
@@ -54,10 +54,10 @@ func (r *Router) NextHop(ip string) (l *Link) {
 		return
 	}
 
-	// TODO: 遍历 r.table，得到正确的下一跳
+	// 遍历 r.table，得到正确的下一跳
 	// 注意使用 r.mu 读写锁避免竞争
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 
 	for _, c := range r.list {
 		if c.Contains(ipb) {
@@ -75,7 +75,7 @@ func (r *Router) NextHop(ip string) (l *Link) {
 
 // SetItem 添加一条表项
 func (r *Router) SetItem(ip *net.IPNet, l *Link) {
-	r.mu.Lock()
+	r.Lock()
 	// 从第一条表项开始匹配
 	for i := 0; i < len(r.list); i++ {
 		if r.list[i].Contains(ip.IP) {
@@ -94,7 +94,7 @@ func (r *Router) SetItem(ip *net.IPNet, l *Link) {
 			break
 		}
 	}
-	r.mu.Unlock()
+	r.Unlock()
 }
 
 func isSubnetBcast(ip net.IP, subnet *net.IPNet) bool {

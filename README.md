@@ -21,8 +21,9 @@ wg [-c config.yaml] [-d|w] [-g] [-h] [-m mtu] [-p]
   -p    show my publickey
   -w    only show logs above warn level
 ```
-- *macos mojave*: in macos mojave, max mtu (ipv4 endpoint) is `9159`
-- *ipv6 endpoint*: the recommand mtu is `1280` to prevent the big segments from being dropped
+
+- **macos mojave**: max mtu (under ipv4 endpoint) is `9159`
+- **ipv6 endpoint**: the recommand mtu is `1280~1400` to prevent the big segments from being dropped
 
 ## Config file example
 ```yaml

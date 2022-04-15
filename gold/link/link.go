@@ -24,14 +24,14 @@ type Link struct {
 	endpoint *net.UDPAddr
 	// 本机允许接收/发送的 ip 网段
 	allowedips []*net.IPNet
-	// 是否允许转发
-	allowtrans bool
-	// 连接的状态，详见下方 const
-	status int
 	// 连接所用对称加密密钥
 	key []tea.TEA
 	// 本机信息
 	me *Me
+	// 连接的状态，详见下方 const
+	status int
+	// 是否允许转发
+	allowtrans bool
 }
 
 const (

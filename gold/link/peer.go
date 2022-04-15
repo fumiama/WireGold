@@ -10,27 +10,36 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type PeerConfig struct {
+	PeerIP                  string
+	EndPoint                string
+	AllowedIPs, Querys      []string
+	PubicKey                *[32]byte
+	KeepAliveDur, QueryTick int64
+	AllowTrans, NoPipe      bool
+}
+
 // AddPeer 添加一个 peer
-func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowedIPs, querys []string, keepAliveDur, queryTick int64, allowTrans, nopipe bool) (l *Link) {
-	peerip = net.ParseIP(peerip).String()
+func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
+	cfg.PeerIP = net.ParseIP(cfg.PeerIP).String()
 	var ok bool
-	l, ok = m.IsInPeer(peerip)
+	l, ok = m.IsInPeer(cfg.PeerIP)
 	if ok {
 		return
 	}
 	l = &Link{
-		pubk:       pubicKey,
-		peerip:     net.ParseIP(peerip),
-		allowtrans: allowTrans,
+		pubk:       cfg.PubicKey,
+		peerip:     net.ParseIP(cfg.PeerIP),
+		allowtrans: cfg.AllowTrans,
 		me:         m,
 	}
 
-	if !nopipe {
+	if !cfg.NoPipe {
 		l.pipe = make(chan *head.Packet, 32)
 	}
-	if pubicKey != nil {
+	if cfg.PubicKey != nil {
 		c := curve.Get(m.privKey[:])
-		k, err := c.Shared(pubicKey)
+		k, err := c.Shared(cfg.PubicKey)
 		if err == nil {
 			l.key = make([]tea.TEA, 16)
 			for i := range l.key {
@@ -38,31 +47,31 @@ func (m *Me) AddPeer(peerip string, pubicKey *[32]byte, endPoint string, allowed
 			}
 		}
 	}
-	if endPoint != "" {
-		e, err := net.ResolveUDPAddr("udp", endPoint)
+	if cfg.EndPoint != "" {
+		e, err := net.ResolveUDPAddr("udp", cfg.EndPoint)
 		if err != nil {
 			panic(err)
 		}
 		l.endpoint = e
 	}
-	if allowedIPs != nil {
-		l.allowedips = make([]*net.IPNet, 0, len(allowedIPs))
-		for _, ipnet := range allowedIPs {
+	if cfg.AllowedIPs != nil {
+		l.allowedips = make([]*net.IPNet, 0, len(cfg.AllowedIPs))
+		for _, ipnet := range cfg.AllowedIPs {
 			_, cidr, err := net.ParseCIDR(ipnet)
 			if err == nil {
 				l.allowedips = append(l.allowedips, cidr)
 				l.me.router.SetItem(cidr, l)
 				l.me.connmapmu.Lock()
-				l.me.connections[peerip] = l
+				l.me.connections[cfg.PeerIP] = l
 				l.me.connmapmu.Unlock()
 			} else {
 				panic(err)
 			}
 		}
 	}
-	logrus.Infoln("[peer] add peer:", peerip, "allow:", allowedIPs)
-	go l.keepAlive(keepAliveDur)
-	go l.sendquery(time.Second*time.Duration(queryTick), querys...)
+	logrus.Infoln("[peer] add peer:", cfg.PeerIP, "allow:", cfg.AllowedIPs)
+	go l.keepAlive(cfg.KeepAliveDur)
+	go l.sendquery(time.Second*time.Duration(cfg.QueryTick), cfg.Querys...)
 	return
 }
 

@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
+	"github.com/wdvxdr1123/ZeroBot/extension/ttl"
 )
 
 type Router struct {
@@ -13,6 +14,7 @@ type Router struct {
 	table map[string]*Link
 	mu    sync.RWMutex
 	list  []*net.IPNet
+	cache *ttl.Cache[string, *Link]
 }
 
 // Accept 判断是否应当接受 ip 发来的包
@@ -41,6 +43,11 @@ func (r *Router) SetDefault(l *Link) {
 
 // NextHop 得到前往 ip 的下一跳的 link
 func (r *Router) NextHop(ip string) (l *Link) {
+	l = r.cache.Get(ip)
+	if l != nil {
+		logrus.Debugln("[router] get cached nexthop to", ip, "link", l)
+		return
+	}
 	ipb := net.ParseIP(ip)
 	if ipb == nil {
 		logrus.Errorln("[router] nil ip")
@@ -56,6 +63,7 @@ func (r *Router) NextHop(ip string) (l *Link) {
 		if c.Contains(ipb) {
 			l = r.table[c.String()]
 			logrus.Debugln("[router] get nexthop to", ipb, "-->", c, "link", l)
+			r.cache.Set(ip, l)
 			return l
 		}
 	}

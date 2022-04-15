@@ -6,12 +6,14 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/helper"
 	"github.com/fumiama/WireGold/lower"
 	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
+	"github.com/wdvxdr1123/ZeroBot/extension/ttl"
 )
 
 // Me 是本机的抽象
@@ -51,15 +53,23 @@ type Me struct {
 	srcport, dstport, mtu uint16
 }
 
+type MyConfig struct {
+	MyIPwithMask          string
+	MyEndpoint            string
+	PrivateKey            *[32]byte
+	NIC                   lower.NICIO
+	SrcPort, DstPort, MTU uint16
+}
+
 // NewMe 设置本机参数
-func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nic lower.NICIO, srcport, dstport, mtu uint16) (m Me) {
-	m.privKey = *privateKey
+func NewMe(cfg *MyConfig) (m Me) {
+	m.privKey = *cfg.PrivateKey
 	var err error
-	m.myend, err = net.ResolveUDPAddr("udp", myEndpoint)
+	m.myend, err = net.ResolveUDPAddr("udp", cfg.MyEndpoint)
 	if err != nil {
 		panic(err)
 	}
-	ip, cidr, err := net.ParseCIDR(myipwithmask)
+	ip, cidr, err := net.ParseCIDR(cfg.MyIPwithMask)
 	if err != nil {
 		panic(err)
 	}
@@ -70,18 +80,23 @@ func NewMe(privateKey *[32]byte, myipwithmask string, myEndpoint string, nic low
 		panic(err)
 	}
 	m.connections = make(map[string]*Link)
-	m.nic = nic
+	m.nic = cfg.NIC
 	m.router = &Router{
 		list:  make([]*net.IPNet, 1, 16),
 		table: make(map[string]*Link, 16),
+		cache: ttl.NewCache[string, *Link](time.Minute),
 	}
 	m.router.SetDefault(nil)
-	m.loop = m.AddPeer(m.me.String(), nil, "127.0.0.1:56789", []string{myipwithmask}, nil, 0, 0, false, nic != nil)
-	m.srcport = srcport
-	m.dstport = dstport
-	m.mtu = mtu & 0xfff8
-	m.writer = helper.SelectWriter()
-	go m.initrecvpool()
+	m.loop = m.AddPeer(&PeerConfig{
+		PeerIP:     m.me.String(),
+		EndPoint:   "127.0.0.1:56789",
+		AllowedIPs: []string{cfg.MyIPwithMask},
+		NoPipe:     cfg.NIC != nil,
+	})
+	m.srcport = cfg.SrcPort
+	m.dstport = cfg.DstPort
+	m.mtu = cfg.MTU & 0xfff8
+	m.initrecvpool()
 	return
 }
 
@@ -125,13 +140,13 @@ func (m *Me) ListenFromNIC() (written int64, err error) {
 	return io.Copy(m, m.nic)
 }
 
-type PacketID [2]byte
+type packetID [2]byte
 
-func newpacketid(packet []byte) PacketID {
+func newpacketid(packet []byte) packetID {
 	return waterutil.IPv4Identification(packet)
 }
 
-func (p PacketID) issame(packet []byte) bool {
+func (p packetID) issame(packet []byte) bool {
 	return p == waterutil.IPv4Identification(packet)
 }
 

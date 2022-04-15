@@ -65,7 +65,7 @@ func (wg *WG) Stop() {
 	_ = wg.me.Close()
 }
 
-func (wg *WG) init(srcport, destport, mtu uint16) {
+func (wg *WG) init(srcport, dstport, mtu uint16) {
 	cidrsmap := make(map[string]bool, 32)
 	_, mysubnet, err := net.ParseCIDR(wg.c.SubNet)
 	if err != nil {
@@ -89,13 +89,15 @@ func (wg *WG) init(srcport, destport, mtu uint16) {
 		i++
 	}
 
-	wg.me = link.NewMe(
-		&wg.key,
-		wg.c.IP+"/32",
-		wg.c.EndPoint,
-		lower.NewNIC(wg.c.IP, wg.c.SubNet, fmt.Sprintf("%d", mtu), cidrs...),
-		srcport, destport, mtu,
-	)
+	wg.me = link.NewMe(&link.MyConfig{
+		MyIPwithMask: wg.c.IP + "/32",
+		MyEndpoint:   wg.c.EndPoint,
+		PrivateKey:   &wg.key,
+		NIC:          lower.NewNIC(wg.c.IP, wg.c.SubNet, fmt.Sprintf("%d", mtu), cidrs...),
+		SrcPort:      srcport,
+		DstPort:      dstport,
+		MTU:          mtu,
+	})
 
 	for _, peer := range wg.c.Peers {
 		var peerkey [32]byte
@@ -107,6 +109,16 @@ func (wg *WG) init(srcport, destport, mtu uint16) {
 		if n != 32 {
 			panic("peer public key length is not 32")
 		}
-		wg.me.AddPeer(peer.IP, &peerkey, peer.EndPoint, peer.AllowedIPs, peer.QueryList, peer.KeepAliveSeconds, peer.QuerySeconds, peer.AllowTrans, true)
+		wg.me.AddPeer(&link.PeerConfig{
+			PeerIP:       peer.IP,
+			EndPoint:     peer.EndPoint,
+			AllowedIPs:   peer.AllowedIPs,
+			Querys:       peer.QueryList,
+			PubicKey:     &peerkey,
+			KeepAliveDur: peer.KeepAliveSeconds,
+			QueryTick:    peer.QuerySeconds,
+			AllowTrans:   peer.AllowTrans,
+			NoPipe:       true,
+		})
 	}
 }

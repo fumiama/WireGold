@@ -27,10 +27,34 @@ func TestTunnel(t *testing.T) {
 	t.Log("peer priv key:", hex.EncodeToString(peerpk.Private()[:]))
 	t.Log("peer publ key:", hex.EncodeToString(peerpk.Public()[:]))
 
-	m := link.NewMe(selfpk.Private(), "192.168.1.2/32", "127.0.0.1:1236", nil, 1, 1, 4096)
-	m.AddPeer("192.168.1.3", peerpk.Public(), "127.0.0.1:1237", []string{"192.168.1.3/32"}, nil, 0, 0, false, false)
-	p := link.NewMe(peerpk.Private(), "192.168.1.3/32", "127.0.0.1:1237", nil, 1, 1, 4096)
-	p.AddPeer("192.168.1.2", selfpk.Public(), "127.0.0.1:1236", []string{"192.168.1.2/32"}, nil, 0, 0, false, false)
+	m := link.NewMe(&link.MyConfig{
+		MyIPwithMask: "192.168.1.2/32",
+		MyEndpoint:   "127.0.0.1:1236",
+		PrivateKey:   selfpk.Private(),
+		SrcPort:      1,
+		DstPort:      1,
+		MTU:          4096,
+	})
+	m.AddPeer(&link.PeerConfig{
+		PeerIP:     "192.168.1.3",
+		EndPoint:   "127.0.0.1:1237",
+		AllowedIPs: []string{"192.168.1.3/32"},
+		PubicKey:   peerpk.Public(),
+	})
+	p := link.NewMe(&link.MyConfig{
+		MyIPwithMask: "192.168.1.3/32",
+		MyEndpoint:   "127.0.0.1:1237",
+		PrivateKey:   peerpk.Private(),
+		SrcPort:      1,
+		DstPort:      1,
+		MTU:          4096,
+	})
+	p.AddPeer(&link.PeerConfig{
+		PeerIP:     "192.168.1.2",
+		EndPoint:   "127.0.0.1:1236",
+		AllowedIPs: []string{"192.168.1.2/32"},
+		PubicKey:   selfpk.Public(),
+	})
 	tunnme, err := Create(&m, "192.168.1.3")
 	if err != nil {
 		t.Fatal(err)

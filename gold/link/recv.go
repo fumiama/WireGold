@@ -3,25 +3,15 @@ package link
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"time"
 	"unsafe"
 
 	"github.com/fumiama/WireGold/gold/head"
-	"github.com/fumiama/WireGold/helper"
 	"github.com/sirupsen/logrus"
-	"github.com/wdvxdr1123/ZeroBot/extension/ttl"
 )
 
 // Read 从 peer 收包
 func (l *Link) Read() *head.Packet {
 	return <-l.pipe
-}
-
-func (m *Me) initrecvpool() {
-	if m.writer == nil {
-		m.writer = helper.SelectWriter()
-	}
-	m.recving = ttl.NewCache[[32]byte, *head.Packet](time.Second * 128)
 }
 
 func (m *Me) wait(data []byte) *head.Packet {

@@ -92,7 +92,10 @@ func NewMe(cfg *MyConfig) (m Me) {
 	m.srcport = cfg.SrcPort
 	m.dstport = cfg.DstPort
 	m.mtu = cfg.MTU & 0xfff8
-	m.initrecvpool()
+	if m.writer == nil {
+		m.writer = helper.SelectWriter()
+	}
+	m.recving = ttl.NewCache[[32]byte, *head.Packet](time.Second * 128)
 	return
 }
 

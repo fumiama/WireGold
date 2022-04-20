@@ -117,17 +117,17 @@ func (m *Me) Close() error {
 }
 
 func (m *Me) Write(packet []byte) (n int, err error) {
-	m.writer.Write(packet)
-	packet = m.writer.Bytes()
+	remain := m.writer.Len()
+	if remain > 0 {
+		m.writer.Write(packet)
+		packet = m.writer.Bytes()
+	}
 	logrus.Debugln("[me] writer eating", len(packet), "bytes...")
-	n, packet = m.sendAllSameDst(packet)
-	if len(packet) > 0 {
-		w := helper.SelectWriter()
-		w.Write(packet)
-		helper.PutWriter(m.writer)
-		m.writer = w
-		logrus.Debugln("[me] writer remain", w.Len(), "bytes")
-	} else if n > 0 {
+	n = m.sendAllSameDst(packet)
+	if len(packet) > n {
+		_, _ = m.writer.Skip(remain + n - len(packet))
+		logrus.Debugln("[me] writer remain", m.writer.Len(), "bytes")
+	} else if n > 0 && remain > 0 {
 		m.writer.Reset()
 		logrus.Debugln("[me] writer becomes empty")
 	}
@@ -149,8 +149,8 @@ func (p packetID) issame(packet []byte) bool {
 	return p == waterutil.IPv4Identification(packet)
 }
 
-func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
-	rem = packet
+func (m *Me) sendAllSameDst(packet []byte) (n int) {
+	rem := packet
 	if !waterutil.IsIPv4(packet) {
 		for len(rem) > 20 && waterutil.IsIPv6(rem) {
 			pktl := int(binary.BigEndian.Uint16(packet[4:6])) + 40
@@ -163,7 +163,7 @@ func (m *Me) sendAllSameDst(packet []byte) (n int, rem []byte) {
 		}
 		if len(rem) == 0 || !waterutil.IsIPv4(rem) {
 			logrus.Warnln("[me] skip to send", len(packet), "bytes full packet")
-			return len(packet), nil
+			return len(packet)
 		}
 	}
 	p := newpacketid(rem)

@@ -3,6 +3,7 @@ module github.com/fumiama/WireGold
 go 1.18
 
 require (
+	github.com/FloatTech/zbputils v1.3.2
 	github.com/fumiama/blake2b-simd v0.0.0-20220412110131-4481822068bb
 	github.com/fumiama/go-base16384 v1.4.0
 	github.com/fumiama/go-x25519 v1.0.0

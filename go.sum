@@ -1,3 +1,5 @@
+github.com/FloatTech/zbputils v1.3.2 h1:TxQ6SjT/f+iHLoz+IlQ3Hk2dUb2P9SIs4DvjGWLjZYs=
+github.com/FloatTech/zbputils v1.3.2/go.mod h1:V2Y8jkxjwACWuJsDCyNVKc+qABfMAUh/mgBYdWBxOPo=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

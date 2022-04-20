@@ -3,6 +3,7 @@ package tunnel
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"io"
 	"testing"
 
 	curve "github.com/fumiama/go-x25519"
@@ -82,6 +83,17 @@ func TestTunnel(t *testing.T) {
 	tunnpeer.Read(buf)
 	if string(sendb) != string(buf) {
 		t.Fatal("error: recv 4096 bytes data")
+	}
+
+	sendb = make([]byte, 65535)
+	rand.Read(sendb)
+	n, _ := tunnme.Write(sendb)
+	t.Log("write", n, "bytes")
+	buf = make([]byte, 65535)
+	n, _ = io.ReadFull(&tunnpeer, buf)
+	t.Log("read", n, "bytes")
+	if string(sendb) != string(buf) {
+		t.Fatal("error: recv 65535 bytes data")
 	}
 
 	tunnme.Stop()

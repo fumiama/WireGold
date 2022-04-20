@@ -1,7 +1,7 @@
 package tunnel
 
 import (
-	"errors"
+	"io"
 	"net"
 
 	"github.com/sirupsen/logrus"
@@ -72,7 +72,7 @@ func (s *Tunnel) Read(p []byte) (int, error) {
 			return copy(p, d[:len(p)]), nil
 		}
 	}
-	return 0, errors.New("reading reaches nil")
+	return 0, io.EOF
 }
 
 func (s *Tunnel) Stop() {

@@ -24,6 +24,7 @@ func main() {
 	mtu := flag.Int("m", 1500-68, "set the mtu of wg")
 	debug := flag.Bool("d", false, "print debug logs")
 	warn := flag.Bool("w", false, "only show logs above warn level")
+	logfile := flag.String("l", "-", "write log to file")
 	flag.Parse()
 	if *debug {
 		logrus.SetLevel(logrus.DebugLevel)
@@ -49,6 +50,14 @@ func main() {
 		fmt.Println("PublicKey:", helper.BytesToString(pubk[:57]))
 		fmt.Println("PrivateKey:", helper.BytesToString(prvk[:57]))
 		os.Exit(0)
+	}
+	if *logfile != "-" {
+		f, err := os.Create(*logfile)
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+		logrus.SetOutput(f)
 	}
 	if helper.IsNotExist(*file) {
 		f := new(bytes.Buffer)

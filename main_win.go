@@ -26,7 +26,7 @@ const (
 	colorReset     = "\x1b[0m"
 )
 
-// LogFormat specialize for zbp
+// LogFormat ...
 type LogFormat struct{}
 
 // Format implements logrus.Formatter

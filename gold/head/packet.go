@@ -110,13 +110,13 @@ func (p *Packet) Marshal(src net.IP, teatype uint8, datasz uint32, offset uint16
 	if src != nil {
 		p.TeaTypeDataSZ = uint32(teatype)<<24 | datasz
 		p.Src = src
+		p.Flags = offset & 0x1fff
 		if dontfrag {
 			offset |= 0x4000
 		}
 		if hasmore {
 			offset |= 0x2000
 		}
-		p.Flags = offset
 	}
 
 	return helper.OpenWriterF(func(w *helper.Writer) {
@@ -140,8 +140,7 @@ func (p *Packet) FillHash() {
 		logrus.Error("[packet] err when fill hash:", err)
 		return
 	}
-	_ = h.Sum(p.Hash[:0])
-	logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(p.Hash[:]))
+	logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(h.Sum(p.Hash[:0])))
 }
 
 // IsVaildHash 验证 packet 合法性
@@ -153,8 +152,7 @@ func (p *Packet) IsVaildHash() bool {
 		return false
 	}
 	var sum [32]byte
-	_ = h.Sum(sum[:0])
-	logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(sum[:]))
+	logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(h.Sum(sum[:0])))
 	logrus.Debugln("[packet] sum in packet:", hex.EncodeToString(p.Hash[:]))
 	return sum == p.Hash
 }

@@ -33,7 +33,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	for ; int(totl)-i > int(l.mtu); i += int(l.mtu) {
 		logrus.Debugln("[link] split frag", i, ":", i+int(l.mtu), ", remain:", int(totl)-i-int(l.mtu))
 		packet.Data = data[:int(l.mtu)]
-		cnt, err := l.write(packet, teatype, totl, uint16(uint(i)>>3), istransfer, true)
+		cnt, err := l.write(packet, teatype, totl, uint16(i>>3), istransfer, true)
 		n += cnt
 		if err != nil {
 			return n, err
@@ -43,7 +43,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	}
 	packet.Put()
 	p.Data = data
-	cnt, err := l.write(p, teatype, totl, uint16(uint(i)>>3), istransfer, false)
+	cnt, err := l.write(p, teatype, totl, uint16(i>>3), istransfer, false)
 	p.Put()
 	n += cnt
 	return n, err

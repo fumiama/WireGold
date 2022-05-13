@@ -2,8 +2,8 @@ package wg
 
 import (
 	"errors"
-	"fmt"
 	"net"
+	"strconv"
 
 	base14 "github.com/fumiama/go-base16384"
 	curve "github.com/fumiama/go-x25519"
@@ -48,13 +48,13 @@ func NewWireGold(c *config.Config) (wg WG, err error) {
 	return
 }
 
-func (wg *WG) Start(srcport, destport, mtu uint16) {
-	wg.init(srcport, destport, mtu)
+func (wg *WG) Start(srcport, destport uint16) {
+	wg.init(srcport, destport)
 	go wg.me.ListenFromNIC()
 }
 
-func (wg *WG) Run(srcport, destport, mtu uint16) {
-	wg.init(srcport, destport, mtu)
+func (wg *WG) Run(srcport, destport uint16) {
+	wg.init(srcport, destport)
 	_, err := wg.me.ListenFromNIC()
 	if err != nil {
 		logrus.Panicln(err)
@@ -65,7 +65,7 @@ func (wg *WG) Stop() {
 	_ = wg.me.Close()
 }
 
-func (wg *WG) init(srcport, dstport, mtu uint16) {
+func (wg *WG) init(srcport, dstport uint16) {
 	cidrsmap := make(map[string]bool, 32)
 	_, mysubnet, err := net.ParseCIDR(wg.c.SubNet)
 	if err != nil {
@@ -93,10 +93,10 @@ func (wg *WG) init(srcport, dstport, mtu uint16) {
 		MyIPwithMask: wg.c.IP + "/32",
 		MyEndpoint:   wg.c.EndPoint,
 		PrivateKey:   &wg.key,
-		NIC:          lower.NewNIC(wg.c.IP, wg.c.SubNet, fmt.Sprintf("%d", mtu), cidrs...),
+		NIC:          lower.NewNIC(wg.c.IP, wg.c.SubNet, strconv.FormatInt(wg.c.MTU, 64), cidrs...),
 		SrcPort:      srcport,
 		DstPort:      dstport,
-		MTU:          mtu,
+		MTU:          uint16(wg.c.MTU),
 	})
 
 	for _, peer := range wg.c.Peers {

@@ -14,6 +14,7 @@ type Config struct {
 	SubNet     string `yaml:"SubNet"`
 	PrivateKey string `yaml:"PrivateKey"`
 	EndPoint   string `yaml:"EndPoint"`
+	MTU        int64  `yaml:"MTU"`
 	Peers      []Peer `yaml:"Peers"`
 }
 

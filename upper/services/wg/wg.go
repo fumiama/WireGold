@@ -93,7 +93,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 		MyIPwithMask: wg.c.IP + "/32",
 		MyEndpoint:   wg.c.EndPoint,
 		PrivateKey:   &wg.key,
-		NIC:          lower.NewNIC(wg.c.IP, wg.c.SubNet, strconv.FormatInt(wg.c.MTU, 64), cidrs...),
+		NIC:          lower.NewNIC(wg.c.IP, wg.c.SubNet, strconv.FormatInt(wg.c.MTU, 10), cidrs...),
 		SrcPort:      srcport,
 		DstPort:      dstport,
 		MTU:          uint16(wg.c.MTU),

@@ -110,13 +110,14 @@ func (p *Packet) Marshal(src net.IP, teatype uint8, datasz uint32, offset uint16
 	if src != nil {
 		p.TeaTypeDataSZ = uint32(teatype)<<24 | datasz
 		p.Src = src
-		p.Flags = offset & 0x1fff
+		offset &= 0x1fff
 		if dontfrag {
 			offset |= 0x4000
 		}
 		if hasmore {
 			offset |= 0x2000
 		}
+		p.Flags = offset
 	}
 
 	return helper.OpenWriterF(func(w *helper.Writer) {

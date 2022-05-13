@@ -88,6 +88,7 @@ func NewMe(cfg *MyConfig) (m Me) {
 		EndPoint:   "127.0.0.1:56789",
 		AllowedIPs: []string{cfg.MyIPwithMask},
 		NoPipe:     cfg.NIC != nil,
+		MTU:        cfg.MTU,
 	})
 	m.srcport = cfg.SrcPort
 	m.dstport = cfg.DstPort

@@ -32,6 +32,8 @@ type Link struct {
 	status int
 	// 是否允许转发
 	allowtrans bool
+	// udp 数据包的最大大小
+	mtu uint16
 }
 
 const (

@@ -41,6 +41,7 @@ func TestTunnel(t *testing.T) {
 		EndPoint:   "127.0.0.1:1237",
 		AllowedIPs: []string{"192.168.1.3/32"},
 		PubicKey:   peerpk.Public(),
+		MTU:        4096,
 	})
 	p := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.3/32",
@@ -55,6 +56,7 @@ func TestTunnel(t *testing.T) {
 		EndPoint:   "127.0.0.1:1236",
 		AllowedIPs: []string{"192.168.1.2/32"},
 		PubicKey:   selfpk.Public(),
+		MTU:        4096,
 	})
 	tunnme, err := Create(&m, "192.168.1.3")
 	if err != nil {

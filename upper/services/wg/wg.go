@@ -117,6 +117,7 @@ func (wg *WG) init(srcport, dstport, mtu uint16) {
 			PubicKey:     &peerkey,
 			KeepAliveDur: peer.KeepAliveSeconds,
 			QueryTick:    peer.QuerySeconds,
+			MTU:          uint16(peer.MTU),
 			AllowTrans:   peer.AllowTrans,
 			NoPipe:       true,
 		})

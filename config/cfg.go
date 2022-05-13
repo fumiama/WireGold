@@ -28,6 +28,7 @@ type Peer struct {
 	QueryList        []string `yaml:"QueryList"`
 	QuerySeconds     int64    `yaml:"QuerySeconds"`
 	AllowTrans       bool     `yaml:"AllowTrans"`
+	MTU              int64    `yaml:"MTU"`
 }
 
 func Parse(path string) (c Config) {

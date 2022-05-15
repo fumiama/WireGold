@@ -45,6 +45,8 @@ type Me struct {
 	writer *helper.Writer
 	// 本机未接收完全分片池
 	recving *ttl.Cache[[32]byte, *head.Packet]
+	// 抗重放攻击记录池
+	recved *ttl.Cache[uint64, uint8]
 	// 本机上层配置
 	srcport, dstport, mtu uint16
 }
@@ -96,7 +98,8 @@ func NewMe(cfg *MyConfig) (m Me) {
 	if m.writer == nil {
 		m.writer = helper.SelectWriter()
 	}
-	m.recving = ttl.NewCache[[32]byte, *head.Packet](time.Second * 128)
+	m.recving = ttl.NewCache[[32]byte, *head.Packet](time.Second * 30)
+	m.recved = ttl.NewCache[uint64, uint8](time.Second * 30)
 	return
 }
 

@@ -40,7 +40,7 @@ func (m *Me) listenthread(conn *net.UDPConn, mu *sync.Mutex) {
 		if packet == nil {
 			continue
 		}
-		sz := packet.TeaTypeDataSZ & 0x00ffffff
+		sz := packet.TeaTypeDataSZ & 0x0000ffff
 		r := int(sz) - len(packet.Data)
 		if r > 0 {
 			logrus.Warnln("[link] packet from endpoint", addr, "is smaller than it declared: drop it")
@@ -61,7 +61,7 @@ func (m *Me) listenthread(conn *net.UDPConn, mu *sync.Mutex) {
 		}
 		switch {
 		case p.IsToMe(packet.Dst):
-			packet.Data = p.Decode(uint8(packet.TeaTypeDataSZ>>24), packet.Data)
+			packet.Data = p.Decode(uint8(packet.TeaTypeDataSZ>>28), packet.Data)
 			if !packet.IsVaildHash() {
 				logrus.Debugln("[link] drop invalid packet")
 				packet.Put()

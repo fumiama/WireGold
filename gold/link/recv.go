@@ -22,6 +22,10 @@ func (m *Me) wait(data []byte) *head.Packet {
 	if flags&0x8000 == 0x8000 { // not a valid packet
 		return nil
 	}
+	crc := binary.LittleEndian.Uint64(data[52:60])
+	if m.recved.Get(crc) != 0 { // 是重放攻击
+		return nil
+	}
 	logrus.Debugln("[recv]", len(data), "bytes data with flag", hex.EncodeToString(data[10:12]))
 	if flags == 0 || flags == 0x4000 {
 		h := head.SelectPacket()
@@ -30,6 +34,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 			logrus.Errorln("[recv] unmarshal err:", err)
 			return nil
 		}
+		m.recved.Set(crc, 1)
 		return h
 	}
 
@@ -42,6 +47,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 		if err == nil {
 			if ok {
 				m.recving.Delete(hsh)
+				m.recved.Set(crc, 1)
 				logrus.Debugln("[recv] all parts of", hex.EncodeToString(hashd), "is reached")
 				return h
 			}

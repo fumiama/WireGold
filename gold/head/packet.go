@@ -6,6 +6,7 @@ import (
 	"errors"
 	"hash/crc64"
 	"net"
+	"sync/atomic"
 
 	"github.com/fumiama/WireGold/helper"
 	blake2b "github.com/fumiama/blake2b-simd"
@@ -15,7 +16,8 @@ import (
 // Packet 是发送和接收的最小单位
 type Packet struct {
 	// TeaTypeDataSZ len(Data)
-	// 高 8 位指定加密所用 tea key
+	// 高 4 位指定加密所用 tea key
+	// 高 4-16 位是随机值
 	// 不得超过 65507-head 字节
 	TeaTypeDataSZ uint32
 	// Proto 详见 head
@@ -36,10 +38,12 @@ type Packet struct {
 	// 生成时 Hash 全 0
 	// https://github.com/fumiama/blake2b-simd
 	Hash [32]byte
+	// CRC64 包头字段的 checksum 值，可以认为在一定时间内唯一
+	CRC64 uint64
 	// Data 承载的数据
 	Data []byte
 	// 记录还有多少字节未到达
-	rembytes uint32
+	rembytes int
 }
 
 // NewPacket 生成一个新包
@@ -66,16 +70,16 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		return
 	}
 
-	sz := p.TeaTypeDataSZ & 0x00ffffff
+	sz := p.TeaTypeDataSZ & 0x0000ffff
 	if sz == 0 && len(p.Data) == 0 {
 		p.TeaTypeDataSZ = binary.LittleEndian.Uint32(data[:4])
-		sz = p.TeaTypeDataSZ & 0x00ffffff
+		sz = p.TeaTypeDataSZ & 0x0000ffff
 		if int(sz)+52 == len(data) {
 			p.Data = data[52:]
 			p.rembytes = 0
 		} else {
 			p.Data = make([]byte, sz)
-			p.rembytes = sz
+			p.rembytes = int(sz)
 		}
 		pt := binary.LittleEndian.Uint16(data[4:6])
 		p.Proto = uint8(pt)
@@ -93,16 +97,19 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		p.Dst = make(net.IP, 4)
 		copy(p.Dst, data[16:20])
 		copy(p.Hash[:], data[20:52])
+		p.CRC64 = binary.LittleEndian.Uint64(data[52:60])
 	}
 
 	if p.rembytes > 0 {
-		p.rembytes -= uint32(copy(p.Data[flags<<3:], data[60:]))
+		p.rembytes -= copy(p.Data[flags<<3:], data[60:])
 	}
 
 	complete = p.rembytes == 0
 
 	return
 }
+
+var counter uint32
 
 // Marshal 将自身数据编码为 []byte
 // offset 必须为 8 的倍数，表示偏移的 8 位
@@ -113,7 +120,7 @@ func (p *Packet) Marshal(src net.IP, teatype uint8, datasz uint32, offset uint16
 	}
 
 	if src != nil {
-		p.TeaTypeDataSZ = uint32(teatype)<<24 | datasz
+		p.TeaTypeDataSZ = uint32(teatype)<<28 | (atomic.AddUint32(&counter, 1)<<16)&0x0fff0000 | datasz
 		p.Src = src
 		offset &= 0x1fff
 		if dontfrag {

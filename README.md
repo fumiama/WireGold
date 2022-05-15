@@ -8,6 +8,8 @@
 
 ## Usage
 > If you are running in windows, remember to select the `wintun.dll` of your arch in `lower/wintun` and place it alongside the compiled exe
+
+> It is highly recommanded to use [UDPspeeder](https://github.com/wangyu-/UDPspeeder) together if you are using a High-latency Lossy Link
 ```bash
 wg [-c config.yaml] [-d|w] [-g] [-h] [-p] [-l log.txt]
 ```

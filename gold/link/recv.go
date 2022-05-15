@@ -46,6 +46,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 				return h
 			}
 		} else {
+			h.Put()
 			logrus.Errorln("[recv] unmarshal err:", err)
 		}
 		return nil
@@ -54,6 +55,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 	h = head.SelectPacket()
 	_, err := h.Unmarshal(data)
 	if err != nil {
+		h.Put()
 		logrus.Errorln("[recv] unmarshal err:", err)
 		return nil
 	}

@@ -15,7 +15,13 @@ func (l *Link) Read() *head.Packet {
 }
 
 func (m *Me) wait(data []byte) *head.Packet {
+	if len(data) < 60 { // not a valid packet
+		return nil
+	}
 	flags := binary.LittleEndian.Uint16(data[10:12])
+	if flags&0x8000 == 0x8000 { // not a valid packet
+		return nil
+	}
 	logrus.Debugln("[recv]", len(data), "bytes data with flag", hex.EncodeToString(data[10:12]))
 	if flags == 0 || flags == 0x4000 {
 		h := head.SelectPacket()

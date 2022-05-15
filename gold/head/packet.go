@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"hash/crc64"
 	"net"
 
 	"github.com/fumiama/WireGold/helper"
@@ -56,8 +57,12 @@ func NewPacket(proto uint8, srcPort uint16, dst net.IP, dstPort uint16, data []b
 
 // Unmarshal 将 data 的数据解码到自身
 func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
-	if len(data) < 12 {
-		err = errors.New("data len < 12")
+	if len(data) < 60 {
+		err = errors.New("data len < 60")
+		return
+	}
+	if crc64.Checksum(data[:52], crc64.MakeTable(crc64.ISO)) != binary.LittleEndian.Uint64(data[52:60]) {
+		err = errors.New("bad crc checksum")
 		return
 	}
 
@@ -91,7 +96,7 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 	}
 
 	if p.rembytes > 0 {
-		p.rembytes -= uint32(copy(p.Data[flags<<3:], data[52:]))
+		p.rembytes -= uint32(copy(p.Data[flags<<3:], data[60:]))
 	}
 
 	complete = p.rembytes == 0
@@ -129,6 +134,7 @@ func (p *Packet) Marshal(src net.IP, teatype uint8, datasz uint32, offset uint16
 		w.Write(p.Src.To4())
 		w.Write(p.Dst.To4())
 		w.Write(p.Hash[:])
+		w.WriteUInt64(crc64.Checksum(w.Bytes(), crc64.MakeTable(crc64.ISO)))
 		w.Write(p.Data)
 	})
 }

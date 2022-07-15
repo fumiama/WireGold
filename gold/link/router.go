@@ -5,8 +5,8 @@ import (
 	"net"
 	"sync"
 
+	"github.com/FloatTech/ttl"
 	"github.com/sirupsen/logrus"
-	"github.com/wdvxdr1123/ZeroBot/extension/ttl"
 )
 
 type Router struct {

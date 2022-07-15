@@ -8,12 +8,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FloatTech/ttl"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/helper"
 	"github.com/fumiama/WireGold/lower"
 	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
-	"github.com/wdvxdr1123/ZeroBot/extension/ttl"
 )
 
 // Me 是本机的抽象

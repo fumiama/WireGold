@@ -8,8 +8,6 @@ import (
 	"encoding/hex"
 	"io"
 	"unsafe"
-
-	"github.com/FloatTech/zbputils/math"
 )
 
 // Writer 写入
@@ -133,7 +131,7 @@ func (w *Writer) Skip(n int) (int, error) {
 		}
 		return 0, io.EOF
 	}
-	n = math.Min(n, len(b.buf[b.off:]))
+	n = min(n, len(b.buf[b.off:]))
 	b.off += n
 	if n > 0 {
 		b.lastRead = opRead
@@ -169,3 +167,11 @@ const (
 	opReadRune3 readOp = 3  // Read rune of size 3.
 	opReadRune4 readOp = 4  // Read rune of size 4.
 )
+
+// min 返回两数最小值，该函数将被内联
+func min[T int | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](a, b T) T {
+	if a > b {
+		return b
+	}
+	return a
+}

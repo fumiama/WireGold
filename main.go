@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"os"
@@ -19,6 +20,7 @@ import (
 func main() {
 	help := flag.Bool("h", false, "display this help")
 	gen := flag.Bool("g", false, "generate key pair")
+	pshgen := flag.Bool("pg", false, "generate preshared key")
 	showp := flag.Bool("p", false, "show my publickey")
 	file := flag.String("c", "config.yaml", "specify conf file")
 	debug := flag.Bool("d", false, "print debug logs")
@@ -48,6 +50,19 @@ func main() {
 		}
 		fmt.Println("PublicKey:", helper.BytesToString(pubk[:57]))
 		fmt.Println("PrivateKey:", helper.BytesToString(prvk[:57]))
+		os.Exit(0)
+	}
+	if *pshgen {
+		var buf [32]byte
+		_, err := rand.Read(buf[:])
+		if err != nil {
+			panic(err)
+		}
+		pshk, err := base14.UTF16BE2UTF8(base14.Encode(buf[:]))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("PresharedKey:", helper.BytesToString(pshk[:57]))
 		os.Exit(0)
 	}
 	if *logfile != "-" {

@@ -1,6 +1,7 @@
 package link
 
 import (
+	"crypto/cipher"
 	"errors"
 	"net"
 
@@ -14,6 +15,8 @@ import (
 type Link struct {
 	// peer 的公钥
 	pubk *[32]byte
+	// 发包计数, 分片算一个
+	sendcount uintptr
 	// 收到的包的队列
 	// 没有下层 nic 时
 	// 包会分发到此
@@ -26,6 +29,8 @@ type Link struct {
 	allowedips []*net.IPNet
 	// 连接所用对称加密密钥
 	key []tea.TEA
+	// 连接所用预共享密钥
+	aead cipher.AEAD
 	// 本机信息
 	me *Me
 	// 连接的状态，详见下方 const

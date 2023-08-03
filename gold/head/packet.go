@@ -6,7 +6,6 @@ import (
 	"errors"
 	"hash/crc64"
 	"net"
-	"sync/atomic"
 
 	"github.com/fumiama/WireGold/helper"
 	blake2b "github.com/fumiama/blake2b-simd"
@@ -17,7 +16,7 @@ import (
 type Packet struct {
 	// TeaTypeDataSZ len(Data)
 	// 高 4 位指定加密所用 tea key
-	// 高 4-16 位是随机值
+	// 高 4-16 位是递增值, 用于预共享密钥验证 additionalData
 	// 不得超过 65507-head 字节
 	TeaTypeDataSZ uint32
 	// Proto 详见 head
@@ -109,18 +108,16 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 	return
 }
 
-var counter uint32
-
 // Marshal 将自身数据编码为 []byte
 // offset 必须为 8 的倍数，表示偏移的 8 位
-func (p *Packet) Marshal(src net.IP, teatype uint8, datasz uint32, offset uint16, dontfrag, hasmore bool) ([]byte, func()) {
+func (p *Packet) Marshal(src net.IP, teatype uint8, additional uint16, datasz uint32, offset uint16, dontfrag, hasmore bool) ([]byte, func()) {
 	p.TTL--
 	if p.TTL == 0 {
 		return nil, nil
 	}
 
 	if src != nil {
-		p.TeaTypeDataSZ = uint32(teatype)<<28 | (atomic.AddUint32(&counter, 1)<<16)&0x0fff0000 | datasz
+		p.TeaTypeDataSZ = uint32(teatype)<<28 | (uint32(additional&0x0fff) << 16) | datasz&0xffff
 		p.Src = src
 		offset &= 0x1fff
 		if dontfrag {
@@ -169,6 +166,11 @@ func (p *Packet) IsVaildHash() bool {
 	logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(h.Sum(sum[:0])))
 	logrus.Debugln("[packet] sum in packet:", hex.EncodeToString(p.Hash[:]))
 	return sum == p.Hash
+}
+
+// AdditionalData 获得 packet 的 additionalData
+func (p *Packet) AdditionalData() uint16 {
+	return uint16((p.TeaTypeDataSZ >> 16) & 0x0fff)
 }
 
 // Put 将自己放回池中

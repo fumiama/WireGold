@@ -8,6 +8,7 @@ import (
 	curve "github.com/fumiama/go-x25519"
 	tea "github.com/fumiama/gofastTEA"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/chacha20poly1305"
 )
 
 type PeerConfig struct {
@@ -15,6 +16,7 @@ type PeerConfig struct {
 	EndPoint                string
 	AllowedIPs, Querys      []string
 	PubicKey                *[32]byte
+	PresharedKey            *[32]byte
 	KeepAliveDur, QueryTick int64
 	MTU                     uint16
 	AllowTrans, NoPipe      bool
@@ -50,6 +52,13 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 			for i := range l.key {
 				l.key[i] = tea.NewTeaCipherLittleEndian(k[i : 16+i])
 			}
+		}
+	}
+	if cfg.PresharedKey != nil {
+		var err error
+		l.aead, err = chacha20poly1305.NewX(cfg.PresharedKey[:])
+		if err != nil {
+			panic(err)
 		}
 	}
 	if cfg.EndPoint != "" {

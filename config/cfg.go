@@ -23,6 +23,7 @@ type Peer struct {
 	IP               string   `yaml:"IP"`
 	SubNet           string   `yaml:"SubNet"`
 	PublicKey        string   `yaml:"PublicKey"`
+	PresharedKey     string   `yaml:"PresharedKey"`
 	EndPoint         string   `yaml:"EndPoint"`
 	AllowedIPs       []string `yaml:"AllowedIPs"`
 	KeepAliveSeconds int64    `yaml:"KeepAliveSeconds"`

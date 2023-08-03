@@ -16,14 +16,14 @@ import (
 // 以秒为单位，小于等于 0 不发送
 func (l *Link) keepAlive(dur int64) {
 	if dur > 0 {
-		logrus.Infoln("[link.nat] start to keep alive")
+		logrus.Infoln("[nat] start to keep alive")
 		t := time.NewTicker(time.Second * time.Duration(dur))
 		for range t.C {
 			n, err := l.WriteAndPut(head.NewPacket(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, nil), false)
 			if err == nil {
-				logrus.Infoln("[link] send", n, "bytes keep alive packet")
+				logrus.Infoln("[nat] send", n, "bytes keep alive packet")
 			} else {
-				logrus.Errorln("[link] send keep alive packet error:", err)
+				logrus.Errorln("[nat] send keep alive packet error:", err)
 			}
 		}
 	}
@@ -37,7 +37,7 @@ func (l *Link) onNotify(packet []byte) {
 	notify := make(head.Notify, 32)
 	err := json.Unmarshal(packet, &notify)
 	if err != nil {
-		logrus.Errorln("[notify] json unmarshal err:", err)
+		logrus.Errorln("[nat] notify json unmarshal err:", err)
 		return
 	}
 	// 2. endpoint注册
@@ -50,12 +50,12 @@ func (l *Link) onNotify(packet []byte) {
 			if ok {
 				if p.endpoint.String() != ep {
 					p.endpoint = addr
-					logrus.Infoln("[notify] set ep of peer", peer, "to", ep)
+					logrus.Infoln("[nat] notify set ep of peer", peer, "to", ep)
 				}
 				continue
 			}
 		}
-		logrus.Debugln("[notify] drop invalid peer:", peer, "ep:", ep)
+		logrus.Debugln("[nat] notify drop invalid peer:", peer, "ep:", ep)
 	}
 }
 
@@ -69,7 +69,7 @@ func (l *Link) onQuery(packet []byte) {
 	var peers head.Query
 	err := json.Unmarshal(packet, &peers)
 	if err != nil {
-		logrus.Errorln("[qurey] json unmarshal err:", err)
+		logrus.Errorln("[nat] query json unmarshal err:", err)
 		return
 	}
 
@@ -84,7 +84,7 @@ func (l *Link) onQuery(packet []byte) {
 		}
 	}
 	if len(notify) > 0 {
-		logrus.Infoln("[query] wrap", len(notify), "notify")
+		logrus.Infoln("[nat] query wrap", len(notify), "notify")
 		w := helper.SelectWriter()
 		json.NewEncoder(w).Encode(&notify)
 		l.WriteAndPut(head.NewPacket(head.ProtoNotify, l.me.srcport, l.peerip, l.me.dstport, w.Bytes()), false)
@@ -103,10 +103,10 @@ func (l *Link) sendquery(tick time.Duration, peers ...string) {
 	}
 	t := time.NewTicker(tick)
 	for range t.C {
-		logrus.Infoln("[query] send query to", l.peerip)
+		logrus.Infoln("[nat] query send query to", l.peerip)
 		_, err = l.WriteAndPut(head.NewPacket(head.ProtoQuery, l.me.srcport, l.peerip, l.me.dstport, data), false)
 		if err != nil {
-			logrus.Errorln("[query] write err:", err)
+			logrus.Errorln("[nat] query write err:", err)
 		}
 	}
 }

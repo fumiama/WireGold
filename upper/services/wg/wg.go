@@ -107,7 +107,19 @@ func (wg *WG) init(srcport, dstport uint16) {
 		}
 		n := copy(peerkey[:], base14.Decode(k))
 		if n != 32 {
-			panic("peer public key length is not 32")
+			panic("peer public key length < 32")
+		}
+		var pshk *[32]byte
+		if peer.PresharedKey != "" {
+			k, err := base14.UTF82UTF16BE(helper.StringToBytes(peer.PresharedKey + suffix32))
+			if err != nil {
+				panic(err)
+			}
+			pshk = &[32]byte{}
+			n := copy(pshk[:], base14.Decode(k))
+			if n != 32 {
+				panic("peer preshared key length < 32")
+			}
 		}
 		wg.me.AddPeer(&link.PeerConfig{
 			PeerIP:       peer.IP,
@@ -115,6 +127,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 			AllowedIPs:   peer.AllowedIPs,
 			Querys:       peer.QueryList,
 			PubicKey:     &peerkey,
+			PresharedKey: pshk,
 			KeepAliveDur: peer.KeepAliveSeconds,
 			QueryTick:    peer.QuerySeconds,
 			MTU:          uint16(peer.MTU),

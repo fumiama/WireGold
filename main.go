@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	base14 "github.com/fumiama/go-base16384"
 	curve "github.com/fumiama/go-x25519"
@@ -82,7 +83,7 @@ func main() {
 			fmt.Println("nil ip")
 			return
 		}
-		f.WriteString("IP: " + r + "\n")
+		f.WriteString("IP: " + strings.TrimSpace(r) + "\n")
 		r = ""
 
 		fmt.Print("SubNet: ")
@@ -91,7 +92,7 @@ func main() {
 			fmt.Println("nil subnet")
 			return
 		}
-		f.WriteString("SubNet: " + r + "\n")
+		f.WriteString("SubNet: " + strings.TrimSpace(r) + "\n")
 		r = ""
 
 		fmt.Print("PrivateKey: ")
@@ -100,7 +101,7 @@ func main() {
 			fmt.Println("nil private key")
 			return
 		}
-		f.WriteString("PrivateKey: " + r + "\n")
+		f.WriteString("PrivateKey: " + strings.TrimSpace(r) + "\n")
 		r = ""
 
 		fmt.Print("EndPoint: ")
@@ -109,7 +110,16 @@ func main() {
 			fmt.Println("nil endpoint")
 			return
 		}
-		f.WriteString("EndPoint: " + r + "\n")
+		f.WriteString("EndPoint: " + strings.TrimSpace(r) + "\n")
+		r = ""
+
+		fmt.Print("MTU: ")
+		fmt.Scanln(&r)
+		if r == "" {
+			fmt.Println("nil endpoint")
+			return
+		}
+		f.WriteString("MTU: " + strings.TrimSpace(r) + "\n")
 		r = ""
 
 		cfgf, err := os.Create(*file)
@@ -131,6 +141,9 @@ func main() {
 	}
 	if c.EndPoint == "" {
 		displayHelp("nil endpoint")
+	}
+	if c.MTU == 0 {
+		displayHelp("nil mtu")
 	}
 	w, err := wg.NewWireGold(&c)
 	if err != nil {

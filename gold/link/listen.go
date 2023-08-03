@@ -62,11 +62,6 @@ func (m *Me) listenthread(conn *net.UDPConn, mu *sync.Mutex) {
 		switch {
 		case p.IsToMe(packet.Dst):
 			packet.Data = p.Decode(uint8(packet.TeaTypeDataSZ>>28), packet.Data)
-			if !packet.IsVaildHash() {
-				logrus.Debugln("[listen] drop invalid hash packet")
-				packet.Put()
-				continue
-			}
 			if p.aead != nil {
 				packet.Data = p.DecodePreshared(packet.AdditionalData(), packet.Data)
 				if packet.Data == nil {
@@ -74,6 +69,11 @@ func (m *Me) listenthread(conn *net.UDPConn, mu *sync.Mutex) {
 					packet.Put()
 					continue
 				}
+			}
+			if !packet.IsVaildHash() {
+				logrus.Debugln("[listen] drop invalid hash packet")
+				packet.Put()
+				continue
 			}
 			switch packet.Proto {
 			case head.ProtoHello:

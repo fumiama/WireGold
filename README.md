@@ -23,6 +23,8 @@ wg [-c config.yaml] [-d|w] [-g] [-h] [-p] [-l log.txt]
   -l string
         write log to file (default "-")
   -p    show my publickey
+  -pg
+        generate preshared key
   -w    only show logs above warn level
 ```
 

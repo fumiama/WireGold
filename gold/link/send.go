@@ -14,6 +14,7 @@ import (
 func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	teatype := uint8(rand.Intn(16))
 	sndcnt := atomic.AddUintptr(&l.sendcount, 1)
+	logrus.Debugln("[send] count:", sndcnt, "additional data:", uint16(sndcnt))
 	if len(p.Data) <= int(l.mtu) {
 		if !istransfer {
 			p.FillHash()

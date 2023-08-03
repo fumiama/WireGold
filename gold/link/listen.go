@@ -63,9 +63,10 @@ func (m *Me) listenthread(conn *net.UDPConn, mu *sync.Mutex) {
 		case p.IsToMe(packet.Dst):
 			packet.Data = p.Decode(uint8(packet.TeaTypeDataSZ>>28), packet.Data)
 			if p.aead != nil {
-				packet.Data = p.DecodePreshared(packet.AdditionalData(), packet.Data)
+				addt := packet.AdditionalData()
+				packet.Data = p.DecodePreshared(addt, packet.Data)
 				if packet.Data == nil {
-					logrus.Debugln("[listen] drop invalid additional data packet")
+					logrus.Debugln("[listen] drop invalid additional data packet:", addt)
 					packet.Put()
 					continue
 				}

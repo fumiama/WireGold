@@ -66,7 +66,7 @@ func (m *Me) listenthread(conn *net.UDPConn, mu *sync.Mutex) {
 				addt := packet.AdditionalData()
 				packet.Data = p.DecodePreshared(addt, packet.Data)
 				if packet.Data == nil {
-					logrus.Debugln("[listen] drop invalid additional data packet:", addt)
+					logrus.Debugln("[listen] drop invalid preshared packet, addt:", addt)
 					packet.Put()
 					continue
 				}

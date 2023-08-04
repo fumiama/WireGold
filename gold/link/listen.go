@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net"
+	"net/netip"
 	"runtime"
 	"strconv"
 	"sync"
@@ -18,10 +19,11 @@ import (
 
 // 监听本机 endpoint
 func (m *Me) listen() (conn *net.UDPConn, err error) {
-	conn, err = net.ListenUDP("udp", m.myend)
+	conn, err = net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.MustParseAddrPort(m.myend.String())))
 	if err != nil {
 		return
 	}
+	m.myend = conn.LocalAddr()
 	logrus.Infoln("[listen] at", m.myend)
 	var mu sync.Mutex
 	for i := 0; i < runtime.NumCPU()*4; i++ {

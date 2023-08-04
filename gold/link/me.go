@@ -29,7 +29,7 @@ type Me struct {
 	// 本机子网
 	subnet net.IPNet
 	// 本机 endpoint
-	myend *net.UDPAddr
+	myend net.Addr
 	// 本机环回 link
 	loop *Link
 	// 本机活跃的所有连接

@@ -2,6 +2,7 @@ package link
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"io"
 	"net"
 	"strconv"
@@ -99,6 +100,9 @@ func NewMe(cfg *MyConfig) (m Me) {
 	m.dstport = cfg.DstPort
 	m.mtu = cfg.MTU & 0xfff8
 	m.mask = cfg.Mask
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], m.mask)
+	logrus.Infoln("[me] xor mask", hex.EncodeToString(buf[:]))
 	if m.writer == nil {
 		m.writer = helper.SelectWriter()
 	}

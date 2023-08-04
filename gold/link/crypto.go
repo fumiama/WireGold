@@ -66,23 +66,58 @@ func (l *Link) DecodePreshared(additional uint16, b []byte) (db []byte) {
 	return
 }
 
-// xor 按 8 字节, 以初始 m.mask 循环异或 data
-func (m *Me) xor(data []byte) []byte {
+// xorenc 按 8 字节, 以初始 m.mask 循环异或编码 data
+func (m *Me) xorenc(data []byte) []byte {
 	batchsz := len(data) / 8
 	remain := len(data) % 8
 	sum := m.mask
-	for i := 0; i < batchsz; i++ {
+	if remain > 0 {
+		var buf [8]byte
+		p := batchsz * 8
+		copy(buf[:], data[p:])
+		sum ^= binary.LittleEndian.Uint64(buf[:])
+		binary.LittleEndian.PutUint64(buf[:], sum)
+		copy(data[p:], buf[:])
+	}
+	for i := batchsz - 1; i >= 0; i-- {
 		a := i * 8
 		b := (i + 1) * 8
 		sum ^= binary.LittleEndian.Uint64(data[a:b])
 		binary.LittleEndian.PutUint64(data[a:b], sum)
 	}
+	return data
+}
+
+// xordec 按 8 字节, 以初始 m.mask 循环异或解码 data
+func (m *Me) xordec(data []byte) []byte {
+	batchsz := len(data) / 8
+	remain := len(data) % 8
+	this := uint64(0)
+	next := uint64(0)
+	if len(data) >= 8 {
+		next = binary.LittleEndian.Uint64(data[:8])
+	}
+	for i := 0; i < batchsz-1; i++ {
+		a := i * 8
+		b := (i + 1) * 8
+		this = next
+		next = binary.LittleEndian.Uint64(data[a+8 : b+8])
+		binary.LittleEndian.PutUint64(data[a:b], this^next)
+	}
 	if remain > 0 {
 		var buf [8]byte
-		copy(buf[:], data[remain:])
-		sum ^= binary.LittleEndian.Uint64(buf[:])
-		binary.LittleEndian.PutUint64(buf[:], sum)
-		copy(data[remain:], buf[:])
+		a := (batchsz - 1) * 8
+		b := batchsz * 8
+		copy(buf[:], data[b:])
+		this = next
+		next = binary.LittleEndian.Uint64(buf[:]) | (m.mask & (uint64(0xffffffff_ffffffff) << (uint64(remain) * 8)))
+		if batchsz > 0 {
+			binary.LittleEndian.PutUint64(data[a:b], this^next)
+		}
+		binary.LittleEndian.PutUint64(buf[:], next^m.mask)
+		copy(data[b:], buf[:])
+	} else {
+		binary.LittleEndian.PutUint64(data[len(data)-8:], next^m.mask)
 	}
 	return data
 }

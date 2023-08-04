@@ -35,7 +35,7 @@ func (l *Link) Decode(teatype uint8, b []byte) (db []byte) {
 	return
 }
 
-// EncodePreshared 使用 chacha20poly1305 加密
+// EncodePreshared 使用 xchacha20poly1305 加密
 func (l *Link) EncodePreshared(additional uint16, b []byte) (eb []byte) {
 	nsz := l.aead.NonceSize()
 	// Select a random nonce, and leave capacity for the ciphertext.
@@ -51,7 +51,7 @@ func (l *Link) EncodePreshared(additional uint16, b []byte) (eb []byte) {
 	return
 }
 
-// DecodePreshared 使用 chacha20poly1305 解密
+// DecodePreshared 使用 xchacha20poly1305 解密
 func (l *Link) DecodePreshared(additional uint16, b []byte) (db []byte) {
 	nsz := l.aead.NonceSize()
 	if len(b) < nsz { // ciphertext too short

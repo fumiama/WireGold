@@ -60,18 +60,22 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 
 func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 	p.FillHash()
+	logrus.Debugln("[send] data len before encrypt:", len(p.Data))
 	if l.usezstd {
 		w := helper.SelectWriter()
 		defer helper.PutWriter(w)
 		enc, _ := zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedFastest))
-		defer enc.Close()
 		_, _ = io.Copy(enc, bytes.NewReader(p.Data))
+		enc.Close()
 		p.Data = w.Bytes()
+		logrus.Debugln("[send] data len after zstd:", len(p.Data))
 	}
 	if l.aead != nil {
 		p.Data = l.EncodePreshared(sndcnt, p.Data)
+		logrus.Debugln("[send] data len after xchacha20:", len(p.Data))
 	}
 	p.Data = l.Encode(teatype, p.Data)
+	logrus.Debugln("[send] data len after tea:", len(p.Data))
 }
 
 // write 向 peer 发一个包

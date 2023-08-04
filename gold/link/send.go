@@ -1,12 +1,16 @@
 package link
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"sync/atomic"
 
 	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/helper"
+	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,21 +25,13 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	logrus.Debugln("[send] mtu:", mtu, ", count:", sndcnt, ", additional data:", uint16(sndcnt))
 	if len(p.Data) <= int(mtu) {
 		if !istransfer {
-			p.FillHash()
-			if l.aead != nil {
-				p.Data = l.EncodePreshared(uint16(sndcnt), p.Data)
-			}
-			p.Data = l.Encode(teatype, p.Data)
+			l.encrypt(p, uint16(sndcnt), teatype)
 		}
 		defer p.Put()
 		return l.write(p, teatype, uint16(sndcnt), mtu, uint32(len(p.Data)), 0, istransfer, false)
 	}
 	if !istransfer {
-		p.FillHash()
-		if l.aead != nil {
-			p.Data = l.EncodePreshared(uint16(sndcnt), p.Data)
-		}
-		p.Data = l.Encode(teatype, p.Data)
+		l.encrypt(p, uint16(sndcnt), teatype)
 	}
 	data := p.Data
 	ttl := p.TTL
@@ -60,6 +56,22 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	p.Put()
 	n += cnt
 	return n, err
+}
+
+func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
+	p.FillHash()
+	if l.usezstd {
+		w := helper.SelectWriter()
+		defer helper.PutWriter(w)
+		enc, _ := zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedFastest))
+		defer enc.Close()
+		_, _ = io.Copy(enc, bytes.NewReader(p.Data))
+		p.Data = w.Bytes()
+	}
+	if l.aead != nil {
+		p.Data = l.EncodePreshared(sndcnt, p.Data)
+	}
+	p.Data = l.Encode(teatype, p.Data)
 }
 
 // write 向 peer 发一个包

@@ -21,6 +21,7 @@ type PeerConfig struct {
 	MTU                     uint16
 	MTURandomRange          uint16
 	AllowTrans, NoPipe      bool
+	UseZstd                 bool
 }
 
 // AddPeer 添加一个 peer
@@ -38,6 +39,7 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 		pubk:           cfg.PubicKey,
 		peerip:         net.ParseIP(cfg.PeerIP),
 		allowtrans:     cfg.AllowTrans,
+		usezstd:        cfg.UseZstd,
 		me:             m,
 		mtu:            uint16(cfg.MTU),
 		mturandomrange: uint16(cfg.MTURandomRange),

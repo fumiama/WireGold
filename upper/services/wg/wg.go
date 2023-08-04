@@ -140,6 +140,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 			MTURandomRange: uint16(peer.MTURandomRange),
 			AllowTrans:     peer.AllowTrans,
 			NoPipe:         true,
+			UseZstd:        peer.UseZstd,
 		})
 	}
 }

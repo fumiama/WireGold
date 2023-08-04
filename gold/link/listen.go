@@ -1,11 +1,14 @@
 package link
 
 import (
+	"bytes"
+	"io"
 	"net"
 	"runtime"
 	"strconv"
 	"sync"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/gold/head"
@@ -67,6 +70,16 @@ func (m *Me) listenthread(conn *net.UDPConn, mu *sync.Mutex) {
 				packet.Data = p.DecodePreshared(addt, packet.Data)
 				if packet.Data == nil {
 					logrus.Debugln("[listen] drop invalid preshared packet, addt:", addt)
+					packet.Put()
+					continue
+				}
+			}
+			if p.usezstd {
+				dec, _ := zstd.NewReader(bytes.NewReader(packet.Data))
+				packet.Data, err = io.ReadAll(dec)
+				dec.Close()
+				if err != nil {
+					logrus.Debugln("[listen] drop invalid zstd packet:", err)
 					packet.Put()
 					continue
 				}

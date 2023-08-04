@@ -9,6 +9,7 @@ require (
 	github.com/fumiama/go-x25519 v1.0.0
 	github.com/fumiama/gofastTEA v0.0.10
 	github.com/fumiama/water v0.0.0-20211231134027-da391938d6ac
+	github.com/klauspost/compress v1.16.7
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/crypto v0.11.1-0.20230731181441-edc325d13aa9
 	gopkg.in/yaml.v3 v3.0.1

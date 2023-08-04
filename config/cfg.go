@@ -30,6 +30,7 @@ type Peer struct {
 	QueryList        []string `yaml:"QueryList"`
 	QuerySeconds     int64    `yaml:"QuerySeconds"`
 	AllowTrans       bool     `yaml:"AllowTrans"`
+	UseZstd          bool     `yaml:"UseZstd"`
 	MTU              int64    `yaml:"MTU"`
 	MTURandomRange   int64    `yaml:"MTURandomRange"`
 }

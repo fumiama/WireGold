@@ -176,9 +176,14 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 	for len(ptr) > 20 && p.issame(ptr) {
 		totl := waterutil.IPv4TotalLength(ptr)
 		if int(totl) > len(ptr) {
+			logrus.Debugln("[me] wrap got invalid totl, break")
 			break
 		}
 		i += int(totl)
+		if i > int(m.mtu) {
+			logrus.Debugln("[me] wrap exceed mtu, break")
+			break
+		}
 		ptr = rem[i:]
 		logrus.Debugln("[me] wrap", totl, "bytes packet to send together")
 	}

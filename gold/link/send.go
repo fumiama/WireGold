@@ -14,11 +14,11 @@ import (
 func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	teatype := uint8(rand.Intn(16))
 	sndcnt := atomic.AddUintptr(&l.sendcount, 1)
-	logrus.Debugln("[send] count:", sndcnt, ", additional data:", uint16(sndcnt))
 	mtu := l.mtu
 	if l.mturandomrange > 0 {
 		mtu -= uint16(rand.Intn(int(l.mturandomrange))) & 0xfff8
 	}
+	logrus.Debugln("[send] mtu:", mtu, ", count:", sndcnt, ", additional data:", uint16(sndcnt))
 	if len(p.Data) <= int(mtu) {
 		if !istransfer {
 			p.FillHash()
@@ -44,7 +44,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	packet := head.SelectPacket()
 	*packet = *p
 	for ; int(totl)-i > int(mtu); i += int(mtu) {
-		logrus.Debugln("[send] split frag", i, ":", i+int(mtu), ", remain:", int(totl)-i-int(mtu))
+		logrus.Debugln("[send] split frag [", i, "~", i+int(mtu), "], remain:", int(totl)-i-int(mtu))
 		packet.Data = data[:int(mtu)]
 		cnt, err := l.write(packet, teatype, uint16(sndcnt), mtu, totl, uint16(i>>3), istransfer, true)
 		n += cnt

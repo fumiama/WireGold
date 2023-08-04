@@ -31,8 +31,10 @@ type Peer struct {
 	QuerySeconds     int64    `yaml:"QuerySeconds"`
 	AllowTrans       bool     `yaml:"AllowTrans"`
 	MTU              int64    `yaml:"MTU"`
+	MTURandomRange   int64    `yaml:"MTURandomRange"`
 }
 
+// Parse 解析配置文件
 func Parse(path string) (c Config) {
 	file, err := os.ReadFile(path)
 	if err != nil {

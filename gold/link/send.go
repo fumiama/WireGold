@@ -15,7 +15,11 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	teatype := uint8(rand.Intn(16))
 	sndcnt := atomic.AddUintptr(&l.sendcount, 1)
 	logrus.Debugln("[send] count:", sndcnt, ", additional data:", uint16(sndcnt))
-	if len(p.Data) <= int(l.mtu) {
+	mtu := l.mtu
+	if l.mturandomrange > 0 {
+		mtu -= uint16(rand.Intn(int(l.mturandomrange)))
+	}
+	if len(p.Data) <= int(mtu) {
 		if !istransfer {
 			p.FillHash()
 			if l.aead != nil {
@@ -24,7 +28,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 			p.Data = l.Encode(teatype, p.Data)
 		}
 		defer p.Put()
-		return l.write(p, teatype, uint16(sndcnt), uint32(len(p.Data)), 0, istransfer, false)
+		return l.write(p, teatype, uint16(sndcnt), mtu, uint32(len(p.Data)), 0, istransfer, false)
 	}
 	if !istransfer {
 		p.FillHash()
@@ -39,31 +43,31 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	i := 0
 	packet := head.SelectPacket()
 	*packet = *p
-	for ; int(totl)-i > int(l.mtu); i += int(l.mtu) {
-		logrus.Debugln("[send] split frag", i, ":", i+int(l.mtu), ", remain:", int(totl)-i-int(l.mtu))
-		packet.Data = data[:int(l.mtu)]
-		cnt, err := l.write(packet, teatype, uint16(sndcnt), totl, uint16(i>>3), istransfer, true)
+	for ; int(totl)-i > int(mtu); i += int(mtu) {
+		logrus.Debugln("[send] split frag", i, ":", i+int(mtu), ", remain:", int(totl)-i-int(mtu))
+		packet.Data = data[:int(mtu)]
+		cnt, err := l.write(packet, teatype, uint16(sndcnt), mtu, totl, uint16(i>>3), istransfer, true)
 		n += cnt
 		if err != nil {
 			return n, err
 		}
-		data = data[int(l.mtu):]
+		data = data[int(mtu):]
 		packet.TTL = ttl
 	}
 	packet.Put()
 	p.Data = data
-	cnt, err := l.write(p, teatype, uint16(sndcnt), totl, uint16(i>>3), istransfer, false)
+	cnt, err := l.write(p, teatype, uint16(sndcnt), mtu, totl, uint16(i>>3), istransfer, false)
 	p.Put()
 	n += cnt
 	return n, err
 }
 
 // write 向 peer 发一个包
-func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz uint32, offset uint16, istransfer, hasmore bool) (n int, err error) {
+func (l *Link) write(p *head.Packet, teatype uint8, additional, mtu uint16, datasz uint32, offset uint16, istransfer, hasmore bool) (n int, err error) {
 	var d []byte
 	var cl func()
 	if istransfer {
-		if p.Flags&0x4000 == 0x4000 && len(p.Data) > int(l.mtu) {
+		if p.Flags&0x4000 == 0x4000 && len(p.Data) > int(mtu) {
 			return len(p.Data), errors.New("drop dont fragmnet big trans packet")
 		}
 		d, cl = p.Marshal(nil, teatype, additional, 0, 0, false, false)

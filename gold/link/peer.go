@@ -19,6 +19,7 @@ type PeerConfig struct {
 	PresharedKey            *[32]byte
 	KeepAliveDur, QueryTick int64
 	MTU                     uint16
+	MTURandomRange          uint16
 	AllowTrans, NoPipe      bool
 }
 
@@ -34,11 +35,12 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 		panic("invalid mtu for peer " + cfg.PeerIP)
 	}
 	l = &Link{
-		pubk:       cfg.PubicKey,
-		peerip:     net.ParseIP(cfg.PeerIP),
-		allowtrans: cfg.AllowTrans,
-		me:         m,
-		mtu:        uint16(cfg.MTU),
+		pubk:           cfg.PubicKey,
+		peerip:         net.ParseIP(cfg.PeerIP),
+		allowtrans:     cfg.AllowTrans,
+		me:             m,
+		mtu:            uint16(cfg.MTU),
+		mturandomrange: uint16(cfg.MTURandomRange),
 	}
 
 	if !cfg.NoPipe {

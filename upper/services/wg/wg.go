@@ -107,7 +107,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 		}
 		n := copy(peerkey[:], base14.Decode(k))
 		if n != 32 {
-			panic("peer public key length < 32")
+			panic("peer " + peer.IP + ": public key length < 32")
 		}
 		var pshk *[32]byte
 		if peer.PresharedKey != "" {
@@ -118,21 +118,28 @@ func (wg *WG) init(srcport, dstport uint16) {
 			pshk = &[32]byte{}
 			n := copy(pshk[:], base14.Decode(k))
 			if n != 32 {
-				panic("peer preshared key length < 32")
+				panic("peer " + peer.IP + ": preshared key length < 32")
 			}
 		}
+		if peer.MTU >= 65535 {
+			panic("peer " + peer.IP + ": MTU too large")
+		}
+		if peer.MTURandomRange >= peer.MTU/2 {
+			panic("peer " + peer.IP + ": MTURandomRange too large")
+		}
 		wg.me.AddPeer(&link.PeerConfig{
-			PeerIP:       peer.IP,
-			EndPoint:     peer.EndPoint,
-			AllowedIPs:   peer.AllowedIPs,
-			Querys:       peer.QueryList,
-			PubicKey:     &peerkey,
-			PresharedKey: pshk,
-			KeepAliveDur: peer.KeepAliveSeconds,
-			QueryTick:    peer.QuerySeconds,
-			MTU:          uint16(peer.MTU),
-			AllowTrans:   peer.AllowTrans,
-			NoPipe:       true,
+			PeerIP:         peer.IP,
+			EndPoint:       peer.EndPoint,
+			AllowedIPs:     peer.AllowedIPs,
+			Querys:         peer.QueryList,
+			PubicKey:       &peerkey,
+			PresharedKey:   pshk,
+			KeepAliveDur:   peer.KeepAliveSeconds,
+			QueryTick:      peer.QuerySeconds,
+			MTU:            uint16(peer.MTU),
+			MTURandomRange: uint16(peer.MTURandomRange),
+			AllowTrans:     peer.AllowTrans,
+			NoPipe:         true,
 		})
 	}
 }

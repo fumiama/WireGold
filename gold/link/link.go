@@ -34,11 +34,13 @@ type Link struct {
 	// 本机信息
 	me *Me
 	// 连接的状态，详见下方 const
-	status int
+	status int8
 	// 是否允许转发
 	allowtrans bool
 	// udp 数据包的最大大小
 	mtu uint16
+	// 随机放缩 mtu 范围 (只减不增)
+	mturandomrange uint16
 }
 
 const (

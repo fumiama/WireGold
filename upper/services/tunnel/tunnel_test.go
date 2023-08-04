@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"io"
 	"testing"
+	"time"
 
 	curve "github.com/fumiama/go-x25519"
 	"github.com/sirupsen/logrus"
@@ -30,7 +31,7 @@ func TestTunnel(t *testing.T) {
 
 	m := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.2/32",
-		MyEndpoint:   "127.0.0.1:1236",
+		MyEndpoint:   "127.0.0.1:21236",
 		PrivateKey:   selfpk.Private(),
 		SrcPort:      1,
 		DstPort:      1,
@@ -38,14 +39,14 @@ func TestTunnel(t *testing.T) {
 	})
 	m.AddPeer(&link.PeerConfig{
 		PeerIP:     "192.168.1.3",
-		EndPoint:   "127.0.0.1:1237",
+		EndPoint:   "127.0.0.1:21237",
 		AllowedIPs: []string{"192.168.1.3/32"},
 		PubicKey:   peerpk.Public(),
 		MTU:        4096,
 	})
 	p := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.3/32",
-		MyEndpoint:   "127.0.0.1:1237",
+		MyEndpoint:   "127.0.0.1:21237",
 		PrivateKey:   peerpk.Private(),
 		SrcPort:      1,
 		DstPort:      1,
@@ -53,7 +54,7 @@ func TestTunnel(t *testing.T) {
 	})
 	p.AddPeer(&link.PeerConfig{
 		PeerIP:     "192.168.1.2",
-		EndPoint:   "127.0.0.1:1236",
+		EndPoint:   "127.0.0.1:21236",
 		AllowedIPs: []string{"192.168.1.2/32"},
 		PubicKey:   selfpk.Public(),
 		MTU:        4096,
@@ -68,6 +69,8 @@ func TestTunnel(t *testing.T) {
 		t.Fatal(err)
 	}
 	tunnpeer.Start(1, 1, 4096)
+
+	time.Sleep(time.Second * 10) // wait link up
 
 	sendb := ([]byte)("1234")
 	tunnme.Write(sendb)

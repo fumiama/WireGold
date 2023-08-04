@@ -2,6 +2,7 @@ package link
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -98,8 +99,17 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional, mtu uint16, data
 		if peerep == nil {
 			return 0, errors.New("[send] nil endpoint of " + p.Dst.String())
 		}
+		bound := 256
+		endl := "..."
+		if len(d) < bound {
+			bound = len(d)
+			endl = "."
+		}
 		logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.myep.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
-		n, err = l.me.myep.WriteToUDP(l.me.xor(d), peerep)
+		logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
+		d = l.me.xor(d)
+		n, err = l.me.myep.WriteToUDP(d, peerep)
+		logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
 		cl()
 	}
 	return

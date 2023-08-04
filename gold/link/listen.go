@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
+	"unsafe"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
@@ -20,6 +22,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 	if err != nil {
 		return
 	}
+	logrus.Infoln("[listen] at", m.myend)
 	var mu sync.Mutex
 	for i := 0; i < runtime.NumCPU()*4; i++ {
 		go m.listenthread(conn, &mu)
@@ -52,7 +55,6 @@ func (m *Me) listenthread(conn *net.UDPConn, mu *sync.Mutex) {
 		}
 		p, ok := m.IsInPeer(packet.Src.String())
 		logrus.Debugln("[listen] recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
-		// logrus.Debugln("[listen] recv:", hex.EncodeToString(lbf))
 		if !ok {
 			logrus.Warnln("[listen] packet from", packet.Src, "to", packet.Dst, "is refused")
 			packet.Put()
@@ -60,7 +62,7 @@ func (m *Me) listenthread(conn *net.UDPConn, mu *sync.Mutex) {
 		}
 		if p.endpoint == nil || p.endpoint.String() != addr.String() {
 			logrus.Infoln("[listen] set endpoint of peer", p.peerip, "to", addr.String())
-			p.endpoint = addr
+			atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&p.endpoint)), unsafe.Pointer(addr))
 		}
 		switch {
 		case p.IsToMe(packet.Dst):

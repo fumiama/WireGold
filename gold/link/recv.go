@@ -18,7 +18,15 @@ func (m *Me) wait(data []byte) *head.Packet {
 	if len(data) < 60 { // not a valid packet
 		return nil
 	}
+	bound := 256
+	endl := "..."
+	if len(data) < bound {
+		bound = len(data)
+		endl = "."
+	}
+	logrus.Debugln("[recv] data bytes", hex.EncodeToString(data[:bound]), endl)
 	data = m.xor(data)
+	logrus.Debugln("[recv] data xored", hex.EncodeToString(data[:bound]), endl)
 	flags := binary.LittleEndian.Uint16(data[10:12])
 	if flags&0x8000 == 0x8000 { // not a valid packet
 		return nil

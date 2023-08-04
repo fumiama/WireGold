@@ -72,7 +72,7 @@ func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 		logrus.Debugln("[send] data len after zstd:", len(p.Data))
 	}
 	if l.aead != nil {
-		p.Data = l.EncodePreshared(sndcnt, p.Data)
+		p.Data = l.EncodePreshared(sndcnt&0x0fff, p.Data)
 		logrus.Debugln("[send] data len after xchacha20:", len(p.Data))
 	}
 	p.Data = l.Encode(teatype, p.Data)

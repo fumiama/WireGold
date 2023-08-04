@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"io"
 	"testing"
+
+	"golang.org/x/crypto/chacha20poly1305"
 )
 
 func TestXOR(t *testing.T) {
@@ -25,6 +27,25 @@ func TestXOR(t *testing.T) {
 		}
 		if !bytes.Equal(m.xordec(m.xorenc(r1.Bytes())), r2.Bytes()) {
 			t.Fatal("unexpected xor at", i)
+		}
+	}
+}
+
+func TestXChacha20(t *testing.T) {
+	l := Link{}
+	k := make([]byte, 32)
+	_, err := rand.Read(k)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.aead, err = chacha20poly1305.NewX(k)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := []byte("12345678")
+	for i := uint64(0); i < 100000; i++ {
+		if !bytes.Equal(l.DecodePreshared(uint16(i), l.EncodePreshared(uint16(i), data)), data) {
+			t.Fatal("unexpected preshared at", i, "addt", uint16(i))
 		}
 	}
 }

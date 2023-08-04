@@ -49,6 +49,8 @@ type Me struct {
 	recved *ttl.Cache[uint64, uint8]
 	// 本机上层配置
 	srcport, dstport, mtu uint16
+	// 报头掩码
+	mask uint64
 }
 
 type MyConfig struct {
@@ -57,6 +59,7 @@ type MyConfig struct {
 	PrivateKey            *[32]byte
 	NIC                   lower.NICIO
 	SrcPort, DstPort, MTU uint16
+	Mask                  uint64
 }
 
 // NewMe 设置本机参数
@@ -95,6 +98,7 @@ func NewMe(cfg *MyConfig) (m Me) {
 	m.srcport = cfg.SrcPort
 	m.dstport = cfg.DstPort
 	m.mtu = cfg.MTU & 0xfff8
+	m.mask = cfg.Mask
 	if m.writer == nil {
 		m.writer = helper.SelectWriter()
 	}

@@ -8,6 +8,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// EndPoint 一个终结点的信息
+type EndPoint struct {
+	Host             string `yaml:"Host"`
+	Port             int64  `yaml:"Port"`
+	Poly             uint64 `yaml:"Poly"`             // Poly 是 port 随机切换算法的生成多项式, 0 为禁用
+	Protocol         string `yaml:"Protocol"`         // Protocol is udp/tcp
+	ReconnectSeconds int64  `yaml:"ReconnectSeconds"` // ReconnectSeconds 断开重连间隔, 每次到时即向对端通报并切换到新的端口, 0 为禁用
+	FECMethod        string `yaml:"FECMethod"`        // FECMethod 可选 1/2 2/3
+}
+
 // Config WireGold 配置文件
 type Config struct {
 	IP         string `yaml:"IP"`
@@ -15,6 +25,7 @@ type Config struct {
 	PrivateKey string `yaml:"PrivateKey"`
 	EndPoint   string `yaml:"EndPoint"`
 	MTU        int64  `yaml:"MTU"`
+	Mask       uint64 `yaml:"Mask"` // Mask 是异或报文所用掩码, 必须保证各端统一
 	Peers      []Peer `yaml:"Peers"`
 }
 

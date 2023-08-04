@@ -18,6 +18,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 	if len(data) < 60 { // not a valid packet
 		return nil
 	}
+	data = m.xor(data)
 	flags := binary.LittleEndian.Uint16(data[10:12])
 	if flags&0x8000 == 0x8000 { // not a valid packet
 		return nil

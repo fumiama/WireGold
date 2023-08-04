@@ -65,3 +65,24 @@ func (l *Link) DecodePreshared(additional uint16, b []byte) (db []byte) {
 	db, _ = l.aead.Open(nil, nonce, ciphertext, buf[:])
 	return
 }
+
+// xor 按 8 字节, 以初始 m.mask 循环异或 data
+func (m *Me) xor(data []byte) []byte {
+	batchsz := len(data) / 8
+	remain := len(data) % 8
+	sum := m.mask
+	for i := 0; i < batchsz; i++ {
+		a := i * 8
+		b := (i + 1) * 8
+		sum ^= binary.LittleEndian.Uint64(data[a:b])
+		binary.LittleEndian.PutUint64(data[a:b], sum)
+	}
+	if remain > 0 {
+		var buf [8]byte
+		copy(buf[:], data[remain:])
+		sum ^= binary.LittleEndian.Uint64(buf[:])
+		binary.LittleEndian.PutUint64(buf[:], sum)
+		copy(data[remain:], buf[:])
+	}
+	return data
+}

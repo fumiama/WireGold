@@ -99,7 +99,7 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional, mtu uint16, data
 			return 0, errors.New("[send] nil endpoint of " + p.Dst.String())
 		}
 		logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.myep.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
-		n, err = l.me.myep.WriteToUDP(d, peerep)
+		n, err = l.me.myep.WriteToUDP(l.me.xor(d), peerep)
 		cl()
 	}
 	return

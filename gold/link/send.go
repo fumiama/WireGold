@@ -17,7 +17,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	logrus.Debugln("[send] count:", sndcnt, ", additional data:", uint16(sndcnt))
 	mtu := l.mtu
 	if l.mturandomrange > 0 {
-		mtu -= uint16(rand.Intn(int(l.mturandomrange)))
+		mtu -= uint16(rand.Intn(int(l.mturandomrange))) & 0xfff8
 	}
 	if len(p.Data) <= int(mtu) {
 		if !istransfer {

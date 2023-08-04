@@ -11,7 +11,6 @@ import (
 
 	"github.com/FloatTech/ttl"
 	"github.com/fumiama/WireGold/gold/head"
-	"github.com/fumiama/WireGold/helper"
 	"github.com/fumiama/WireGold/lower"
 	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
@@ -42,8 +41,6 @@ type Me struct {
 	nic lower.NICIO
 	// 本机路由表
 	router *Router
-	// 本机发送缓冲区
-	writer *helper.Writer
 	// 本机未接收完全分片池
 	recving *ttl.Cache[[32]byte, *head.Packet]
 	// 抗重放攻击记录池
@@ -103,9 +100,6 @@ func NewMe(cfg *MyConfig) (m Me) {
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], m.mask)
 	logrus.Infoln("[me] xor mask", hex.EncodeToString(buf[:]))
-	if m.writer == nil {
-		m.writer = helper.SelectWriter()
-	}
 	m.recving = ttl.NewCache[[32]byte, *head.Packet](time.Second * 30)
 	m.recved = ttl.NewCache[uint64, uint8](time.Second * 30)
 	return
@@ -129,28 +123,8 @@ func (m *Me) Close() error {
 }
 
 func (m *Me) Write(packet []byte) (n int, err error) {
-	remain := m.writer.Len()
-	if remain > 0 {
-		if len(packet) > 0 {
-			m.writer.Write(packet)
-		}
-		packet = m.writer.Bytes()
-	}
-	logrus.Debugln("[me] writer eating", len(packet), "bytes...")
-	complete := false
-	n, complete = m.sendAllSameDst(packet)
-	if len(packet) > n {
-		_, _ = m.writer.Skip(remain + n - len(packet))
-		logrus.Debugln("[me] writer remain", m.writer.Len(), "bytes")
-		if !complete {
-			logrus.Debugln("[me] incomplete, call inner writer")
-			nextn, err := m.Write(nil)
-			return n + nextn, err
-		}
-	} else if n > 0 && remain > 0 {
-		m.writer.Reset()
-		logrus.Debugln("[me] writer becomes empty")
-	}
+	n = m.sendAllSameDst(packet)
+	logrus.Debugln("[me] writer ate", len(packet), "bytes, remain", len(packet)-n, "bytes")
 	return
 }
 
@@ -169,13 +143,13 @@ func (p packetID) issame(packet []byte) bool {
 	return p == waterutil.IPv4Identification(packet)
 }
 
-func (m *Me) sendAllSameDst(packet []byte) (n int, isremainnotcomplete bool) {
+func (m *Me) sendAllSameDst(packet []byte) (n int) {
 	rem := packet
 	if !waterutil.IsIPv4(packet) {
 		for len(rem) > 20 && waterutil.IsIPv6(rem) {
 			pktl := int(binary.BigEndian.Uint16(packet[4:6])) + 40
 			if pktl > len(rem) {
-				return 0, true
+				return 0
 			}
 			n += pktl
 			rem = packet[n:]
@@ -183,7 +157,7 @@ func (m *Me) sendAllSameDst(packet []byte) (n int, isremainnotcomplete bool) {
 		}
 		if len(rem) == 0 || !waterutil.IsIPv4(rem) {
 			logrus.Warnln("[me] skip to send", len(packet), "bytes full packet")
-			return len(packet), false
+			return len(packet)
 		}
 	}
 	p := newpacketid(rem)
@@ -193,7 +167,6 @@ func (m *Me) sendAllSameDst(packet []byte) (n int, isremainnotcomplete bool) {
 		totl := waterutil.IPv4TotalLength(ptr)
 		if int(totl) > len(ptr) {
 			logrus.Debugln("[me] wrap got invalid totl, break")
-			isremainnotcomplete = true
 			break
 		}
 		i += int(totl)

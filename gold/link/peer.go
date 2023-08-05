@@ -32,7 +32,7 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 	if ok {
 		return
 	}
-	if cfg.MTU == 0 || cfg.MTU == 65535 || cfg.MTU%8 != 0 || (m.mtu != 0 && cfg.MTU > m.mtu) {
+	if cfg.MTU == 0 || (m.mtu != 0 && cfg.MTU > m.mtu) {
 		panic("invalid mtu for peer " + cfg.PeerIP)
 	}
 	l = &Link{

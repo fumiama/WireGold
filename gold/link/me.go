@@ -170,10 +170,6 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 			break
 		}
 		i += int(totl)
-		if i > int(m.mtu) {
-			logrus.Debugln("[me] wrap exceed mtu, break")
-			break
-		}
 		ptr = rem[i:]
 		logrus.Debugln("[me] wrap", totl, "bytes packet to send together")
 	}

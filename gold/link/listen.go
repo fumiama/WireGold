@@ -55,7 +55,7 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 				i--
 				continue
 			}
-			recvtotlcnt += len(lbf)
+			recvtotlcnt += n
 			recvloopcnt++
 			if recvloopcnt >= 4096 {
 				now := time.Now().UnixMilli()

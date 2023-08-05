@@ -39,6 +39,7 @@ SubNet: 192.168.233.0/24
 PrivateKey: 暲菉斂狧污爉窫擸紈卆帞蔩慈睠庮扝憚瞼縀
 EndPoint: 0.0.0.0:56789
 MTU: 1504
+Mask: 0x1234567890abcdef
 Peers:
   -
       IP: "192.168.233.2"
@@ -50,6 +51,8 @@ Peers:
       KeepAliveSeconds: 0
       QueryList: ["192.168.233.3"]
       MTU: 1400
+      MTURandomRange: 128
+      UseZstd: true
       QuerySeconds: 10
       AllowTrans: false
   -

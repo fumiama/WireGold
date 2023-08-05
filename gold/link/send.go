@@ -17,6 +17,7 @@ import (
 
 // WriteAndPut 向 peer 发包并将包放回缓存池
 func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
+	defer p.Put()
 	teatype := uint8(rand.Intn(16))
 	sndcnt := atomic.AddUintptr(&l.sendcount, 1)
 	mtu := l.mtu
@@ -33,22 +34,21 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 		delta = 8
 	}
 	if len(p.Data) <= delta {
-		defer p.Put()
 		return l.write(p, teatype, uint16(sndcnt), uint32(len(p.Data)), 0, istransfer, false)
 	}
 	if istransfer && p.Flags&0x4000 == 0x4000 && len(p.Data) > delta {
-		return 0, errors.New("drop dont fragmnet big trans packet")
+		return 0, errors.New("drop don't fragmnet big trans packet")
 	}
 	data := p.Data
 	ttl := p.TTL
 	totl := uint32(len(data))
-	i := 0
+	pos := 0
 	packet := head.SelectPacket()
 	*packet = *p
-	for ; int(totl)-i > delta; i += delta {
-		logrus.Debugln("[send] split frag [", i, "~", i+delta, "], remain:", int(totl)-i-delta)
+	for ; int(totl)-pos > delta; pos += delta {
+		logrus.Debugln("[send] split frag [", pos, "~", pos+delta, "], remain:", int(totl)-pos-delta)
 		packet.Data = data[:delta]
-		cnt, err := l.write(packet, teatype, uint16(sndcnt), totl, uint16(i>>3), istransfer, true)
+		cnt, err := l.write(packet, teatype, uint16(sndcnt), totl, uint16(pos>>3), istransfer, true)
 		n += cnt
 		if err != nil {
 			return n, err
@@ -57,10 +57,12 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 		packet.TTL = ttl
 	}
 	packet.Put()
-	p.Data = data
-	cnt, err := l.write(p, teatype, uint16(sndcnt), totl, uint16(i>>3), istransfer, false)
-	p.Put()
-	n += cnt
+	if len(data) > 0 {
+		p.Data = data
+		cnt := 0
+		cnt, err = l.write(p, teatype, uint16(sndcnt), totl, uint16(pos>>3), istransfer, false)
+		n += cnt
+	}
 	return n, err
 }
 

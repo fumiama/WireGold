@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,10 +12,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/gold/link"
+	"github.com/fumiama/WireGold/helper"
 )
 
 func TestTunnel(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logFormat{enableColor: false})
 
 	selfpk, err := curve.New(nil)
 	if err != nil {
@@ -31,7 +34,7 @@ func TestTunnel(t *testing.T) {
 
 	m := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.2/32",
-		MyEndpoint:   "127.0.0.1:21236",
+		MyEndpoint:   "127.0.0.1:21246",
 		PrivateKey:   selfpk.Private(),
 		SrcPort:      1,
 		DstPort:      1,
@@ -39,14 +42,14 @@ func TestTunnel(t *testing.T) {
 	})
 	m.AddPeer(&link.PeerConfig{
 		PeerIP:     "192.168.1.3",
-		EndPoint:   "127.0.0.1:21237",
+		EndPoint:   "127.0.0.1:21247",
 		AllowedIPs: []string{"192.168.1.3/32"},
 		PubicKey:   peerpk.Public(),
 		MTU:        4096,
 	})
 	p := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.3/32",
-		MyEndpoint:   "127.0.0.1:21237",
+		MyEndpoint:   "127.0.0.1:21247",
 		PrivateKey:   peerpk.Private(),
 		SrcPort:      1,
 		DstPort:      1,
@@ -54,7 +57,7 @@ func TestTunnel(t *testing.T) {
 	})
 	p.AddPeer(&link.PeerConfig{
 		PeerIP:     "192.168.1.2",
-		EndPoint:   "127.0.0.1:21236",
+		EndPoint:   "127.0.0.1:21246",
 		AllowedIPs: []string{"192.168.1.2/32"},
 		PubicKey:   selfpk.Public(),
 		MTU:        4096,
@@ -70,7 +73,7 @@ func TestTunnel(t *testing.T) {
 	}
 	tunnpeer.Start(1, 1, 4096)
 
-	time.Sleep(time.Second * 10) // wait link up
+	time.Sleep(time.Second) // wait link up
 
 	sendb := ([]byte)("1234")
 	tunnme.Write(sendb)
@@ -103,4 +106,65 @@ func TestTunnel(t *testing.T) {
 
 	tunnme.Stop()
 	tunnpeer.Stop()
+}
+
+// logFormat specialize for go-cqhttp
+type logFormat struct {
+	enableColor bool
+}
+
+// Format implements logrus.Formatter
+func (f logFormat) Format(entry *logrus.Entry) ([]byte, error) {
+	buf := helper.SelectWriter()
+	defer helper.PutWriter(buf)
+
+	buf.WriteByte('[')
+	if f.enableColor {
+		buf.WriteString(getLogLevelColorCode(entry.Level))
+	}
+	buf.WriteString(strings.ToUpper(entry.Level.String()))
+	if f.enableColor {
+		buf.WriteString(colorReset)
+	}
+	buf.WriteString("] ")
+	buf.WriteString(entry.Message)
+	buf.WriteString("\n")
+
+	ret := make([]byte, len(buf.Bytes()))
+	copy(ret, buf.Bytes()) // copy buffer
+	return ret, nil
+}
+
+const (
+	colorCodePanic = "\x1b[1;31m" // color.Style{color.Bold, color.Red}.String()
+	colorCodeFatal = "\x1b[1;31m" // color.Style{color.Bold, color.Red}.String()
+	colorCodeError = "\x1b[31m"   // color.Style{color.Red}.String()
+	colorCodeWarn  = "\x1b[33m"   // color.Style{color.Yellow}.String()
+	colorCodeInfo  = "\x1b[37m"   // color.Style{color.White}.String()
+	colorCodeDebug = "\x1b[32m"   // color.Style{color.Green}.String()
+	colorCodeTrace = "\x1b[36m"   // color.Style{color.Cyan}.String()
+	colorReset     = "\x1b[0m"
+)
+
+// getLogLevelColorCode 获取日志等级对应色彩code
+func getLogLevelColorCode(level logrus.Level) string {
+	switch level {
+	case logrus.PanicLevel:
+		return colorCodePanic
+	case logrus.FatalLevel:
+		return colorCodeFatal
+	case logrus.ErrorLevel:
+		return colorCodeError
+	case logrus.WarnLevel:
+		return colorCodeWarn
+	case logrus.InfoLevel:
+		return colorCodeInfo
+	case logrus.DebugLevel:
+		return colorCodeDebug
+	case logrus.TraceLevel:
+		return colorCodeTrace
+
+	default:
+		return colorCodeInfo
+	}
 }

@@ -13,7 +13,6 @@ type EndPoint struct {
 	Host             string `yaml:"Host"`
 	Port             int64  `yaml:"Port"`
 	Poly             uint64 `yaml:"Poly"`             // Poly 是 port 随机切换算法的生成多项式, 0 为禁用
-	Protocol         string `yaml:"Protocol"`         // Protocol is udp/tcp
 	ReconnectSeconds int64  `yaml:"ReconnectSeconds"` // ReconnectSeconds 断开重连间隔, 每次到时即向对端通报并切换到新的端口, 0 为禁用
 	FECMethod        string `yaml:"FECMethod"`        // FECMethod 可选 1/2 2/3
 }

@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"encoding/hex"
 	"io"
 	"net"
 
@@ -82,7 +83,13 @@ func (s *Tunnel) Stop() {
 
 func (s *Tunnel) handleWrite() {
 	for b := range s.in {
-		logrus.Debugln("[tunnel] write recv", b)
+		end := 64
+		endl := "..."
+		if len(b) < 64 {
+			end = len(b)
+			endl = "."
+		}
+		logrus.Debugln("[tunnel] write send", hex.EncodeToString(b[:end]), endl)
 		if b == nil {
 			logrus.Errorln("[tunnel] write recv nil")
 			break
@@ -114,7 +121,13 @@ func (s *Tunnel) handleRead() {
 			logrus.Errorln("[tunnel] read recv nil")
 			break
 		}
-		logrus.Debugln("[tunnel] read recv", p.Data)
+		end := 64
+		endl := "..."
+		if len(p.Data) < 64 {
+			end = len(p.Data)
+			endl = "."
+		}
+		logrus.Debugln("[tunnel] read recv", hex.EncodeToString(p.Data[:end]), endl)
 		s.out <- p.Data
 		p.Put()
 	}

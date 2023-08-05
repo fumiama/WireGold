@@ -82,7 +82,7 @@ func (w *Writer) WriteUInt64(v uint64) {
 }
 
 func (w *Writer) WriteString(v string) {
-	w.WriteUInt32(uint32(len(v) + 4))
+	//w.WriteUInt32(uint32(len(v) + 4))
 	(*bytes.Buffer)(w).WriteString(v)
 }
 

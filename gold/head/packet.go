@@ -101,6 +101,7 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 
 	if p.rembytes > 0 {
 		p.rembytes -= copy(p.Data[flags<<3:], data[60:])
+		logrus.Debugln("[packet] copied frag", hex.EncodeToString(p.Hash[:]), "rembytes:", p.rembytes)
 	}
 
 	complete = p.rembytes == 0

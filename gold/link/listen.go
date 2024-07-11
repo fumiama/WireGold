@@ -2,11 +2,9 @@ package link
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"net"
 	"net/netip"
-	"os"
 	"runtime"
 	"strconv"
 	"sync"
@@ -50,18 +48,10 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 			}
 			logrus.Debugln("[listen] lock index", i)
 			lbf := listenbuff[i*65536 : (i+1)*65536]
-			err = conn.SetDeadline(time.Now().Add(time.Second))
-			if err != nil {
-				logrus.Warnln("[listen] set ddl err:", err)
-			}
-		READ:
 			n, addr, err := conn.ReadFromUDP(lbf)
 			if m.loop == nil {
 				logrus.Warnln("[listen] quit listening")
 				return
-			}
-			if errors.Is(err, os.ErrDeadlineExceeded) {
-				goto READ
 			}
 			if err != nil {
 				logrus.Warnln("[listen] read from udp err, reconnect:", err)

@@ -86,9 +86,13 @@ func NewMe(cfg *MyConfig) (m Me) {
 		cache: ttl.NewCache[string, *Link](time.Minute),
 	}
 	m.router.SetDefault(nil)
+	_, localp, err := net.SplitHostPort(m.EndPoint().String())
+	if err != nil {
+		panic(err)
+	}
 	m.loop = m.AddPeer(&PeerConfig{
 		PeerIP:     m.me.String(),
-		EndPoint:   "127.0.0.1:56789",
+		EndPoint:   "127.0.0.1:" + localp,
 		AllowedIPs: []string{cfg.MyIPwithMask},
 		NoPipe:     cfg.NIC != nil,
 		MTU:        cfg.MTU,

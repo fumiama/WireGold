@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"io"
@@ -92,26 +93,47 @@ func TestTunnel(t *testing.T) {
 	rand.Read(sendb)
 	tunnme.Write(sendb)
 	buf = make([]byte, 4096)
-	tunnpeer.Read(buf)
+	_, err = io.ReadFull(&tunnpeer, buf)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if string(sendb) != string(buf) {
 		t.Fatal("error: recv 4096 bytes data")
 	}
 
 	sendb = make([]byte, 65535)
-	rand.Read(sendb)
-	n, _ := tunnme.Write(sendb)
-	t.Log("write", n, "bytes")
 	buf = make([]byte, 65535)
-	n, _ = io.ReadFull(&tunnpeer, buf)
-	t.Log("read", n, "bytes")
-	if string(sendb) != string(buf) {
-		t.Fatal("error: recv 65535 bytes data")
-		t.Log("expect", hex.EncodeToString(sendb))
-		t.Log("got", hex.EncodeToString(buf))
+	for i := 0; i < 32; i++ {
+		rand.Read(sendb)
+		n, _ := tunnme.Write(sendb)
+		t.Log("loop", i, "write", n, "bytes")
+		n, err = io.ReadFull(&tunnpeer, buf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log("loop", i, "read", n, "bytes")
+		if string(sendb) != string(buf) {
+			t.Fatal("loop", i, "error: recv 65535 bytes data")
+		}
 	}
 
-	tunnme.Stop()
-	tunnpeer.Stop()
+	rand.Read(sendb)
+	tunnme.Write(sendb)
+	rd := bytes.NewBuffer(nil)
+
+	tm := time.AfterFunc(time.Second*5, func() {
+		tunnme.Stop()
+		tunnpeer.Stop()
+	})
+	defer tm.Stop()
+
+	_, err = io.CopyBuffer(rd, &tunnpeer, make([]byte, 200))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(sendb) != rd.String() {
+		t.Fatal("error: recv fragmented 4096 bytes data")
+	}
 }
 
 // logFormat specialize for go-cqhttp

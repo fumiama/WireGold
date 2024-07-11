@@ -57,6 +57,7 @@ func (n *NIC) Close() error {
 	return n.ifce.Close()
 }
 
+// nolint: unparam
 func execute(c string, args ...string) {
 	logrus.Printf("[lower] exec cmd: %v %v:", c, args)
 	cmd := exec.Command(c, args...)

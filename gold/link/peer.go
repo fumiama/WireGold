@@ -41,8 +41,8 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 		allowtrans:     cfg.AllowTrans,
 		usezstd:        cfg.UseZstd,
 		me:             m,
-		mtu:            uint16(cfg.MTU),
-		mturandomrange: uint16(cfg.MTURandomRange),
+		mtu:            cfg.MTU,
+		mturandomrange: cfg.MTURandomRange,
 	}
 
 	if !cfg.NoPipe {

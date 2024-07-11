@@ -6,7 +6,6 @@ import (
 
 	"github.com/fumiama/WireGold/gold/head"
 	curve "github.com/fumiama/go-x25519"
-	tea "github.com/fumiama/gofastTEA"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/chacha20poly1305"
 )
@@ -48,21 +47,28 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 	if !cfg.NoPipe {
 		l.pipe = make(chan *head.Packet, 32)
 	}
+	var k, p []byte
 	if cfg.PubicKey != nil {
-		c := curve.Get(m.privKey[:])
-		k, err := c.Shared(cfg.PubicKey)
-		if err == nil {
-			l.key = make([]tea.TEA, 16)
-			for i := range l.key {
-				l.key[i] = tea.NewTeaCipherLittleEndian(k[i : 16+i])
-			}
-		}
+		k, _ = curve.Get(m.privKey[:]).Shared(cfg.PubicKey)
 	}
 	if cfg.PresharedKey != nil {
+		p = cfg.PresharedKey[:]
+	}
+	if len(k) == 32 {
 		var err error
-		l.aead, err = chacha20poly1305.NewX(cfg.PresharedKey[:])
-		if err != nil {
-			panic(err)
+		if len(p) == 32 {
+			mixk := mixkeys(k, p)
+			for i := range k {
+				l.keys[i], err = chacha20poly1305.NewX(mixk[i : i+32])
+				if err != nil {
+					panic(err)
+				}
+			}
+		} else {
+			l.keys[0], err = chacha20poly1305.NewX(k)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	if cfg.EndPoint != "" {

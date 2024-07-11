@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"sync/atomic"
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/helper"
@@ -18,15 +17,15 @@ import (
 // WriteAndPut 向 peer 发包并将包放回缓存池
 func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	defer p.Put()
-	teatype := uint8(rand.Intn(16))
-	sndcnt := atomic.AddUintptr(&l.sendcount, 1)
+	teatype := l.randkeyidx()
+	sndcnt := uint16(l.incgetsndcnt())
 	mtu := l.mtu
 	if l.mturandomrange > 0 {
 		mtu -= uint16(rand.Intn(int(l.mturandomrange)))
 	}
-	logrus.Debugln("[send] mtu:", mtu, ", count:", sndcnt, ", additional data:", uint16(sndcnt)&0x0fff)
+	logrus.Debugln("[send] mtu:", mtu, ", addt:", uint16(sndcnt)&0x0fff, ", key index:", teatype)
 	if !istransfer {
-		l.encrypt(p, uint16(sndcnt), teatype)
+		l.encrypt(p, sndcnt, teatype)
 	}
 	delta := (int(mtu) - 60) & 0x0000fff8
 	if delta <= 0 {
@@ -34,7 +33,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 		delta = 8
 	}
 	if len(p.Data) <= delta {
-		return l.write(p, teatype, uint16(sndcnt), uint32(len(p.Data)), 0, istransfer, false)
+		return l.write(p, teatype, sndcnt, uint32(len(p.Data)), 0, istransfer, false)
 	}
 	if istransfer && p.Flags&0x4000 == 0x4000 && len(p.Data) > delta {
 		return 0, errors.New("drop don't fragmnet big trans packet")
@@ -48,7 +47,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	for ; int(totl)-pos > delta; pos += delta {
 		logrus.Debugln("[send] split frag [", pos, "~", pos+delta, "], remain:", int(totl)-pos-delta)
 		packet.Data = data[:delta]
-		cnt, err := l.write(packet, teatype, uint16(sndcnt), totl, uint16(pos>>3), istransfer, true)
+		cnt, err := l.write(packet, teatype, sndcnt, totl, uint16(pos>>3), istransfer, true)
 		n += cnt
 		if err != nil {
 			return n, err
@@ -60,7 +59,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	if len(data) > 0 {
 		p.Data = data
 		cnt := 0
-		cnt, err = l.write(p, teatype, uint16(sndcnt), totl, uint16(pos>>3), istransfer, false)
+		cnt, err = l.write(p, teatype, sndcnt, totl, uint16(pos>>3), istransfer, false)
 		n += cnt
 	}
 	return n, err
@@ -78,12 +77,8 @@ func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 		p.Data = w.Bytes()
 		logrus.Debugln("[send] data len after zstd:", len(p.Data))
 	}
-	if l.aead != nil {
-		p.Data = l.EncodePreshared(sndcnt&0x0fff, p.Data)
-		logrus.Debugln("[send] data len after xchacha20:", len(p.Data))
-	}
-	p.Data = l.Encode(teatype, p.Data)
-	logrus.Debugln("[send] data len after tea:", len(p.Data))
+	p.Data = l.Encode(teatype, sndcnt&0x07ff, p.Data)
+	logrus.Debugln("[send] data len after xchacha20:", len(p.Data), "addt:", sndcnt)
 }
 
 // write 向 peer 发一个包

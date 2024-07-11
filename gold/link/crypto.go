@@ -1,45 +1,89 @@
 package link
 
 import (
+	"crypto/cipher"
 	"crypto/rand"
 	"encoding/binary"
+	"math/bits"
+	mrand "math/rand"
 )
 
-// Encode 使用 TEA 加密
-func (l *Link) Encode(teatype uint8, b []byte) (eb []byte) {
-	if b == nil || teatype >= 16 {
-		return
+func (l *Link) randkeyidx() uint8 {
+	if l.keys[1] == nil {
+		return 0
 	}
-	if l.key == nil {
-		eb = b
-		return
+	return uint8(mrand.Intn(32))
+}
+
+func mixkeys(k1, k2 []byte) []byte {
+	if len(k1) != 32 || len(k2) != 32 {
+		panic("unexpected key len")
 	}
-	// 在此处填写加密逻辑，密钥是l.key，输入是b，输出是eb
-	// 不用写return，直接赋值给eb即可
-	eb = l.key[teatype].Encrypt(b)
+	k := make([]byte, 64)
+	for i := range k1 {
+		k1i, k2i := i, 31-i
+		k1v, k2v := k1[k1i], k2[k2i]
+		binary.LittleEndian.PutUint16(
+			k[i*2:(i+1)*2],
+			expandkeyunit(k1v, k2v),
+		)
+	}
+	return k
+}
+
+func expandkeyunit(v1, v2 byte) (v uint16) {
+	v1s, v2s := uint16(v1), uint16(bits.Reverse8(v2))
+	for i := 0; i < 8; i++ {
+		v |= v1s & (1 << (i * 2))
+		v1s <<= 1
+	}
+	for i := 0; i < 8; i++ {
+		v2s <<= 1
+		v |= v2s & (2 << (i * 2))
+	}
 	return
 }
 
-// Decode 使用 TEA 解密
-func (l *Link) Decode(teatype uint8, b []byte) (db []byte) {
-	if b == nil || teatype >= 16 {
+// Encode 使用 xchacha20poly1305 和密钥序列加密
+func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb []byte) {
+	if b == nil || teatype >= 32 {
 		return
 	}
-	if l.key == nil {
+	if l.keys[0] == nil {
+		eb = make([]byte, len(b))
+		copy(eb, b)
+		return
+	}
+	aead := l.keys[teatype]
+	if aead == nil {
+		return
+	}
+	eb = encode(aead, additional, b)
+	return
+}
+
+// Decode 使用 xchacha20poly1305 和密钥序列解密
+func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db []byte) {
+	if b == nil || teatype >= 32 {
+		return
+	}
+	if l.keys[0] == nil {
 		db = b
 		return
 	}
-	// 在此处填写解密逻辑，密钥是l.key，输入是b，输出是db
-	// 不用写return，直接赋值给db即可
-	db = l.key[teatype].Decrypt(b)
+	aead := l.keys[teatype]
+	if aead == nil {
+		return
+	}
+	db = decode(aead, additional, b)
 	return
 }
 
-// EncodePreshared 使用 xchacha20poly1305 加密
-func (l *Link) EncodePreshared(additional uint16, b []byte) (eb []byte) {
-	nsz := l.aead.NonceSize()
+// encode 使用 xchacha20poly1305 加密
+func encode(aead cipher.AEAD, additional uint16, b []byte) (eb []byte) {
+	nsz := aead.NonceSize()
 	// Select a random nonce, and leave capacity for the ciphertext.
-	nonce := make([]byte, nsz, nsz+len(b)+l.aead.Overhead())
+	nonce := make([]byte, nsz, nsz+len(b)+aead.Overhead())
 	_, err := rand.Read(nonce)
 	if err != nil {
 		return
@@ -47,13 +91,13 @@ func (l *Link) EncodePreshared(additional uint16, b []byte) (eb []byte) {
 	// Encrypt the message and append the ciphertext to the nonce.
 	var buf [2]byte
 	binary.LittleEndian.PutUint16(buf[:], additional)
-	eb = l.aead.Seal(nonce, nonce, b, buf[:])
+	eb = aead.Seal(nonce, nonce, b, buf[:])
 	return
 }
 
-// DecodePreshared 使用 xchacha20poly1305 解密
-func (l *Link) DecodePreshared(additional uint16, b []byte) (db []byte) {
-	nsz := l.aead.NonceSize()
+// decode 使用 xchacha20poly1305 解密
+func decode(aead cipher.AEAD, additional uint16, b []byte) (db []byte) {
+	nsz := aead.NonceSize()
 	if len(b) < nsz { // ciphertext too short
 		return
 	}
@@ -62,7 +106,7 @@ func (l *Link) DecodePreshared(additional uint16, b []byte) (db []byte) {
 	// Decrypt the message and check it wasn't tampered with.
 	var buf [2]byte
 	binary.LittleEndian.PutUint16(buf[:], additional)
-	db, _ = l.aead.Open(nil, nonce, ciphertext, buf[:])
+	db, _ = aead.Open(nil, nonce, ciphertext, buf[:])
 	return
 }
 

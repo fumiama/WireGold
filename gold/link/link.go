@@ -4,11 +4,11 @@ import (
 	"crypto/cipher"
 	"errors"
 	"net"
+	"sync/atomic"
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/helper"
 	base14 "github.com/fumiama/go-base16384"
-	tea "github.com/fumiama/gofastTEA"
 )
 
 // Link 是本机到 peer 的连接抽象
@@ -27,10 +27,8 @@ type Link struct {
 	endpoint *net.UDPAddr
 	// 本机允许接收/发送的 ip 网段
 	allowedips []*net.IPNet
-	// 连接所用对称加密密钥
-	key []tea.TEA
-	// 连接所用预共享密钥
-	aead cipher.AEAD
+	// 连接所用对称加密密钥集
+	keys [32]cipher.AEAD
 	// 本机信息
 	me *Me
 	// 连接的状态，详见下方 const
@@ -83,4 +81,8 @@ func (l *Link) String() (n string) {
 		}
 	}
 	return
+}
+
+func (l *Link) incgetsndcnt() uintptr {
+	return atomic.AddUintptr(&l.sendcount, 1)
 }

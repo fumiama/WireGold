@@ -146,6 +146,7 @@ func (s *Tunnel) handleRead() {
 			delete(seqmap, seq)
 			seq++
 			s.out <- p
+			continue
 		}
 		p := s.l.Read()
 		if p == nil {

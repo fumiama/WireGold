@@ -16,10 +16,7 @@ import (
 	"github.com/fumiama/WireGold/helper"
 )
 
-func TestTunnel(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetFormatter(&logFormat{enableColor: false})
-
+func testTunnel(t *testing.T, isplain bool, pshk *[32]byte) {
 	selfpk, err := curve.New(nil)
 	if err != nil {
 		panic(err)
@@ -35,34 +32,47 @@ func TestTunnel(t *testing.T) {
 
 	m := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.2/32",
-		MyEndpoint:   "127.0.0.1:21246",
+		MyEndpoint:   "127.0.0.1:0",
 		PrivateKey:   selfpk.Private(),
 		SrcPort:      1,
 		DstPort:      1,
 		MTU:          4096,
 	})
-	m.AddPeer(&link.PeerConfig{
-		PeerIP:         "192.168.1.3",
-		EndPoint:       "127.0.0.1:21247",
-		AllowedIPs:     []string{"192.168.1.3/32"},
-		PubicKey:       peerpk.Public(),
-		MTU:            4096,
-		MTURandomRange: 1024,
-		UseZstd:        true,
-	})
+	defer m.Close()
+
 	p := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.3/32",
-		MyEndpoint:   "127.0.0.1:21247",
+		MyEndpoint:   "127.0.0.1:0",
 		PrivateKey:   peerpk.Private(),
 		SrcPort:      1,
 		DstPort:      1,
 		MTU:          4096,
 	})
+	defer p.Close()
+
+	ppp := peerpk.Public()
+	spp := selfpk.Public()
+	if isplain {
+		ppp = nil
+		spp = nil
+	}
+
+	m.AddPeer(&link.PeerConfig{
+		PeerIP:         "192.168.1.3",
+		EndPoint:       p.EndPoint().String(),
+		AllowedIPs:     []string{"192.168.1.3/32"},
+		PubicKey:       ppp,
+		PresharedKey:   pshk,
+		MTU:            4096,
+		MTURandomRange: 1024,
+		UseZstd:        true,
+	})
 	p.AddPeer(&link.PeerConfig{
 		PeerIP:         "192.168.1.2",
-		EndPoint:       "127.0.0.1:21246",
+		EndPoint:       m.EndPoint().String(),
 		AllowedIPs:     []string{"192.168.1.2/32"},
-		PubicKey:       selfpk.Public(),
+		PubicKey:       spp,
+		PresharedKey:   pshk,
 		MTU:            4096,
 		MTURandomRange: 1024,
 		UseZstd:        true,
@@ -121,7 +131,7 @@ func TestTunnel(t *testing.T) {
 	tunnme.Write(sendb)
 	rd := bytes.NewBuffer(nil)
 
-	tm := time.AfterFunc(time.Second*5, func() {
+	tm := time.AfterFunc(time.Second*2, func() {
 		tunnme.Stop()
 		tunnpeer.Stop()
 	})
@@ -134,6 +144,22 @@ func TestTunnel(t *testing.T) {
 	if string(sendb) != rd.String() {
 		t.Fatal("error: recv fragmented 4096 bytes data")
 	}
+}
+
+func TestTunnel(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logFormat{enableColor: false})
+
+	testTunnel(t, true, nil) // test plain text
+
+	testTunnel(t, false, nil) // test normal
+
+	var buf [32]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		panic(err)
+	}
+	testTunnel(t, false, &buf) // test preshared
 }
 
 // logFormat specialize for go-cqhttp

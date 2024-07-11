@@ -61,7 +61,7 @@ func (wg *WG) Run(srcport, destport uint16) {
 }
 
 func (wg *WG) Stop() {
-	_ = wg.me.CloseNIC()
+	_ = wg.me.Close()
 }
 
 func (wg *WG) init(srcport, dstport uint16) {

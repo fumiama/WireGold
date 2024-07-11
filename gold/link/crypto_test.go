@@ -3,6 +3,8 @@ package link
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/binary"
+	"encoding/hex"
 	"io"
 	"testing"
 
@@ -32,20 +34,47 @@ func TestXOR(t *testing.T) {
 }
 
 func TestXChacha20(t *testing.T) {
-	l := Link{}
 	k := make([]byte, 32)
 	_, err := rand.Read(k)
 	if err != nil {
 		t.Fatal(err)
 	}
-	l.aead, err = chacha20poly1305.NewX(k)
+	aead, err := chacha20poly1305.NewX(k)
 	if err != nil {
 		t.Fatal(err)
 	}
 	data := []byte("12345678")
 	for i := uint64(0); i < 100000; i++ {
-		if !bytes.Equal(l.DecodePreshared(uint16(i), l.EncodePreshared(uint16(i), data)), data) {
+		if !bytes.Equal(decode(aead, uint16(i), encode(aead, uint16(i), data)), data) {
 			t.Fatal("unexpected preshared at", i, "addt", uint16(i))
 		}
+	}
+}
+
+func TestExpandKeyUnit(t *testing.T) {
+	k1 := byte(0b10001010)
+	k2 := byte(0b10111010)     // rev 01011101
+	v := expandkeyunit(k1, k2) // x1x0x0x0x1x0x1x0 | 0x1x0x1x1x1x0x1x = 0110001011100110
+	if v != 0b0110001011100110 {
+		buf := [2]byte{}
+		binary.BigEndian.PutUint16(buf[:], v)
+		t.Fatal(hex.EncodeToString(buf[:]))
+	}
+}
+
+func TestMixKeys(t *testing.T) {
+	k1, _ := hex.DecodeString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	k2, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000000")
+	k := mixkeys(k1, k2)
+	kexp, _ := hex.DecodeString("55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555")
+	if !bytes.Equal(k, kexp) {
+		t.Fatal(hex.EncodeToString(k))
+	}
+	k1, _ = hex.DecodeString("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+	k2, _ = hex.DecodeString("deadbeef1239876540deadbeef1239876540deadbeef1239876540abcdef4567")
+	k = mixkeys(k1, k2)
+	kexp, _ = hex.DecodeString("2ca9188d3ebb4a9f22e34d4479d857fca48390253ebbe23f22cbcf6e59507ddc06a9b08794316abfa26b67cedb7a5d542c8912adb493c0352aebe76e73dadf7e")
+	if !bytes.Equal(k, kexp) {
+		t.Fatal(hex.EncodeToString(k))
 	}
 }

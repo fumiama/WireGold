@@ -15,8 +15,8 @@ import (
 // Packet 是发送和接收的最小单位
 type Packet struct {
 	// TeaTypeDataSZ len(Data)
-	// 高 4 位指定加密所用 tea key
-	// 高 4-16 位是递增值, 用于预共享密钥验证 additionalData
+	// 高 5 位指定加密所用 key index
+	// 高 5-16 位是递增值, 用于 xchacha20 验证 additionalData
 	// 不得超过 65507-head 字节
 	TeaTypeDataSZ uint32
 	// Proto 详见 head
@@ -118,7 +118,7 @@ func (p *Packet) Marshal(src net.IP, teatype uint8, additional uint16, datasz ui
 	}
 
 	if src != nil {
-		p.TeaTypeDataSZ = uint32(teatype)<<28 | (uint32(additional&0x0fff) << 16) | datasz&0xffff
+		p.TeaTypeDataSZ = uint32(teatype)<<27 | (uint32(additional&0x07ff) << 16) | datasz&0xffff
 		p.Src = src
 		offset &= 0x1fff
 		if dontfrag {
@@ -171,7 +171,7 @@ func (p *Packet) IsVaildHash() bool {
 
 // AdditionalData 获得 packet 的 additionalData
 func (p *Packet) AdditionalData() uint16 {
-	return uint16((p.TeaTypeDataSZ >> 16) & 0x0fff)
+	return uint16((p.TeaTypeDataSZ >> 16) & 0x07ff)
 }
 
 // Put 将自己放回池中

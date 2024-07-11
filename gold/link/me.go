@@ -121,9 +121,25 @@ func (m *Me) MTU() uint16 {
 	return m.mtu
 }
 
-func (m *Me) CloseNIC() error {
-	m.nic.Down()
-	return m.nic.Close()
+func (m *Me) EndPoint() net.Addr {
+	return m.udpep
+}
+
+func (m *Me) Close() error {
+	m.loop = nil
+	m.connections = nil
+	_ = m.udpconn.Close()
+	m.udpconn = nil
+	m.router = nil
+	m.recving.Destroy()
+	m.recving = nil
+	m.recved.Destroy()
+	m.recved = nil
+	if m.nic != nil {
+		m.nic.Down()
+		return m.nic.Close()
+	}
+	return nil
 }
 
 func (m *Me) Write(packet []byte) (n int, err error) {

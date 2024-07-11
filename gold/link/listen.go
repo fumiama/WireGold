@@ -2,9 +2,11 @@ package link
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net"
 	"net/netip"
+	"os"
 	"runtime"
 	"strconv"
 	"sync"
@@ -48,7 +50,18 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 			}
 			logrus.Debugln("[listen] lock index", i)
 			lbf := listenbuff[i*65536 : (i+1)*65536]
+			err = conn.SetDeadline(time.Now().Add(time.Second))
+			if err != nil {
+				logrus.Warnln("[listen] set ddl err:", err)
+			}
 			n, addr, err := conn.ReadFromUDP(lbf)
+			if m.loop == nil {
+				logrus.Warnln("[listen] quit listening")
+				return
+			}
+			if errors.Is(err, os.ErrDeadlineExceeded) {
+				err = nil
+			}
 			if err != nil {
 				logrus.Warnln("[listen] read from udp err, reconnect:", err)
 				conn, err = net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.MustParseAddrPort(m.udpep.String())))
@@ -102,15 +115,12 @@ func (m *Me) listenthread(packet *head.Packet, addr *net.UDPAddr, index int, fin
 	}
 	switch {
 	case p.IsToMe(packet.Dst):
-		packet.Data = p.Decode(uint8(packet.TeaTypeDataSZ>>28), packet.Data)
-		if p.aead != nil {
-			addt := packet.AdditionalData()
-			packet.Data = p.DecodePreshared(addt, packet.Data)
-			if packet.Data == nil {
-				logrus.Debugln("[listen] @", index, "drop invalid preshared packet, addt:", addt)
-				packet.Put()
-				return
-			}
+		addt := packet.AdditionalData()
+		packet.Data = p.Decode(uint8(packet.TeaTypeDataSZ>>27), addt, packet.Data)
+		if packet.Data == nil {
+			logrus.Debugln("[listen] @", index, "drop invalid packet, addt:", addt)
+			packet.Put()
+			return
 		}
 		if p.usezstd {
 			dec, _ := zstd.NewReader(bytes.NewReader(packet.Data))

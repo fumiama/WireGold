@@ -97,6 +97,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 		SrcPort:      srcport,
 		DstPort:      dstport,
 		MTU:          uint16(wg.c.MTU),
+		SpeedLoop:    wg.c.SpeedLoop,
 		Mask:         wg.c.Mask,
 	})
 

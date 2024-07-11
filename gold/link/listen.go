@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"runtime"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -17,17 +18,17 @@ import (
 	"github.com/fumiama/WireGold/gold/head"
 )
 
-// 监听本机 endpoint
-func (m *Me) listen() (conn *net.UDPConn, err error) {
-	conn, err = net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.MustParseAddrPort(m.myend.String())))
+// 监听本机 UDP endpoint
+func (m *Me) listenudp() (conn *net.UDPConn, err error) {
+	conn, err = net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.MustParseAddrPort(m.udpep.String())))
 	if err != nil {
 		return
 	}
-	m.myend = conn.LocalAddr()
-	logrus.Infoln("[listen] at", m.myend)
+	m.udpep = conn.LocalAddr()
+	logrus.Infoln("[listen] at", m.udpep)
 	go func() {
-		recvtotlcnt := 0
-		recvloopcnt := 0
+		recvtotlcnt := uint64(0)
+		recvloopcnt := uint16(0)
 		recvlooptime := time.Now().UnixMilli()
 		n := runtime.NumCPU()
 		if n > 64 {
@@ -35,42 +36,45 @@ func (m *Me) listen() (conn *net.UDPConn, err error) {
 		}
 		logrus.Infoln("[listen] use cpu num:", n)
 		listenbuff := make([]byte, 65536*n)
-		hasntfinished := make([]bool, n)
+		hasntfinished := make([]sync.Mutex, n)
 		for i := 0; err == nil; i++ {
 			i %= n
-			for hasntfinished[i] {
-				time.Sleep(time.Millisecond)
+			for !hasntfinished[i].TryLock() {
 				i++
 				i %= n
+				if i == 0 { // looked up a full round
+					time.Sleep(time.Millisecond * 10)
+				}
 			}
+			logrus.Debugln("[listen] lock index", i)
 			lbf := listenbuff[i*65536 : (i+1)*65536]
 			n, addr, err := conn.ReadFromUDP(lbf)
 			if err != nil {
 				logrus.Warnln("[listen] read from udp err, reconnect:", err)
-				conn, err = net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.MustParseAddrPort(m.myend.String())))
+				conn, err = net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.MustParseAddrPort(m.udpep.String())))
 				if err != nil {
 					logrus.Errorln("[listen] reconnect udp err:", err)
 					return
 				}
+				hasntfinished[i].Unlock()
 				i--
 				continue
 			}
-			recvtotlcnt += n
+			recvtotlcnt += uint64(n)
 			recvloopcnt++
-			if recvloopcnt >= 4096 {
+			if recvloopcnt%m.speedloop == 0 {
 				now := time.Now().UnixMilli()
 				logrus.Infof("[listen] recv avg speed: %.2f KB/s", float64(recvtotlcnt)/float64(now-recvlooptime))
 				recvtotlcnt = 0
-				recvloopcnt = 0
 				recvlooptime = now
 			}
 			packet := m.wait(lbf[:n])
 			if packet == nil {
+				hasntfinished[i].Unlock()
 				i--
 				continue
 			}
-			hasntfinished[i] = true
-			go m.listenthread(packet, addr, i, func() { hasntfinished[i] = false })
+			go m.listenthread(packet, addr, i, hasntfinished[i].Unlock)
 		}
 	}()
 	return

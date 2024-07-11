@@ -27,16 +27,16 @@ type Me struct {
 	me net.IP
 	// 本机子网
 	subnet net.IPNet
-	// 本机 endpoint
-	myend net.Addr
+	// 本机 UDP endpoint
+	udpep net.Addr
 	// 本机环回 link
 	loop *Link
 	// 本机活跃的所有连接
 	connections map[string]*Link
 	// 读写同步锁
 	connmapmu sync.RWMutex
-	// 本机监听的 endpoint
-	myep *net.UDPConn
+	// 本机监听的 udp 连接, 用于向对端直接发送报文
+	udpconn *net.UDPConn
 	// 本机网卡
 	nic lower.NICIO
 	// 本机路由表
@@ -46,25 +46,25 @@ type Me struct {
 	// 抗重放攻击记录池
 	recved *ttl.Cache[uint64, bool]
 	// 本机上层配置
-	srcport, dstport, mtu uint16
+	srcport, dstport, mtu, speedloop uint16
 	// 报头掩码
 	mask uint64
 }
 
 type MyConfig struct {
-	MyIPwithMask          string
-	MyEndpoint            string
-	PrivateKey            *[32]byte
-	NIC                   lower.NICIO
-	SrcPort, DstPort, MTU uint16
-	Mask                  uint64
+	MyIPwithMask                     string
+	MyEndpoint                       string
+	PrivateKey                       *[32]byte
+	NIC                              lower.NICIO
+	SrcPort, DstPort, MTU, SpeedLoop uint16
+	Mask                             uint64
 }
 
 // NewMe 设置本机参数
 func NewMe(cfg *MyConfig) (m Me) {
 	m.privKey = *cfg.PrivateKey
 	var err error
-	m.myend, err = net.ResolveUDPAddr("udp", cfg.MyEndpoint)
+	m.udpep, err = net.ResolveUDPAddr("udp", cfg.MyEndpoint)
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +74,7 @@ func NewMe(cfg *MyConfig) (m Me) {
 	}
 	m.me = ip
 	m.subnet = *cidr
-	m.myep, err = m.listen()
+	m.udpconn, err = m.listenudp()
 	if err != nil {
 		panic(err)
 	}
@@ -96,6 +96,10 @@ func NewMe(cfg *MyConfig) (m Me) {
 	m.srcport = cfg.SrcPort
 	m.dstport = cfg.DstPort
 	m.mtu = cfg.MTU & 0xfff8
+	m.speedloop = cfg.SpeedLoop
+	if m.speedloop == 0 {
+		m.speedloop = 4096
+	}
 	m.mask = cfg.Mask
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], m.mask)

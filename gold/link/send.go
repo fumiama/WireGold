@@ -98,23 +98,21 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz ui
 	if d == nil {
 		return 0, errors.New("[send] ttl exceeded")
 	}
-	if err == nil {
-		peerep := l.endpoint
-		if peerep == nil {
-			return 0, errors.New("[send] nil endpoint of " + p.Dst.String())
-		}
-		bound := 64
-		endl := "..."
-		if len(d) < bound {
-			bound = len(d)
-			endl = "."
-		}
-		logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.myep.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
-		logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
-		d = l.me.xorenc(d)
-		logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
-		n, err = l.me.myep.WriteToUDP(d, peerep)
-		cl()
+	peerep := l.endpoint
+	if peerep == nil {
+		return 0, errors.New("[send] nil endpoint of " + p.Dst.String())
 	}
+	bound := 64
+	endl := "..."
+	if len(d) < bound {
+		bound = len(d)
+		endl = "."
+	}
+	logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.udpconn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
+	logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
+	d = l.me.xorenc(d)
+	logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
+	n, err = l.me.udpconn.WriteToUDP(d, peerep)
+	cl()
 	return
 }

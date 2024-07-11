@@ -24,6 +24,7 @@ type Config struct {
 	PrivateKey string `yaml:"PrivateKey"`
 	EndPoint   string `yaml:"EndPoint"`
 	MTU        int64  `yaml:"MTU"`
+	SpeedLoop  uint16 `yaml:"SpeedLoop"`
 	Mask       uint64 `yaml:"Mask"` // Mask 是异或报文所用掩码, 必须保证各端统一
 	Peers      []Peer `yaml:"Peers"`
 }

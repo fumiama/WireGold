@@ -23,7 +23,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	if l.mturandomrange > 0 {
 		mtu -= uint16(rand.Intn(int(l.mturandomrange)))
 	}
-	logrus.Debugln("[send] mtu:", mtu, ", addt:", uint16(sndcnt)&0x0fff, ", key index:", teatype)
+	logrus.Debugln("[send] mtu:", mtu, ", addt:", sndcnt&0x07ff, ", key index:", teatype)
 	if !istransfer {
 		l.encrypt(p, sndcnt, teatype)
 	}

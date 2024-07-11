@@ -2,6 +2,7 @@ package link
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net"
 	"net/netip"
@@ -49,7 +50,7 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 			logrus.Debugln("[listen] lock index", i)
 			lbf := listenbuff[i*65536 : (i+1)*65536]
 			n, addr, err := conn.ReadFromUDP(lbf)
-			if m.loop == nil {
+			if m.loop == nil || errors.Is(err, net.ErrClosed) {
 				logrus.Warnln("[listen] quit listening")
 				return
 			}

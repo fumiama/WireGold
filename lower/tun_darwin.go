@@ -13,9 +13,9 @@ func (n *NIC) Up() {
 }
 
 func (n *NIC) Down() {
-	execute("ifconfig", n.ifce.Name(), "down")
 	execute("route", "delete", n.subnet, "-interface", n.ifce.Name())
 	for _, c := range n.cidrs {
 		execute("route", "delete", c, "-interface", n.ifce.Name())
 	}
+	execute("ifconfig", n.ifce.Name(), "down")
 }

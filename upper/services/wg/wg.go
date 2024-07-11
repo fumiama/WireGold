@@ -56,11 +56,12 @@ func (wg *WG) Run(srcport, destport uint16) {
 	wg.init(srcport, destport)
 	_, err := wg.me.ListenNIC()
 	if err != nil {
-		logrus.Panicln(err)
+		logrus.Warnln(err)
 	}
 }
 
 func (wg *WG) Stop() {
+	logrus.Warnln("[wg] stopping...")
 	_ = wg.me.Close()
 }
 

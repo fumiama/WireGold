@@ -6,7 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	base14 "github.com/fumiama/go-base16384"
 	curve "github.com/fumiama/go-x25519"
@@ -155,7 +157,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	defer w.Stop()
+	mc := make(chan os.Signal, 1)
+	signal.Notify(mc, os.Interrupt, syscall.SIGQUIT, syscall.SIGTERM)
+	go func() {
+		<-mc
+		w.Stop()
+	}()
 	w.Run(upper.ServiceWireGold, upper.ServiceWireGold)
 }
 

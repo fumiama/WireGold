@@ -132,13 +132,19 @@ func (m *Me) EndPoint() net.Addr {
 func (m *Me) Close() error {
 	m.loop = nil
 	m.connections = nil
-	_ = m.udpconn.Close()
-	m.udpconn = nil
+	if m.udpconn != nil {
+		_ = m.udpconn.Close()
+		m.udpconn = nil
+	}
 	m.router = nil
-	m.recving.Destroy()
-	m.recving = nil
-	m.recved.Destroy()
-	m.recved = nil
+	if m.recving != nil {
+		m.recving.Destroy()
+		m.recving = nil
+	}
+	if m.recved != nil {
+		m.recved.Destroy()
+		m.recved = nil
+	}
 	if m.nic != nil {
 		m.nic.Down()
 		return m.nic.Close()

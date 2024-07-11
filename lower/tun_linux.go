@@ -14,9 +14,9 @@ func (n *NIC) Up() {
 }
 
 func (n *NIC) Down() {
-	execute("/sbin/ip", "link", "set", "dev", n.ifce.Name(), "down")
 	execute("/sbin/ip", "route", "del", n.subnet, "dev", n.ifce.Name())
 	for _, c := range n.cidrs {
 		execute("/sbin/ip", "route", "del", c, "dev", n.ifce.Name())
 	}
+	execute("/sbin/ip", "link", "set", "dev", n.ifce.Name(), "down")
 }

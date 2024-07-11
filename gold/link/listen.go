@@ -54,6 +54,7 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 			if err != nil {
 				logrus.Warnln("[listen] set ddl err:", err)
 			}
+		READ:
 			n, addr, err := conn.ReadFromUDP(lbf)
 			if m.loop == nil {
 				logrus.Warnln("[listen] quit listening")
@@ -61,6 +62,7 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 			}
 			if errors.Is(err, os.ErrDeadlineExceeded) {
 				err = nil
+				goto READ
 			}
 			if err != nil {
 				logrus.Warnln("[listen] read from udp err, reconnect:", err)

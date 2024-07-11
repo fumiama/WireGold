@@ -61,7 +61,6 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 				return
 			}
 			if errors.Is(err, os.ErrDeadlineExceeded) {
-				err = nil
 				goto READ
 			}
 			if err != nil {

@@ -4,8 +4,9 @@ linters-settings:
     exclude-functions:
       - fmt:.*
       - io/ioutil:^Read.*
-      - github.com/fumiama/WireGold/helper.(*Writer).(Write.*)
-      - github.com/fumiama/WireGold/upper/services/tunnel.(*Tunnel).(Write|Read)
+      - os:\(\*File\)\..*
+      - github.com/fumiama/WireGold/helper:\(\*Writer\)\.Write.*
+      - github.com/fumiama/WireGold/upper/services/tunnel:\(\*Tunnel\)\.(Write|Read)
 
   goimports:
     local-prefixes: github.com/fumiama/WireGold

@@ -41,11 +41,13 @@ func TestTunnel(t *testing.T) {
 		MTU:          4096,
 	})
 	m.AddPeer(&link.PeerConfig{
-		PeerIP:     "192.168.1.3",
-		EndPoint:   "127.0.0.1:21247",
-		AllowedIPs: []string{"192.168.1.3/32"},
-		PubicKey:   peerpk.Public(),
-		MTU:        4096,
+		PeerIP:         "192.168.1.3",
+		EndPoint:       "127.0.0.1:21247",
+		AllowedIPs:     []string{"192.168.1.3/32"},
+		PubicKey:       peerpk.Public(),
+		MTU:            4096,
+		MTURandomRange: 1024,
+		UseZstd:        true,
 	})
 	p := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.3/32",
@@ -56,11 +58,13 @@ func TestTunnel(t *testing.T) {
 		MTU:          4096,
 	})
 	p.AddPeer(&link.PeerConfig{
-		PeerIP:     "192.168.1.2",
-		EndPoint:   "127.0.0.1:21246",
-		AllowedIPs: []string{"192.168.1.2/32"},
-		PubicKey:   selfpk.Public(),
-		MTU:        4096,
+		PeerIP:         "192.168.1.2",
+		EndPoint:       "127.0.0.1:21246",
+		AllowedIPs:     []string{"192.168.1.2/32"},
+		PubicKey:       selfpk.Public(),
+		MTU:            4096,
+		MTURandomRange: 1024,
+		UseZstd:        true,
 	})
 	tunnme, err := Create(&m, "192.168.1.3")
 	if err != nil {
@@ -102,6 +106,8 @@ func TestTunnel(t *testing.T) {
 	t.Log("read", n, "bytes")
 	if string(sendb) != string(buf) {
 		t.Fatal("error: recv 65535 bytes data")
+		t.Log("expect", hex.EncodeToString(sendb))
+		t.Log("got", hex.EncodeToString(buf))
 	}
 
 	tunnme.Stop()

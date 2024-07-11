@@ -157,8 +157,12 @@ func (m *Me) listenthread(packet *head.Packet, addr *net.UDPAddr, index int, fin
 				p.pipe <- packet
 				logrus.Debugln("[listen] @", index, "deliver to pipe of", p.peerip)
 			} else {
-				m.nic.Write(packet.Data)
-				logrus.Debugln("[listen] @", index, "deliver", len(packet.Data), "bytes data to nic")
+				_, err := m.nic.Write(packet.Data)
+				if err != nil {
+					logrus.Errorln("[listen] @", index, "deliver", len(packet.Data), "bytes data to nic err:", err)
+				} else {
+					logrus.Debugln("[listen] @", index, "deliver", len(packet.Data), "bytes data to nic")
+				}
 				packet.Put()
 			}
 		default:

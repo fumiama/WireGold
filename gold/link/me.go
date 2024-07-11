@@ -121,7 +121,7 @@ func (m *Me) MTU() uint16 {
 	return m.mtu
 }
 
-func (m *Me) Close() error {
+func (m *Me) CloseNIC() error {
 	m.nic.Down()
 	return m.nic.Close()
 }
@@ -132,7 +132,7 @@ func (m *Me) Write(packet []byte) (n int, err error) {
 	return
 }
 
-func (m *Me) ListenFromNIC() (written int64, err error) {
+func (m *Me) ListenNIC() (written int64, err error) {
 	m.nic.Up()
 	return io.Copy(m, m.nic)
 }

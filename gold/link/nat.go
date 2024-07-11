@@ -86,8 +86,12 @@ func (l *Link) onQuery(packet []byte) {
 	if len(notify) > 0 {
 		logrus.Infoln("[nat] query wrap", len(notify), "notify")
 		w := helper.SelectWriter()
-		json.NewEncoder(w).Encode(&notify)
-		l.WriteAndPut(head.NewPacket(head.ProtoNotify, l.me.srcport, l.peerip, l.me.dstport, w.Bytes()), false)
+		_ = json.NewEncoder(w).Encode(&notify)
+		_, err = l.WriteAndPut(head.NewPacket(head.ProtoNotify, l.me.srcport, l.peerip, l.me.dstport, w.Bytes()), false)
+		if err != nil {
+			logrus.Errorln("[nat] notify peer", l, "err:", err)
+			return
+		}
 		helper.PutWriter(w)
 	}
 }

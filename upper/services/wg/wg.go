@@ -49,20 +49,19 @@ func NewWireGold(c *config.Config) (wg WG, err error) {
 }
 
 func (wg *WG) Start(srcport, destport uint16) {
-	wg.init(srcport, destport)
-	go wg.me.ListenFromNIC()
+	go wg.Run(srcport, destport)
 }
 
 func (wg *WG) Run(srcport, destport uint16) {
 	wg.init(srcport, destport)
-	_, err := wg.me.ListenFromNIC()
+	_, err := wg.me.ListenNIC()
 	if err != nil {
 		logrus.Panicln(err)
 	}
 }
 
 func (wg *WG) Stop() {
-	_ = wg.me.Close()
+	_ = wg.me.CloseNIC()
 }
 
 func (wg *WG) init(srcport, dstport uint16) {

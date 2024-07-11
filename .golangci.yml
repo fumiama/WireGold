@@ -1,12 +1,12 @@
 linters-settings:
   errcheck:
+    ignore: fmt:.*,io/ioutil:^Read.*
     ignoretests: true
     exclude-functions:
-      - fmt:.*
-      - io/ioutil:^Read.*
-      - os:\(\*File\)\..*
-      - github.com/fumiama/WireGold/helper:\(\*Writer\)\.Write.*
-      - github.com/fumiama/WireGold/upper/services/tunnel:\(\*Tunnel\)\.(Write|Read)
+      - (*os.File).Write
+      - (*github.com/fumiama/WireGold/helper.Writer).Write
+      - (*github.com/fumiama/WireGold/upper/services/tunnel.Tunnel).Write
+      - (*github.com/fumiama/WireGold/upper/services/tunnel.Tunnel).Read
 
   goimports:
     local-prefixes: github.com/fumiama/WireGold
@@ -65,7 +65,8 @@ run:
 
 # output configuration options
 output:
-  format: 'colored-line-number'
+  formats:
+    - 'colored-line-number'
   print-issued-lines: true
   print-linter-name: true
   uniq-by-line: true

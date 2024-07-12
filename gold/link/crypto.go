@@ -4,8 +4,13 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/binary"
+	"errors"
 	"math/bits"
 	mrand "math/rand"
+)
+
+var (
+	ErrCipherTextTooShort = errors.New("ciphertext too short")
 )
 
 func (l *Link) randkeyidx() uint8 {
@@ -63,7 +68,7 @@ func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb []byte) {
 }
 
 // Decode 使用 xchacha20poly1305 和密钥序列解密
-func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db []byte) {
+func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db []byte, err error) {
 	if b == nil || teatype >= 32 {
 		return
 	}
@@ -75,8 +80,7 @@ func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db []byte) {
 	if aead == nil {
 		return
 	}
-	db = decode(aead, additional, b)
-	return
+	return decode(aead, additional, b)
 }
 
 // encode 使用 xchacha20poly1305 加密
@@ -96,18 +100,17 @@ func encode(aead cipher.AEAD, additional uint16, b []byte) (eb []byte) {
 }
 
 // decode 使用 xchacha20poly1305 解密
-func decode(aead cipher.AEAD, additional uint16, b []byte) (db []byte) {
+func decode(aead cipher.AEAD, additional uint16, b []byte) ([]byte, error) {
 	nsz := aead.NonceSize()
-	if len(b) < nsz { // ciphertext too short
-		return
+	if len(b) < nsz {
+		return nil, ErrCipherTextTooShort
 	}
 	// Split nonce and ciphertext.
 	nonce, ciphertext := b[:nsz], b[nsz:]
 	// Decrypt the message and check it wasn't tampered with.
 	var buf [2]byte
 	binary.LittleEndian.PutUint16(buf[:], additional)
-	db, _ = aead.Open(nil, nonce, ciphertext, buf[:])
-	return
+	return aead.Open(nil, nonce, ciphertext, buf[:])
 }
 
 // xorenc 按 8 字节, 以初始 m.mask 循环异或编码 data

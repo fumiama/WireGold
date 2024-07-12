@@ -61,6 +61,7 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 					logrus.Errorln("[listen] reconnect udp err:", err)
 					return
 				}
+				logrus.Debugln("[listen] unlock index", i)
 				hasntfinished[i].Unlock()
 				i--
 				continue
@@ -75,6 +76,7 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 			}
 			packet := m.wait(lbf[:n])
 			if packet == nil {
+				logrus.Debugln("[listen] unlock index", i)
 				hasntfinished[i].Unlock()
 				i--
 				continue
@@ -87,6 +89,7 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 
 func (m *Me) listenthread(packet *head.Packet, addr *net.UDPAddr, index int, finish func()) {
 	defer finish()
+	defer logrus.Debugln("[listen] unlock index", index)
 	sz := packet.TeaTypeDataSZ & 0x0000ffff
 	r := int(sz) - len(packet.Data)
 	if r > 0 {
@@ -108,9 +111,10 @@ func (m *Me) listenthread(packet *head.Packet, addr *net.UDPAddr, index int, fin
 	switch {
 	case p.IsToMe(packet.Dst):
 		addt := packet.AdditionalData()
-		packet.Data = p.Decode(uint8(packet.TeaTypeDataSZ>>27), addt, packet.Data)
-		if packet.Data == nil {
-			logrus.Debugln("[listen] @", index, "drop invalid packet, addt:", addt)
+		var err error
+		packet.Data, err = p.Decode(uint8(packet.TeaTypeDataSZ>>27), addt, packet.Data)
+		if err != nil {
+			logrus.Debugln("[listen] @", index, "drop invalid packet, addt:", addt, "err:", err)
 			packet.Put()
 			return
 		}

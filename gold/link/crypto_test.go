@@ -45,7 +45,11 @@ func TestXChacha20(t *testing.T) {
 	}
 	data := []byte("12345678")
 	for i := uint64(0); i < 100000; i++ {
-		if !bytes.Equal(decode(aead, uint16(i), encode(aead, uint16(i), data)), data) {
+		db, err := decode(aead, uint16(i), encode(aead, uint16(i), data))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(db, data) {
 			t.Fatal("unexpected preshared at", i, "addt", uint16(i))
 		}
 	}

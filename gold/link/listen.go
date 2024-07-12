@@ -109,6 +109,11 @@ func (m *Me) listenthread(packet *head.Packet, addr *net.UDPAddr, index int, fin
 	}
 	switch {
 	case p.IsToMe(packet.Dst):
+		if !p.Accept(packet.Src) {
+			logrus.Warnln("[listen] @", index, "refused packet from", packet.Src.String()+":"+strconv.Itoa(int(packet.SrcPort)))
+			packet.Put()
+			return
+		}
 		addt := packet.AdditionalData()
 		var err error
 		packet.Data, err = p.Decode(packet.CipherIndex(), addt, packet.Data)

@@ -92,15 +92,17 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 				}
 			}
 			_, cidr, err := net.ParseCIDR(ipnet)
-			if err == nil {
-				l.allowedips = append(l.allowedips, cidr)
-				l.me.router.SetItem(cidr, l)
-				l.me.connmapmu.Lock()
-				l.me.connections[cfg.PeerIP] = l
-				l.me.connmapmu.Unlock()
-			} else {
+			if err != nil {
 				panic(err)
 			}
+			l.allowedips = append(l.allowedips, cidr)
+			if noroute {
+				continue
+			}
+			l.me.router.SetItem(cidr, l)
+			l.me.connmapmu.Lock()
+			l.me.connections[cfg.PeerIP] = l
+			l.me.connmapmu.Unlock()
 		}
 	}
 	logrus.Infoln("[peer] add peer:", cfg.PeerIP, "allow:", cfg.AllowedIPs)

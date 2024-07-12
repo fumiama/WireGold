@@ -7,6 +7,8 @@ import (
 	"errors"
 	"math/bits"
 	mrand "math/rand"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -51,7 +53,7 @@ func expandkeyunit(v1, v2 byte) (v uint16) {
 
 // Encode 使用 xchacha20poly1305 和密钥序列加密
 func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb []byte) {
-	if b == nil || teatype >= 32 {
+	if len(b) == 0 || teatype >= 32 {
 		return
 	}
 	if l.keys[0] == nil {
@@ -61,6 +63,7 @@ func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb []byte) {
 	}
 	aead := l.keys[teatype]
 	if aead == nil {
+		logrus.Warnln("[crypto] cipher key at index", teatype, "is empty")
 		return
 	}
 	eb = encode(aead, additional, b)
@@ -69,7 +72,7 @@ func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb []byte) {
 
 // Decode 使用 xchacha20poly1305 和密钥序列解密
 func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db []byte, err error) {
-	if b == nil || teatype >= 32 {
+	if len(b) == 0 || teatype >= 32 {
 		return
 	}
 	if l.keys[0] == nil {

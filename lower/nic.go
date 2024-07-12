@@ -31,7 +31,8 @@ type NIC struct {
 func NewNIC(ip, subnet, mtu string, cidrs ...string) NICIO {
 	ifce, err := water.New(water.Config{DeviceType: water.TUN})
 	if err != nil {
-		panic(err)
+		logrus.Error(err)
+		os.Exit(1)
 	}
 	n := &NIC{
 		ifce:   ifce,

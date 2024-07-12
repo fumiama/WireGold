@@ -113,7 +113,7 @@ func (m *Me) listenthread(packet *head.Packet, addr *net.UDPAddr, index int, fin
 		var err error
 		packet.Data, err = p.Decode(packet.CipherIndex(), addt, packet.Data)
 		if err != nil {
-			logrus.Debugln("[listen] @", index, "drop invalid packet, addt:", addt, "err:", err)
+			logrus.Debugln("[listen] @", index, "drop invalid packet", ", key idx:", packet.CipherIndex(), "addt:", addt, "err:", err)
 			packet.Put()
 			return
 		}

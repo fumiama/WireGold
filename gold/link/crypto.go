@@ -84,19 +84,20 @@ func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db []byte, er
 }
 
 // encode 使用 xchacha20poly1305 加密
-func encode(aead cipher.AEAD, additional uint16, b []byte) (eb []byte) {
+func encode(aead cipher.AEAD, additional uint16, b []byte) []byte {
 	nsz := aead.NonceSize()
-	// Select a random nonce, and leave capacity for the ciphertext.
-	nonce := make([]byte, nsz, nsz+len(b)+aead.Overhead())
+	// Accocate capacity for all the stuffs.
+	buf := make([]byte, 2+nsz+len(b)+aead.Overhead())
+	binary.LittleEndian.PutUint16(buf[:2], additional)
+	nonce := buf[2 : 2+nsz]
+	// Select a random nonce
 	_, err := rand.Read(nonce)
 	if err != nil {
-		return
+		panic(err)
 	}
 	// Encrypt the message and append the ciphertext to the nonce.
-	var buf [2]byte
-	binary.LittleEndian.PutUint16(buf[:], additional)
-	eb = aead.Seal(nonce, nonce, b, buf[:])
-	return
+	eb := aead.Seal(nonce[nsz:nsz], nonce, b, buf[:2])
+	return nonce[:nsz+len(eb)]
 }
 
 // decode 使用 xchacha20poly1305 解密
@@ -107,6 +108,9 @@ func decode(aead cipher.AEAD, additional uint16, b []byte) ([]byte, error) {
 	}
 	// Split nonce and ciphertext.
 	nonce, ciphertext := b[:nsz], b[nsz:]
+	if len(ciphertext) == 0 {
+		return nil, nil
+	}
 	// Decrypt the message and check it wasn't tampered with.
 	var buf [2]byte
 	binary.LittleEndian.PutUint16(buf[:], additional)

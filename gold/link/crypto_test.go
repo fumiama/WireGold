@@ -43,14 +43,18 @@ func TestXChacha20(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	data := []byte("12345678")
-	for i := uint64(0); i < 100000; i++ {
-		db, err := decode(aead, uint16(i), encode(aead, uint16(i), data))
+	data := make([]byte, 4096)
+	_, err = rand.Read(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 4096; i++ {
+		db, err := decode(aead, uint16(i), encode(aead, uint16(i), data[:i]))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !bytes.Equal(db, data) {
-			t.Fatal("unexpected preshared at", i, "addt", uint16(i))
+		if !bytes.Equal(db, data[:i]) {
+			t.Fatal("unexpected preshared at idx(len)", i, "addt", uint16(i))
 		}
 	}
 }

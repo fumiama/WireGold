@@ -3,6 +3,7 @@ package link
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"strconv"
 	"unsafe"
 
 	"github.com/fumiama/WireGold/gold/head"
@@ -27,17 +28,18 @@ func (m *Me) wait(data []byte) *head.Packet {
 	logrus.Debugln("[recv] data bytes", hex.EncodeToString(data[:bound]), endl)
 	data = m.xordec(data)
 	logrus.Debugln("[recv] data xored", hex.EncodeToString(data[:bound]), endl)
-	flags := binary.LittleEndian.Uint16(data[10:12])
-	if flags&0x8000 != 0 { // not a valid packet
+	flags := head.Flags(data)
+	if !flags.IsValid() {
 		logrus.Debugln("[recv] drop invalid flags packet:", hex.EncodeToString(data[11:12]), hex.EncodeToString(data[10:11]))
 		return nil
 	}
 	crc := binary.LittleEndian.Uint64(data[52:60])
 	if m.recved.Get(crc) { // 是重放攻击
+		logrus.Warnln("[recv] ignore duplicated crc packet", strconv.FormatUint(crc, 16))
 		return nil
 	}
 	logrus.Debugln("[recv]", len(data), "bytes data with flag", hex.EncodeToString(data[11:12]), hex.EncodeToString(data[10:11]))
-	if flags == 0 || flags == 0x4000 {
+	if flags.IsSingle() || flags.NoFrag() {
 		h := head.SelectPacket()
 		_, err := h.Unmarshal(data)
 		if err != nil {

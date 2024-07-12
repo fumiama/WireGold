@@ -90,8 +90,7 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 func (m *Me) listenthread(packet *head.Packet, addr *net.UDPAddr, index int, finish func()) {
 	defer finish()
 	defer logrus.Debugln("[listen] unlock index", index)
-	sz := packet.TeaTypeDataSZ & 0x0000ffff
-	r := int(sz) - len(packet.Data)
+	r := packet.Len() - len(packet.Data)
 	if r > 0 {
 		logrus.Warnln("[listen] @", index, "packet from endpoint", addr, "is smaller than it declared: drop it")
 		packet.Put()
@@ -112,7 +111,7 @@ func (m *Me) listenthread(packet *head.Packet, addr *net.UDPAddr, index int, fin
 	case p.IsToMe(packet.Dst):
 		addt := packet.AdditionalData()
 		var err error
-		packet.Data, err = p.Decode(uint8(packet.TeaTypeDataSZ>>27), addt, packet.Data)
+		packet.Data, err = p.Decode(packet.CipherIndex(), addt, packet.Data)
 		if err != nil {
 			logrus.Debugln("[listen] @", index, "drop invalid packet, addt:", addt, "err:", err)
 			packet.Put()

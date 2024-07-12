@@ -35,7 +35,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	if len(p.Data) <= delta {
 		return l.write(p, teatype, sndcnt, uint32(len(p.Data)), 0, istransfer, false)
 	}
-	if istransfer && p.Flags&0x4000 == 0x4000 && len(p.Data) > delta {
+	if istransfer && p.Flags.DontFrag() && len(p.Data) > delta {
 		return 0, errors.New("drop don't fragmnet big trans packet")
 	}
 	data := p.Data

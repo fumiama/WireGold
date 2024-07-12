@@ -15,7 +15,7 @@ func SelectPacket() *Packet {
 
 // PutPacket 将 Packet 放回池中
 func PutPacket(p *Packet) {
-	p.TeaTypeDataSZ = 0
+	p.idxdatsz = 0
 	p.Data = nil
 	packetPool.Put(p)
 }

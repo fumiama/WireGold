@@ -81,6 +81,16 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 	if cfg.AllowedIPs != nil {
 		l.allowedips = make([]*net.IPNet, 0, len(cfg.AllowedIPs))
 		for _, ipnet := range cfg.AllowedIPs {
+			if len(ipnet) == 0 {
+				continue
+			}
+			noroute := ipnet[0] == 'x'
+			if noroute {
+				ipnet = ipnet[1:]
+				if len(ipnet) == 0 {
+					continue
+				}
+			}
 			_, cidr, err := net.ParseCIDR(ipnet)
 			if err == nil {
 				l.allowedips = append(l.allowedips, cidr)

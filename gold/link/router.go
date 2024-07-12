@@ -81,7 +81,7 @@ func (r *Router) SetItem(ip *net.IPNet, l *Link) {
 		if r.list[i].Contains(ip.IP) {
 			// 是同一个网络
 			if ip.Mask.String() == r.list[i].Mask.String() {
-				logrus.Infoln("[router] change link of item", r.list[i], "from", r.table[r.list[i].String()], "to", l)
+				logrus.Warnln("[router] change link of item", r.list[i], "from", r.table[r.list[i].String()], "to", l)
 				r.table[r.list[i].String()] = l
 				break
 			}

@@ -70,10 +70,14 @@ type Packet struct {
 	Hash [32]byte
 	// crc64 包头字段的 checksum 值，可以认为在一定时间内唯一
 	crc64 uint64
-	// Data 承载的数据
-	Data []byte
+	// data 承载的数据
+	data []byte
+	// Data 当前的偏移
+	a, b int
 	// 记录还有多少字节未到达
 	rembytes int
+	// 是否经由 helper.MakeBytes 创建 Data
+	buffered bool
 }
 
 // NewPacket 生成一个新包
@@ -85,7 +89,8 @@ func NewPacket(proto uint8, srcPort uint16, dst net.IP, dstPort uint16, data []b
 	p.SrcPort = srcPort
 	p.DstPort = dstPort
 	p.Dst = dst
-	p.Data = data
+	p.data = data
+	p.b = len(data)
 	return
 }
 
@@ -101,16 +106,19 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		return
 	}
 
-	sz := p.idxdatsz & 0x0000ffff
-	if sz == 0 && len(p.Data) == 0 {
+	sz := p.Len()
+	if sz == 0 && len(p.data) == 0 {
 		p.idxdatsz = binary.LittleEndian.Uint32(data[:4])
-		sz = p.idxdatsz & 0x0000ffff
-		if int(sz)+52 == len(data) {
-			p.Data = data[52:]
+		sz = p.Len()
+		if sz+52 == len(data) {
+			p.data = data[52:]
+			p.b = len(p.data)
 			p.rembytes = 0
 		} else {
-			p.Data = make([]byte, sz)
-			p.rembytes = int(sz)
+			p.data = helper.MakeBytes(sz)
+			p.buffered = true
+			p.b = sz
+			p.rembytes = sz
 		}
 		pt := binary.LittleEndian.Uint16(data[4:6])
 		p.Proto = uint8(pt)
@@ -131,7 +139,7 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 	}
 
 	if p.rembytes > 0 {
-		p.rembytes -= copy(p.Data[flags.Offset():], data[60:])
+		p.rembytes -= copy(p.data[flags.Offset():], data[60:])
 		logrus.Debugln("[packet] copied frag", hex.EncodeToString(p.Hash[:]), "rembytes:", p.rembytes)
 	}
 
@@ -171,14 +179,14 @@ func (p *Packet) Marshal(src net.IP, teatype uint8, additional uint16, datasz ui
 		w.Write(p.Dst.To4())
 		w.Write(p.Hash[:])
 		w.WriteUInt64(crc64.Checksum(w.Bytes(), crc64.MakeTable(crc64.ISO)))
-		w.Write(p.Data)
+		w.Write(p.Body())
 	})
 }
 
 // FillHash 生成 p.Data 的 Hash
 func (p *Packet) FillHash() {
 	h := blake2b.New256()
-	_, err := h.Write(p.Data)
+	_, err := h.Write(p.Body())
 	if err != nil {
 		logrus.Error("[packet] err when fill hash:", err)
 		return
@@ -189,7 +197,7 @@ func (p *Packet) FillHash() {
 // IsVaildHash 验证 packet 合法性
 func (p *Packet) IsVaildHash() bool {
 	h := blake2b.New256()
-	_, err := h.Write(p.Data)
+	_, err := h.Write(p.Body())
 	if err != nil {
 		logrus.Error("[packet] err when check hash:", err)
 		return false
@@ -218,4 +226,48 @@ func (p *Packet) Len() int {
 // Put 将自己放回池中
 func (p *Packet) Put() {
 	PutPacket(p)
+}
+
+// Body returns data
+func (p *Packet) Body() []byte {
+	return p.data[p.a:p.b]
+}
+
+func (p *Packet) BodyLen() int {
+	return p.b - p.a
+}
+
+func (p *Packet) SetBody(b []byte, buffered bool) {
+	p.a = 0
+	p.b = len(b)
+	if len(b) <= cap(p.data) {
+		p.data = p.data[:len(b)]
+		copy(p.data, b)
+		if buffered {
+			helper.PutBytes(b)
+		}
+		return
+	}
+	if p.buffered {
+		helper.PutBytes(p.data)
+	}
+	p.data = b
+	p.buffered = buffered
+}
+
+func (p *Packet) CropBody(a, b int) {
+	if b > len(p.data) {
+		b = len(p.data)
+	}
+	if a < 0 || b < 0 || a > b {
+		return
+	}
+	p.a, p.b = a, b
+}
+
+func (p *Packet) Copy() *Packet {
+	newp := SelectPacket()
+	*newp = *p
+	newp.buffered = false
+	return newp
 }

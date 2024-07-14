@@ -32,32 +32,33 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 		logrus.Warnln("[send] reset invalid data frag len", delta, "to 8")
 		delta = 8
 	}
-	if len(p.Data) <= delta {
-		return l.write(p, teatype, sndcnt, uint32(len(p.Data)), 0, istransfer, false)
+	remlen := p.BodyLen()
+	if remlen <= delta {
+		return l.write(p, teatype, sndcnt, uint32(remlen), 0, istransfer, false)
 	}
-	if istransfer && p.Flags.DontFrag() && len(p.Data) > delta {
+	if istransfer && p.Flags.DontFrag() && remlen > delta {
 		return 0, errors.New("drop don't fragmnet big trans packet")
 	}
-	data := p.Data
 	ttl := p.TTL
-	totl := uint32(len(data))
+	totl := uint32(remlen)
 	pos := 0
-	packet := head.SelectPacket()
-	*packet = *p
-	for ; int(totl)-pos > delta; pos += delta {
-		logrus.Debugln("[send] split frag [", pos, "~", pos+delta, "], remain:", int(totl)-pos-delta)
-		packet.Data = data[:delta]
+	packet := p.Copy()
+	for remlen > delta {
+		remlen -= delta
+		logrus.Debugln("[send] split frag [", pos, "~", pos+delta, "], remain:", remlen)
+		packet.CropBody(pos, pos+delta)
 		cnt, err := l.write(packet, teatype, sndcnt, totl, uint16(pos>>3), istransfer, true)
 		n += cnt
 		if err != nil {
 			return n, err
 		}
-		data = data[delta:]
 		packet.TTL = ttl
+		pos += delta
 	}
 	packet.Put()
-	if len(data) > 0 {
-		p.Data = data
+	if remlen > 0 {
+		logrus.Debugln("[send] last frag [", pos, "~", pos+remlen, "]")
+		p.CropBody(pos, pos+remlen)
 		cnt := 0
 		cnt, err = l.write(p, teatype, sndcnt, totl, uint16(pos>>3), istransfer, false)
 		n += cnt
@@ -67,18 +68,19 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 
 func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 	p.FillHash()
-	logrus.Debugln("[send] data len before encrypt:", len(p.Data))
+	logrus.Debugln("[send] data len before encrypt:", p.BodyLen())
+	data := p.Body()
 	if l.usezstd {
 		w := helper.SelectWriter()
 		defer helper.PutWriter(w)
 		enc, _ := zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedFastest))
-		_, _ = io.Copy(enc, bytes.NewReader(p.Data))
+		_, _ = io.Copy(enc, bytes.NewReader(data))
 		enc.Close()
-		p.Data = w.Bytes()
-		logrus.Debugln("[send] data len after zstd:", len(p.Data))
+		data = w.Bytes()
+		logrus.Debugln("[send] data len after zstd:", len(data))
 	}
-	p.Data = l.Encode(teatype, sndcnt&0x07ff, p.Data)
-	logrus.Debugln("[send] data len after xchacha20:", len(p.Data), "addt:", sndcnt)
+	p.SetBody(l.Encode(teatype, sndcnt&0x07ff, data), true)
+	logrus.Debugln("[send] data len after xchacha20:", p.BodyLen(), "addt:", sndcnt)
 }
 
 // write 向 peer 发一个包

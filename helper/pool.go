@@ -13,6 +13,19 @@ var bufferPool = sync.Pool{
 	},
 }
 
+func MakeBytes(sz int) []byte {
+	w := SelectWriter()
+	b := w.Bytes()
+	if cap(b) >= sz {
+		return b[:sz]
+	}
+	return make([]byte, sz)
+}
+
+func PutBytes(b []byte) {
+	PutWriter((*Writer)(bytes.NewBuffer(b)))
+}
+
 // SelectWriter 从池中取出一个 Writer
 func SelectWriter() *Writer {
 	// 因为 bufferPool 定义有 New 函数

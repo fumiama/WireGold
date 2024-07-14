@@ -15,7 +15,10 @@ import (
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
+	"github.com/fumiama/WireGold/helper"
 )
+
+const lstnbufgragsz = 65536
 
 // 监听本机 endpoint
 func (m *Me) listen() (conn p2p.Conn, err error) {
@@ -34,7 +37,7 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 			n = 64 // 只用最多 64 核
 		}
 		logrus.Infoln("[listen] use cpu num:", n)
-		listenbuff := make([]byte, 65536*n)
+		listenbuff := make([]byte, lstnbufgragsz*n)
 		hasntfinished := make([]sync.Mutex, n)
 		for i := 0; err == nil; i++ {
 			i %= n
@@ -46,7 +49,7 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 				}
 			}
 			logrus.Debugln("[listen] lock index", i)
-			lbf := listenbuff[i*65536 : (i+1)*65536]
+			lbf := listenbuff[i*lstnbufgragsz : (i+1)*lstnbufgragsz]
 			n, addr, err := conn.ReadFromPeer(lbf)
 			if m.loop == nil || errors.Is(err, net.ErrClosed) {
 				logrus.Warnln("[listen] quit listening")
@@ -72,9 +75,9 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 				recvtotlcnt = 0
 				recvlooptime = now
 			}
-			packet := m.wait(lbf[:n])
+			packet := m.wait(lbf[:n:lstnbufgragsz])
 			if packet == nil {
-				logrus.Debugln("[listen] unlock index", i)
+				logrus.Debugln("[listen] waiting, unlock index", i)
 				hasntfinished[i].Unlock()
 				i--
 				continue
@@ -87,10 +90,11 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 
 func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish func()) {
 	defer finish()
-	defer logrus.Debugln("[listen] unlock index", index)
-	r := packet.Len() - len(packet.Data)
+	defer logrus.Debugln("[listen] dispatched, unlock index", index)
+	logrus.Debugln("[listen] start dispatching index", index)
+	r := packet.Len() - packet.BodyLen()
 	if r > 0 {
-		logrus.Warnln("[listen] @", index, "packet from endpoint", addr, "is smaller than it declared: drop it")
+		logrus.Warnln("[listen] @", index, "packet from endpoint", addr, "len", packet.BodyLen(), "is smaller than it declared len", packet.Len(), ", drop it")
 		packet.Put()
 		return
 	}
@@ -114,22 +118,25 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 		}
 		addt := packet.AdditionalData()
 		var err error
-		packet.Data, err = p.Decode(packet.CipherIndex(), addt, packet.Data)
+		data, err := p.Decode(packet.CipherIndex(), addt, packet.Body())
 		if err != nil {
 			logrus.Debugln("[listen] @", index, "drop invalid packet", ", key idx:", packet.CipherIndex(), "addt:", addt, "err:", err)
 			packet.Put()
 			return
 		}
+		packet.SetBody(data, true)
 		if p.usezstd {
-			dec, _ := zstd.NewReader(bytes.NewReader(packet.Data))
+			dec, _ := zstd.NewReader(bytes.NewReader(packet.Body()))
 			var err error
-			packet.Data, err = io.ReadAll(dec)
+			w := helper.SelectWriter()
+			_, err = io.Copy(w, dec)
 			dec.Close()
 			if err != nil {
 				logrus.Debugln("[listen] @", index, "drop invalid zstd packet:", err)
 				packet.Put()
 				return
 			}
+			packet.SetBody(w.Bytes(), true)
 		}
 		if !packet.IsVaildHash() {
 			logrus.Debugln("[listen] @", index, "drop invalid hash packet")
@@ -154,22 +161,22 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 			packet.Put()
 		case head.ProtoNotify:
 			logrus.Infoln("[listen] @", index, "recv notify from", packet.Src)
-			go p.onNotify(packet.Data)
+			go p.onNotify(packet.Body())
 			packet.Put()
 		case head.ProtoQuery:
 			logrus.Infoln("[listen] @", index, "recv query from", packet.Src)
-			go p.onQuery(packet.Data)
+			go p.onQuery(packet.Body())
 			packet.Put()
 		case head.ProtoData:
 			if p.pipe != nil {
 				p.pipe <- packet
 				logrus.Debugln("[listen] @", index, "deliver to pipe of", p.peerip)
 			} else {
-				_, err := m.nic.Write(packet.Data)
+				_, err := m.nic.Write(packet.Body())
 				if err != nil {
-					logrus.Errorln("[listen] @", index, "deliver", len(packet.Data), "bytes data to nic err:", err)
+					logrus.Errorln("[listen] @", index, "deliver", packet.BodyLen(), "bytes data to nic err:", err)
 				} else {
-					logrus.Debugln("[listen] @", index, "deliver", len(packet.Data), "bytes data to nic")
+					logrus.Debugln("[listen] @", index, "deliver", packet.BodyLen(), "bytes data to nic")
 				}
 				packet.Put()
 			}

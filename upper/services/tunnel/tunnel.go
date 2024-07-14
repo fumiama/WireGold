@@ -70,11 +70,11 @@ func (s *Tunnel) Read(p []byte) (int, error) {
 			return 0, io.EOF
 		}
 		defer pkt.Put()
-		if len(pkt.Data) < 4 {
-			logrus.Warnln("[tunnel] unexpected packet data len", len(pkt.Data), "content", pkt.Data)
+		if pkt.BodyLen() < 4 {
+			logrus.Warnln("[tunnel] unexpected packet data len", pkt.BodyLen(), "content", hex.EncodeToString(pkt.Body()))
 			return 0, io.EOF
 		}
-		d = pkt.Data[4:]
+		d = pkt.Body()[4:]
 	}
 	if d != nil {
 		if len(p) >= len(d) {
@@ -111,7 +111,7 @@ func (s *Tunnel) handleWrite() {
 		}
 		logrus.Debugln("[tunnel] writing", len(b), "bytes...")
 		for len(b) > int(s.mtu)-4 {
-			logrus.Infoln("[tunnel] seq", seq, "split buffer")
+			logrus.Debugln("[tunnel] seq", seq, "split buffer")
 			binary.LittleEndian.PutUint32(buf[:4], seq)
 			seq++
 			copy(buf[4:], b[:s.mtu-4])
@@ -157,12 +157,12 @@ func (s *Tunnel) handleRead() {
 		}
 		end := 64
 		endl := "..."
-		if len(p.Data) < 64 {
-			end = len(p.Data)
+		if p.BodyLen() < 64 {
+			end = p.BodyLen()
 			endl = "."
 		}
-		logrus.Debugln("[tunnel] read recv", hex.EncodeToString(p.Data[:end]), endl)
-		recvseq := binary.LittleEndian.Uint32(p.Data[:4])
+		logrus.Debugln("[tunnel] read recv", hex.EncodeToString(p.Body()[:end]), endl)
+		recvseq := binary.LittleEndian.Uint32(p.Body()[:4])
 		if recvseq == seq {
 			logrus.Debugln("[tunnel] dispatch seq", seq)
 			seq++

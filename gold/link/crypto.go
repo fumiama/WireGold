@@ -8,6 +8,7 @@ import (
 	"math/bits"
 	mrand "math/rand"
 
+	"github.com/fumiama/WireGold/helper"
 	"github.com/sirupsen/logrus"
 )
 
@@ -51,13 +52,13 @@ func expandkeyunit(v1, v2 byte) (v uint16) {
 	return
 }
 
-// Encode 使用 xchacha20poly1305 和密钥序列加密
+// Encode by aead and put b into pool
 func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb []byte) {
 	if len(b) == 0 || teatype >= 32 {
 		return
 	}
 	if l.keys[0] == nil {
-		eb = make([]byte, len(b))
+		eb = helper.MakeBytes(len(b))
 		copy(eb, b)
 		return
 	}
@@ -70,13 +71,14 @@ func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb []byte) {
 	return
 }
 
-// Decode 使用 xchacha20poly1305 和密钥序列解密
+// Decode by aead and put b into pool
 func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db []byte, err error) {
 	if len(b) == 0 || teatype >= 32 {
 		return
 	}
 	if l.keys[0] == nil {
-		db = b
+		db = helper.MakeBytes(len(b))
+		copy(db, b)
 		return
 	}
 	aead := l.keys[teatype]
@@ -86,11 +88,10 @@ func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db []byte, er
 	return decode(aead, additional, b)
 }
 
-// encode 使用 xchacha20poly1305 加密
 func encode(aead cipher.AEAD, additional uint16, b []byte) []byte {
 	nsz := aead.NonceSize()
 	// Accocate capacity for all the stuffs.
-	buf := make([]byte, 2+nsz+len(b)+aead.Overhead())
+	buf := helper.MakeBytes(2 + nsz + len(b) + aead.Overhead())
 	binary.LittleEndian.PutUint16(buf[:2], additional)
 	nonce := buf[2 : 2+nsz]
 	// Select a random nonce
@@ -103,7 +104,6 @@ func encode(aead cipher.AEAD, additional uint16, b []byte) []byte {
 	return nonce[:nsz+len(eb)]
 }
 
-// decode 使用 xchacha20poly1305 解密
 func decode(aead cipher.AEAD, additional uint16, b []byte) ([]byte, error) {
 	nsz := aead.NonceSize()
 	if len(b) < nsz {
@@ -117,7 +117,7 @@ func decode(aead cipher.AEAD, additional uint16, b []byte) ([]byte, error) {
 	// Decrypt the message and check it wasn't tampered with.
 	var buf [2]byte
 	binary.LittleEndian.PutUint16(buf[:], additional)
-	return aead.Open(nil, nonce, ciphertext, buf[:])
+	return aead.Open(helper.SelectWriter().Bytes(), nonce, ciphertext, buf[:])
 }
 
 // xorenc 按 8 字节, 以初始 m.mask 循环异或编码 data

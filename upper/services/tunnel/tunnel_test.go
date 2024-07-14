@@ -169,8 +169,7 @@ type logFormat struct {
 
 // Format implements logrus.Formatter
 func (f logFormat) Format(entry *logrus.Entry) ([]byte, error) {
-	buf := helper.SelectWriter()
-	defer helper.PutWriter(buf)
+	buf := helper.SelectWriter() // this writer will not be put back
 
 	buf.WriteByte('[')
 	if f.enableColor {
@@ -184,9 +183,7 @@ func (f logFormat) Format(entry *logrus.Entry) ([]byte, error) {
 	buf.WriteString(entry.Message)
 	buf.WriteString("\n")
 
-	ret := make([]byte, len(buf.Bytes()))
-	copy(ret, buf.Bytes()) // copy buffer
-	return ret, nil
+	return buf.Bytes(), nil
 }
 
 const (

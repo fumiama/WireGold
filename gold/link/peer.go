@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/gold/p2p"
 	curve "github.com/fumiama/go-x25519"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/chacha20poly1305"
@@ -72,7 +73,7 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 		}
 	}
 	if cfg.EndPoint != "" {
-		e, err := net.ResolveUDPAddr("udp", cfg.EndPoint)
+		e, err := p2p.NewEndPoint(m.ep.Network(), cfg.EndPoint)
 		if err != nil {
 			panic(err)
 		}

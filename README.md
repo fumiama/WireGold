@@ -44,7 +44,6 @@ Mask: 0x1234567890abcdef
 Peers:
   -
     IP: "192.168.233.2"
-    SubNet: 192.168.233.0/24
     PublicKey: 徯萃嵾爻燸攗窍褃冔蒔犡緇袿屿組待族砇嘀
     PresharedKey: 瀸敀爅崾嘊嵜紼樴稍毯攣矐訷蟷扛嬋庩崛昀
     EndPoint: 1.2.3.4:56789
@@ -58,7 +57,6 @@ Peers:
     AllowTrans: true
   -
     IP: "192.168.233.3"
-    SubNet: 192.168.233.0/24
     PublicKey: 牢喨粷詸衭譛浾蘹櫠砙杹蟫瑳叩刋橋経挵蘀
     PresharedKey: 竅琚喫従痸告烈兇厕趭萨假蔛瀇譄施烸蝫瘀
     EndPoint: ""

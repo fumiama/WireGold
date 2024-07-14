@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/gold/p2p"
 	"github.com/fumiama/WireGold/helper"
 	base14 "github.com/fumiama/go-base16384"
 )
@@ -24,7 +25,7 @@ type Link struct {
 	// peer 的虚拟 ip
 	peerip net.IP
 	// peer 的公网 endpoint
-	endpoint *net.UDPAddr
+	endpoint p2p.EndPoint
 	// 本机允许接收/发送的 ip 网段
 	allowedips []*net.IPNet
 	// 连接所用对称加密密钥集

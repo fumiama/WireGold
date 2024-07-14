@@ -10,10 +10,12 @@ import (
 	"time"
 
 	"github.com/FloatTech/ttl"
-	"github.com/fumiama/WireGold/gold/head"
-	"github.com/fumiama/WireGold/lower"
 	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
+
+	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/gold/p2p"
+	"github.com/fumiama/WireGold/lower"
 )
 
 // Me 是本机的抽象
@@ -27,16 +29,16 @@ type Me struct {
 	me net.IP
 	// 本机子网
 	subnet net.IPNet
-	// 本机 UDP endpoint
-	udpep net.Addr
+	// 本机 endpoint
+	ep p2p.EndPoint
 	// 本机环回 link
 	loop *Link
 	// 本机活跃的所有连接
 	connections map[string]*Link
 	// 读写同步锁
 	connmapmu sync.RWMutex
-	// 本机监听的 udp 连接, 用于向对端直接发送报文
-	udpconn *net.UDPConn
+	// 本机监听的连接端点, 也用于向对端直接发送报文
+	conn p2p.Conn
 	// 本机网卡
 	nic lower.NICIO
 	// 本机路由表
@@ -54,6 +56,7 @@ type Me struct {
 type MyConfig struct {
 	MyIPwithMask                     string
 	MyEndpoint                       string
+	Network                          string
 	PrivateKey                       *[32]byte
 	NIC                              lower.NICIO
 	SrcPort, DstPort, MTU, SpeedLoop uint16
@@ -64,7 +67,11 @@ type MyConfig struct {
 func NewMe(cfg *MyConfig) (m Me) {
 	m.privKey = *cfg.PrivateKey
 	var err error
-	m.udpep, err = net.ResolveUDPAddr("udp", cfg.MyEndpoint)
+	nw := cfg.Network
+	if nw == "" {
+		nw = "udp"
+	}
+	m.ep, err = p2p.NewEndPoint(nw, cfg.MyEndpoint)
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +81,7 @@ func NewMe(cfg *MyConfig) (m Me) {
 	}
 	m.me = ip
 	m.subnet = *cidr
-	m.udpconn, err = m.listenudp()
+	m.conn, err = m.listen()
 	if err != nil {
 		panic(err)
 	}
@@ -125,16 +132,16 @@ func (m *Me) MTU() uint16 {
 	return m.mtu
 }
 
-func (m *Me) EndPoint() net.Addr {
-	return m.udpep
+func (m *Me) EndPoint() p2p.EndPoint {
+	return m.ep
 }
 
 func (m *Me) Close() error {
 	m.loop = nil
 	m.connections = nil
-	if m.udpconn != nil {
-		_ = m.udpconn.Close()
-		m.udpconn = nil
+	if m.conn != nil {
+		_ = m.conn.Close()
+		m.conn = nil
 	}
 	m.router = nil
 	if m.recving != nil {

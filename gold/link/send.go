@@ -103,11 +103,11 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz ui
 		bound = len(d)
 		endl = "."
 	}
-	logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.udpconn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
+	logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.conn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
 	logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
 	d = l.me.xorenc(d)
 	logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
-	n, err = l.me.udpconn.WriteToUDP(d, peerep)
+	n, err = l.me.conn.WriteToPeer(d, peerep)
 	cl()
 	return
 }

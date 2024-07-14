@@ -2,12 +2,12 @@ package link
 
 import (
 	"encoding/json"
-	"net"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/gold/p2p"
 	"github.com/fumiama/WireGold/helper"
 )
 
@@ -44,11 +44,11 @@ func (l *Link) onNotify(packet []byte) {
 	// ---- 遍历 Notify，注册对方的 endpoint 到
 	// ---- connections，注意使用读写锁connmapmu
 	for peer, ep := range notify {
-		addr, err := net.ResolveUDPAddr("udp", ep)
+		addr, err := p2p.NewEndPoint(ep[0], ep[1])
 		if err == nil {
 			p, ok := l.me.IsInPeer(peer)
 			if ok {
-				if p.endpoint.String() != ep {
+				if !p.endpoint.Euqal(addr) {
 					p.endpoint = addr
 					logrus.Infoln("[nat] notify set ep of peer", peer, "to", ep)
 				}
@@ -80,7 +80,10 @@ func (l *Link) onQuery(packet []byte) {
 	for _, p := range peers {
 		lnk, ok := l.me.IsInPeer(p)
 		if ok {
-			notify[p] = lnk.endpoint.String()
+			notify[p] = [2]string{
+				lnk.endpoint.Network(),
+				lnk.endpoint.String(),
+			}
 		}
 	}
 	if len(notify) > 0 {

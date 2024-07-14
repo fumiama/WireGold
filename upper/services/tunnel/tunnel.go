@@ -8,6 +8,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	_ "github.com/fumiama/WireGold/gold/p2p/udp" // support udp connection
+
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/link"
 )

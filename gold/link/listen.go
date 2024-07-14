@@ -5,28 +5,26 @@ import (
 	"errors"
 	"io"
 	"net"
-	"net/netip"
 	"runtime"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/gold/p2p"
 )
 
-// 监听本机 UDP endpoint
-func (m *Me) listenudp() (conn *net.UDPConn, err error) {
-	conn, err = net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.MustParseAddrPort(m.udpep.String())))
+// 监听本机 endpoint
+func (m *Me) listen() (conn p2p.Conn, err error) {
+	conn, err = m.ep.Listen()
 	if err != nil {
 		return
 	}
-	m.udpep = conn.LocalAddr()
-	logrus.Infoln("[listen] at", m.udpep)
+	m.ep = conn.LocalAddr()
+	logrus.Infoln("[listen] at", m.ep)
 	go func() {
 		recvtotlcnt := uint64(0)
 		recvloopcnt := uint16(0)
@@ -49,14 +47,14 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 			}
 			logrus.Debugln("[listen] lock index", i)
 			lbf := listenbuff[i*65536 : (i+1)*65536]
-			n, addr, err := conn.ReadFromUDP(lbf)
+			n, addr, err := conn.ReadFromPeer(lbf)
 			if m.loop == nil || errors.Is(err, net.ErrClosed) {
 				logrus.Warnln("[listen] quit listening")
 				return
 			}
 			if err != nil {
 				logrus.Warnln("[listen] read from udp err, reconnect:", err)
-				conn, err = net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.MustParseAddrPort(m.udpep.String())))
+				conn, err = m.ep.Listen()
 				if err != nil {
 					logrus.Errorln("[listen] reconnect udp err:", err)
 					return
@@ -81,13 +79,13 @@ func (m *Me) listenudp() (conn *net.UDPConn, err error) {
 				i--
 				continue
 			}
-			go m.listenthread(packet, addr, i, hasntfinished[i].Unlock)
+			go m.dispatch(packet, addr, i, hasntfinished[i].Unlock)
 		}
 	}()
 	return
 }
 
-func (m *Me) listenthread(packet *head.Packet, addr *net.UDPAddr, index int, finish func()) {
+func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish func()) {
 	defer finish()
 	defer logrus.Debugln("[listen] unlock index", index)
 	r := packet.Len() - len(packet.Data)
@@ -103,9 +101,9 @@ func (m *Me) listenthread(packet *head.Packet, addr *net.UDPAddr, index int, fin
 		packet.Put()
 		return
 	}
-	if p.endpoint == nil || p.endpoint.String() != addr.String() {
+	if p.endpoint == nil || !p.endpoint.Euqal(addr) {
 		logrus.Infoln("[listen] @", index, "set endpoint of peer", p.peerip, "to", addr.String())
-		atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&p.endpoint)), unsafe.Pointer(addr))
+		p.endpoint = addr
 	}
 	switch {
 	case p.IsToMe(packet.Dst):

@@ -9,6 +9,8 @@ import (
 	curve "github.com/fumiama/go-x25519"
 	"github.com/sirupsen/logrus"
 
+	_ "github.com/fumiama/WireGold/gold/p2p/udp" // support udp connection
+
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/link"
 	"github.com/fumiama/WireGold/helper"
@@ -93,6 +95,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 	wg.me = link.NewMe(&link.MyConfig{
 		MyIPwithMask: wg.c.IP + "/32",
 		MyEndpoint:   wg.c.EndPoint,
+		Network:      wg.c.Network,
 		PrivateKey:   &wg.key,
 		NIC:          lower.NewNIC(wg.c.IP, wg.c.SubNet, strconv.FormatInt(wg.c.MTU, 10), cidrs...),
 		SrcPort:      srcport,

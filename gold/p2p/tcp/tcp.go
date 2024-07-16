@@ -116,10 +116,11 @@ func (conn *Conn) accept() {
 }
 
 func (conn *Conn) receive(ep *EndPoint) {
-	dialtimeout := conn.addr.dialtimeout
-	if dialtimeout < time.Second {
-		dialtimeout = time.Second
+	peerstimeout := ep.peerstimeout
+	if peerstimeout < time.Second {
+		peerstimeout = time.Second * 5
 	}
+	peerstimeout *= 2
 	for {
 		r := &connrecv{addr: ep}
 		if conn.addr == nil || conn.lstn == nil || conn.peers == nil || conn.recv == nil {
@@ -132,7 +133,7 @@ func (conn *Conn) receive(ep *EndPoint) {
 		r.conn = tcpconn
 
 		stopch := make(chan struct{})
-		t := time.AfterFunc(dialtimeout, func() {
+		t := time.AfterFunc(peerstimeout, func() {
 			stopch <- struct{}{}
 		})
 
@@ -146,7 +147,7 @@ func (conn *Conn) receive(ep *EndPoint) {
 		select {
 		case <-stopch:
 			logrus.Debugln("[tcp] recv from", ep, "timeout")
-			return
+			continue
 		case <-copych:
 			t.Stop()
 		}

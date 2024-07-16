@@ -67,6 +67,7 @@ func (ep *EndPoint) Listen() (p2p.Conn, error) {
 
 type connrecv struct {
 	addr *EndPoint // cast from tcpconn.RemoteAddr()
+	conn *net.TCPConn
 	pckt packet
 }
 
@@ -121,6 +122,7 @@ func (conn *Conn) receive(ep *EndPoint) {
 		if tcpconn == nil {
 			return
 		}
+		r.conn = tcpconn
 		_, err := io.Copy(&r.pckt, tcpconn)
 		if err != nil {
 			logrus.Debugln("[tcp] recv from", ep, "err:", err)
@@ -163,6 +165,7 @@ func (conn *Conn) ReadFromPeer(b []byte) (int, p2p.EndPoint, error) {
 		if p == nil {
 			return 0, nil, net.ErrClosed
 		}
+		conn.peers.Set(p.addr.String(), p.conn)
 		if p.pckt.typ == packetTypeNormal {
 			break
 		}

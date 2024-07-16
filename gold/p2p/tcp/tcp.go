@@ -50,8 +50,8 @@ func (ep *EndPoint) Listen() (p2p.Conn, error) {
 	}
 	ep.addr = lstn.Addr().(*net.TCPAddr)
 	peerstimeout := ep.peerstimeout
-	if peerstimeout < time.Second {
-		peerstimeout = time.Second * 5
+	if peerstimeout < time.Second*30 {
+		peerstimeout = time.Second * 30
 	}
 	chansz := ep.recvchansize
 	if chansz < 32 {
@@ -112,21 +112,28 @@ func (conn *Conn) accept() {
 			logrus.Info("[tcp] re-listen on", conn.addr)
 			continue
 		}
-		ep, _ := newEndpoint(tcpconn.RemoteAddr().String(), &Config{
-			DialTimeout:        conn.addr.dialtimeout,
-			PeersTimeout:       conn.addr.peerstimeout,
-			ReceiveChannelSize: conn.addr.recvchansize,
-		})
-		logrus.Debugln("[tcp] accept from", ep)
-		conn.peers.Set(ep.String(), tcpconn)
-		go conn.receive(ep)
+		go conn.receive(tcpconn, false)
 	}
 }
 
-func (conn *Conn) receive(ep *EndPoint) {
-	peerstimeout := ep.peerstimeout
-	if peerstimeout < time.Second {
-		peerstimeout = time.Second * 5
+func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
+	ep, _ := newEndpoint(tcpconn.RemoteAddr().String(), &Config{
+		DialTimeout:        conn.addr.dialtimeout,
+		PeersTimeout:       conn.addr.peerstimeout,
+		ReceiveChannelSize: conn.addr.recvchansize,
+	})
+
+	if !hasvalidated {
+		if !isvalid(tcpconn) {
+			return
+		}
+		logrus.Debugln("[tcp] accept from", ep)
+		conn.peers.Set(ep.String(), tcpconn)
+	}
+
+	peerstimeout := conn.addr.peerstimeout
+	if peerstimeout < time.Second*30 {
+		peerstimeout = time.Second * 30
 	}
 	peerstimeout *= 2
 	for {
@@ -244,9 +251,16 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
 		if !ok {
 			return 0, errors.New("expect *net.TCPConn but got " + reflect.ValueOf(cn).Type().String())
 		}
+		_, err = io.Copy(tcpconn, &packet{
+			typ: packetTypeKeepAlive,
+		})
+		if err != nil {
+			logrus.Debugln("[tcp] dial to", tcpep.addr, "success, but write err:", err)
+			return 0, err
+		}
 		logrus.Debugln("[tcp] dial to", tcpep.addr, "success, local:", tcpconn.LocalAddr())
 		conn.peers.Set(tcpep.String(), tcpconn)
-		go conn.receive(tcpep)
+		go conn.receive(tcpconn, true)
 	} else {
 		logrus.Debugln("[tcp] reuse tcpconn from", tcpconn.LocalAddr(), "to", tcpconn.RemoteAddr())
 	}

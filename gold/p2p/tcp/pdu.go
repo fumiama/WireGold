@@ -5,8 +5,10 @@ import (
 	"errors"
 	"io"
 	"net"
+	"time"
 
 	"github.com/fumiama/WireGold/helper"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -85,4 +87,40 @@ func (p *packet) WriteTo(w io.Writer) (n int64, err error) {
 	buf, cl := p.pack()
 	defer cl()
 	return io.Copy(w, &buf)
+}
+
+func isvalid(tcpconn *net.TCPConn) bool {
+	pckt := packet{}
+
+	stopch := make(chan struct{})
+	t := time.AfterFunc(time.Second, func() {
+		stopch <- struct{}{}
+	})
+
+	var err error
+	copych := make(chan struct{})
+	go func() {
+		_, err = io.Copy(&pckt, tcpconn)
+		copych <- struct{}{}
+	}()
+
+	select {
+	case <-stopch:
+		logrus.Debugln("[tcp] validate recv from", tcpconn.RemoteAddr(), "timeout")
+		return false
+	case <-copych:
+		t.Stop()
+	}
+
+	if err != nil {
+		logrus.Debugln("[tcp] validate recv from", tcpconn.RemoteAddr(), "err:", err)
+		return false
+	}
+	if pckt.typ != packetTypeKeepAlive {
+		logrus.Debugln("[tcp] validate got invalid typ", pckt.typ, "from", tcpconn.RemoteAddr())
+		return false
+	}
+
+	logrus.Debugln("[tcp] passed validate recv from", tcpconn.RemoteAddr())
+	return true
 }

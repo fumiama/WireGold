@@ -19,6 +19,9 @@ func (l *Link) keepAlive(dur int64) {
 		logrus.Infoln("[nat] start to keep alive")
 		t := time.NewTicker(time.Second * time.Duration(dur))
 		for range t.C {
+			if l.status == LINK_STATUS_DOWN || l.me.loop == nil {
+				return
+			}
 			n, err := l.WriteAndPut(head.NewPacket(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, nil), false)
 			if err == nil {
 				logrus.Infoln("[nat] send", n, "bytes keep alive packet")
@@ -75,6 +78,11 @@ func (l *Link) onQuery(packet []byte) {
 	err := json.Unmarshal(packet, &peers)
 	if err != nil {
 		logrus.Errorln("[nat] query json unmarshal err:", err)
+		return
+	}
+
+	if l == nil || l.me == nil {
+		logrus.Errorln("[nat] nil link/me")
 		return
 	}
 

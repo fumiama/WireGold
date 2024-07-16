@@ -9,6 +9,7 @@ import (
 )
 
 type Config struct {
+	DialTimeout        time.Duration
 	PeersTimeout       time.Duration
 	ReceiveChannelSize int
 }
@@ -28,6 +29,7 @@ func newEndpoint(endpoint string, configs ...any) *EndPoint {
 		addr: net.TCPAddrFromAddrPort(
 			netip.MustParseAddrPort(endpoint),
 		),
+		dialtimeout:  cfg.DialTimeout,
 		peerstimeout: cfg.PeersTimeout,
 		recvchansize: cfg.ReceiveChannelSize,
 	}

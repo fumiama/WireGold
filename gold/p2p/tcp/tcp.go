@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 type EndPoint struct {
 	addr         *net.TCPAddr
+	dialtimeout  time.Duration
 	peerstimeout time.Duration
 	recvchansize int
 }
@@ -45,9 +47,9 @@ func (ep *EndPoint) Listen() (p2p.Conn, error) {
 		return nil, err
 	}
 	ep.addr = lstn.Addr().(*net.TCPAddr)
-	timeout := ep.peerstimeout
-	if timeout < time.Second {
-		timeout = time.Second
+	peerstimeout := ep.peerstimeout
+	if peerstimeout < time.Second {
+		peerstimeout = time.Second
 	}
 	chansz := ep.recvchansize
 	if chansz < 32 {
@@ -56,7 +58,7 @@ func (ep *EndPoint) Listen() (p2p.Conn, error) {
 	conn := &Conn{
 		addr: ep,
 		lstn: lstn,
-		peers: ttl.NewCacheOn(timeout, [4]func(string, *net.TCPConn){
+		peers: ttl.NewCacheOn(peerstimeout, [4]func(string, *net.TCPConn){
 			nil,
 			nil,
 			func(s string, t *net.TCPConn) {
@@ -122,6 +124,7 @@ func (conn *Conn) accept() {
 			continue
 		}
 		ep := newEndpoint(tcpconn.RemoteAddr().String(), &Config{
+			DialTimeout:        conn.addr.dialtimeout,
 			PeersTimeout:       conn.addr.peerstimeout,
 			ReceiveChannelSize: conn.addr.recvchansize,
 		})
@@ -203,11 +206,22 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
 	}
 	tcpconn := conn.peers.Get(tcpep.String())
 	if tcpconn == nil {
+		dialtimeout := tcpep.dialtimeout
+		if dialtimeout < time.Second {
+			dialtimeout = time.Second
+		}
+		logrus.Infoln("[tcp] dial to", tcpep.addr, "timeout", dialtimeout)
+		var cn net.Conn
 		// must use another port to send because there's no exsiting conn
-		tcpconn, err = net.DialTCP(tcpep.Network(), nil, tcpep.addr)
+		cn, err = net.DialTimeout(tcpep.Network(), tcpep.addr.String(), dialtimeout)
 		if err != nil {
 			return
 		}
+		tcpconn, ok = cn.(*net.TCPConn)
+		if !ok {
+			return 0, errors.New("expect *net.TCPConn but got " + reflect.ValueOf(cn).Type().String())
+		}
+		logrus.Infoln("[tcp] dial to", tcpep.addr, "success, local:", tcpconn.LocalAddr())
 		conn.peers.Set(tcpep.String(), tcpconn)
 	}
 	cnt, err := io.Copy(tcpconn, &packet{

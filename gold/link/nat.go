@@ -19,7 +19,7 @@ func (l *Link) keepAlive(dur int64) {
 		logrus.Infoln("[nat] start to keep alive")
 		t := time.NewTicker(time.Second * time.Duration(dur))
 		for range t.C {
-			if l.status == LINK_STATUS_DOWN || l.me.loop == nil {
+			if l.me.loop == nil {
 				return
 			}
 			n, err := l.WriteAndPut(head.NewPacket(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, nil), false)
@@ -98,6 +98,9 @@ func (l *Link) onQuery(packet []byte) {
 		}
 		if eps == "" {
 			eps = l.rawep // use registered ep only
+		}
+		if eps == "" {
+			continue
 		}
 		if ok {
 			notify[p] = [2]string{

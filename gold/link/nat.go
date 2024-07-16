@@ -92,10 +92,17 @@ func (l *Link) onQuery(packet []byte) {
 	notify := make(head.Notify, len(peers))
 	for _, p := range peers {
 		lnk, ok := l.me.IsInPeer(p)
+		eps := ""
+		if l.me.ep.Network() == "udp" { // udp has real p2p
+			eps = lnk.endpoint.String()
+		}
+		if eps == "" {
+			eps = l.rawep // use registered ep only
+		}
 		if ok {
 			notify[p] = [2]string{
 				lnk.endpoint.Network(),
-				lnk.endpoint.String(),
+				eps,
 			}
 		}
 	}

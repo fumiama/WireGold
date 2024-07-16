@@ -7,10 +7,12 @@ import (
 	"github.com/fumiama/WireGold/gold/p2p"
 )
 
-func NewEndpoint(endpoint string, _ ...any) p2p.EndPoint {
-	return (*EndPoint)(net.UDPAddrFromAddrPort(
-		netip.MustParseAddrPort(endpoint),
-	))
+func NewEndpoint(endpoint string, _ ...any) (p2p.EndPoint, error) {
+	addr, err := netip.ParseAddrPort(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	return (*EndPoint)(net.UDPAddrFromAddrPort(addr)), nil
 }
 
 func init() {

@@ -44,7 +44,8 @@ func (conn *Conn) String() string {
 }
 
 func (conn *Conn) LocalAddr() p2p.EndPoint {
-	return NewEndpoint((*net.UDPConn)(conn).LocalAddr().String())
+	ep, _ := NewEndpoint((*net.UDPConn)(conn).LocalAddr().String())
+	return ep
 }
 
 func (conn *Conn) ReadFromPeer(b []byte) (int, p2p.EndPoint, error) {

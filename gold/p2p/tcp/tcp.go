@@ -112,7 +112,7 @@ func (conn *Conn) accept() {
 			logrus.Info("[tcp] re-listen on", conn.addr)
 			continue
 		}
-		ep := newEndpoint(tcpconn.RemoteAddr().String(), &Config{
+		ep, _ := newEndpoint(tcpconn.RemoteAddr().String(), &Config{
 			DialTimeout:        conn.addr.dialtimeout,
 			PeersTimeout:       conn.addr.peerstimeout,
 			ReceiveChannelSize: conn.addr.recvchansize,

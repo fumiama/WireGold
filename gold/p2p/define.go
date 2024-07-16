@@ -12,7 +12,7 @@ var (
 	ErrEndpointTypeMistatch = errors.New("endpoint type mismatch")
 )
 
-type Initializer func(endpoint string, configs ...any) EndPoint
+type Initializer func(endpoint string, configs ...any) (EndPoint, error)
 
 var factory syncx.Map[string, Initializer]
 
@@ -32,7 +32,7 @@ func NewEndPoint(network, endpoint string, configs ...any) (EndPoint, error) {
 	if !ok {
 		return nil, errors.New("network " + network + " not found")
 	}
-	return initializer(endpoint, configs...), nil
+	return initializer(endpoint, configs...)
 }
 
 type Conn interface {

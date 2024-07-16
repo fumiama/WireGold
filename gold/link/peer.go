@@ -38,6 +38,7 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 	l = &Link{
 		pubk:           cfg.PubicKey,
 		peerip:         net.ParseIP(cfg.PeerIP),
+		rawep:          cfg.EndPoint,
 		allowtrans:     cfg.AllowTrans,
 		usezstd:        cfg.UseZstd,
 		me:             m,

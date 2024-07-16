@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"reflect"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -59,10 +58,19 @@ func (ep *EndPoint) Listen() (p2p.Conn, error) {
 		chansz = 32
 	}
 	conn := &Conn{
-		addr:  ep,
-		lstn:  lstn,
-		peers: ttl.NewCache[string, *net.TCPConn](peerstimeout),
-		recv:  make(chan *connrecv, chansz),
+		addr: ep,
+		lstn: lstn,
+		peers: ttl.NewCacheOn(peerstimeout, [4]func(string, *net.TCPConn){
+			nil, nil, func(_ string, t *net.TCPConn) {
+				err := t.CloseWrite()
+				if err != nil {
+					logrus.Debugln("[tcp] close write from", t.LocalAddr(), "to", t.RemoteAddr(), "err:", err)
+				} else {
+					logrus.Debugln("[tcp] close write from", t.LocalAddr(), "to", t.RemoteAddr())
+				}
+			}, nil,
+		}),
+		recv: make(chan *connrecv, chansz),
 	}
 	go conn.accept()
 	return conn, nil
@@ -147,7 +155,8 @@ func (conn *Conn) receive(ep *EndPoint) {
 		select {
 		case <-stopch:
 			logrus.Debugln("[tcp] recv from", ep, "timeout")
-			continue
+			_ = tcpconn.CloseRead()
+			return
 		case <-copych:
 			t.Stop()
 		}
@@ -229,14 +238,6 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
 		if !ok {
 			return 0, errors.New("expect *net.TCPConn but got " + reflect.ValueOf(cn).Type().String())
 		}
-		runtime.SetFinalizer(tcpconn, func(t *net.TCPConn) {
-			err := t.CloseWrite()
-			if err != nil {
-				logrus.Debugln("[tcp] close write from", t.LocalAddr(), "to", t.RemoteAddr(), "err:", err)
-			} else {
-				logrus.Debugln("[tcp] close write from", t.LocalAddr(), "to", t.RemoteAddr())
-			}
-		})
 		logrus.Debugln("[tcp] dial to", tcpep.addr, "success, local:", tcpconn.LocalAddr())
 		conn.peers.Set(tcpep.String(), tcpconn)
 		go conn.receive(tcpep)

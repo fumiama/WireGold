@@ -30,6 +30,8 @@ type Link struct {
 	peerip net.IP
 	// peer 的公网 endpoint
 	endpoint p2p.EndPoint
+	// peer 在设置的原始值
+	rawep string
 	// 本机允许接收/发送的 ip 网段
 	allowedips []*net.IPNet
 	// 连接所用对称加密密钥集

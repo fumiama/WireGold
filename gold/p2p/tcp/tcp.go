@@ -31,6 +31,9 @@ func (ep *EndPoint) Network() string {
 }
 
 func (ep *EndPoint) Euqal(ep2 p2p.EndPoint) bool {
+	if ep == nil || ep2 == nil {
+		return ep == nil && ep2 == nil
+	}
 	tcpep2, ok := ep2.(*EndPoint)
 	if !ok {
 		return false
@@ -113,6 +116,10 @@ func (conn *Conn) accept() {
 }
 
 func (conn *Conn) receive(ep *EndPoint) {
+	dialtimeout := conn.addr.dialtimeout
+	if dialtimeout < time.Second {
+		dialtimeout = time.Second
+	}
 	for {
 		r := &connrecv{addr: ep}
 		if conn.addr == nil || conn.lstn == nil || conn.peers == nil || conn.recv == nil {
@@ -123,7 +130,27 @@ func (conn *Conn) receive(ep *EndPoint) {
 			return
 		}
 		r.conn = tcpconn
-		_, err := io.Copy(&r.pckt, tcpconn)
+
+		stopch := make(chan struct{})
+		t := time.AfterFunc(dialtimeout, func() {
+			stopch <- struct{}{}
+		})
+
+		var err error
+		copych := make(chan struct{})
+		go func() {
+			_, err = io.Copy(&r.pckt, tcpconn)
+			copych <- struct{}{}
+		}()
+
+		select {
+		case <-stopch:
+			logrus.Debugln("[tcp] recv from", ep, "timeout")
+			return
+		case <-copych:
+			t.Stop()
+		}
+
 		if err != nil {
 			logrus.Debugln("[tcp] recv from", ep, "err:", err)
 			return
@@ -211,6 +238,7 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
 		})
 		logrus.Debugln("[tcp] dial to", tcpep.addr, "success, local:", tcpconn.LocalAddr())
 		conn.peers.Set(tcpep.String(), tcpconn)
+		go conn.receive(tcpep)
 	} else {
 		logrus.Debugln("[tcp] reuse tcpconn from", tcpconn.LocalAddr(), "to", tcpconn.RemoteAddr())
 	}

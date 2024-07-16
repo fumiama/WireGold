@@ -17,6 +17,9 @@ func (ep *EndPoint) Network() string {
 }
 
 func (ep *EndPoint) Euqal(ep2 p2p.EndPoint) bool {
+	if ep == nil || ep2 == nil {
+		return ep == nil && ep2 == nil
+	}
 	udpep2, ok := ep2.(*EndPoint)
 	if !ok {
 		return false

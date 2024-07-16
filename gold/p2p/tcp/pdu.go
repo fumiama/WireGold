@@ -2,10 +2,15 @@ package tcp
 
 import (
 	"encoding/binary"
+	"errors"
 	"io"
 	"net"
 
 	"github.com/fumiama/WireGold/helper"
+)
+
+var (
+	ErrInvalidMagic = errors.New("invalid magic")
 )
 
 type packetType uint8
@@ -13,7 +18,16 @@ type packetType uint8
 const (
 	packetTypeKeepAlive packetType = iota
 	packetTypeNormal
+	packetTypeTop
 )
+
+const magic = 0x12d3fde9
+
+var magicbuf [4]byte
+
+func init() {
+	binary.LittleEndian.PutUint32(magicbuf[:], magic)
+}
 
 type packet struct {
 	typ packetType
@@ -28,7 +42,7 @@ func (p *packet) pack() (net.Buffers, func()) {
 		w.WriteByte(byte(p.typ))
 		w.WriteUInt16(p.len)
 	})
-	return net.Buffers{d, p.dat}, cl
+	return net.Buffers{magicbuf[:], d, p.dat}, cl
 }
 
 func (p *packet) Read(_ []byte) (int, error) {
@@ -40,9 +54,18 @@ func (p *packet) Write(_ []byte) (int, error) {
 }
 
 func (p *packet) ReadFrom(r io.Reader) (n int64, err error) {
-	var buf [3]byte
+	var buf [4]byte
 	cnt, err := io.ReadFull(r, buf[:])
 	n = int64(cnt)
+	if err != nil {
+		return
+	}
+	if binary.LittleEndian.Uint32(buf[:]) != magic {
+		err = ErrInvalidMagic
+		return
+	}
+	cnt, err = io.ReadFull(r, buf[:3])
+	n += int64(cnt)
 	if err != nil {
 		return
 	}

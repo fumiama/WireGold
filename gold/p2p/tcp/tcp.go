@@ -163,6 +163,12 @@ func (conn *Conn) receive(ep *EndPoint) {
 
 		if err != nil {
 			logrus.Debugln("[tcp] recv from", ep, "err:", err)
+			_ = tcpconn.CloseRead()
+			return
+		}
+		if r.pckt.typ >= packetTypeTop {
+			logrus.Debugln("[tcp] close reading invalid conn from", ep, "typ", r.pckt.typ, "len", r.pckt.len)
+			_ = tcpconn.CloseRead()
 			return
 		}
 		logrus.Debugln("[tcp] dispatch packet from", ep, "typ", r.pckt.typ, "len", r.pckt.len)

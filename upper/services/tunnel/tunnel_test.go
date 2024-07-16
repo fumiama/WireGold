@@ -16,7 +16,7 @@ import (
 	"github.com/fumiama/WireGold/helper"
 )
 
-func testTunnel(t *testing.T, isplain bool, pshk *[32]byte) {
+func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte) {
 	selfpk, err := curve.New(nil)
 	if err != nil {
 		panic(err)
@@ -33,6 +33,7 @@ func testTunnel(t *testing.T, isplain bool, pshk *[32]byte) {
 	m := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.2/32",
 		MyEndpoint:   "127.0.0.1:0",
+		Network:      nw,
 		PrivateKey:   selfpk.Private(),
 		SrcPort:      1,
 		DstPort:      1,
@@ -43,6 +44,7 @@ func testTunnel(t *testing.T, isplain bool, pshk *[32]byte) {
 	p := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.3/32",
 		MyEndpoint:   "127.0.0.1:0",
+		Network:      nw,
 		PrivateKey:   peerpk.Private(),
 		SrcPort:      1,
 		DstPort:      1,
@@ -146,20 +148,36 @@ func testTunnel(t *testing.T, isplain bool, pshk *[32]byte) {
 	}
 }
 
-func TestTunnel(t *testing.T) {
+func TestTunnelUDP(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetFormatter(&logFormat{enableColor: false})
 
-	testTunnel(t, true, nil) // test plain text
+	testTunnel(t, "udp", true, nil) // test plain text
 
-	testTunnel(t, false, nil) // test normal
+	testTunnel(t, "udp", false, nil) // test normal
 
 	var buf [32]byte
 	_, err := rand.Read(buf[:])
 	if err != nil {
 		panic(err)
 	}
-	testTunnel(t, false, &buf) // test preshared
+	testTunnel(t, "udp", false, &buf) // test preshared
+}
+
+func TestTunnelTCP(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logFormat{enableColor: false})
+
+	testTunnel(t, "tcp", true, nil) // test plain text
+
+	testTunnel(t, "tcp", false, nil) // test normal
+
+	var buf [32]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		panic(err)
+	}
+	testTunnel(t, "tcp", false, &buf) // test preshared
 }
 
 // logFormat specialize for go-cqhttp

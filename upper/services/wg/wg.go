@@ -9,6 +9,7 @@ import (
 	curve "github.com/fumiama/go-x25519"
 	"github.com/sirupsen/logrus"
 
+	_ "github.com/fumiama/WireGold/gold/p2p/tcp" // support tcp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udp" // support udp connection
 
 	"github.com/fumiama/WireGold/config"
@@ -36,7 +37,7 @@ func NewWireGold(c *config.Config) (wg WG, err error) {
 	}
 	n := copy(wg.key[:], base14.Decode(k))
 	if n != 32 {
-		err = errors.New("private key length is not 32")
+		err = errors.New("private key length != 32, got " + strconv.Itoa(n))
 		return
 	}
 

@@ -52,7 +52,7 @@ func (conn *Conn) ReadFromPeer(b []byte) (int, p2p.EndPoint, error) {
 func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (int, error) {
 	udpep, ok := ep.(*EndPoint)
 	if !ok {
-		return 0, ErrEndpointTypeMistatch
+		return 0, p2p.ErrEndpointTypeMistatch
 	}
 	return (*net.UDPConn)(conn).WriteTo(b, (*net.UDPAddr)(udpep))
 }

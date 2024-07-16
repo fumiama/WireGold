@@ -12,6 +12,10 @@ import (
 	base14 "github.com/fumiama/go-base16384"
 )
 
+var (
+	ErrPerrNotExist = errors.New("peer not exist")
+)
+
 // Link 是本机到 peer 的连接抽象
 type Link struct {
 	// peer 的公钥
@@ -56,7 +60,7 @@ func (m *Me) Connect(peer string) (*Link, error) {
 	if ok {
 		return p, nil
 	}
-	return nil, errors.New("peer not exist")
+	return nil, ErrPerrNotExist
 }
 
 // Close 关闭到 peer 的连接

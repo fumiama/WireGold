@@ -8,6 +8,10 @@ import (
 	"github.com/RomiChan/syncx"
 )
 
+var (
+	ErrEndpointTypeMistatch = errors.New("endpoint type mismatch")
+)
+
 type Initializer func(endpoint string, configs ...any) EndPoint
 
 var factory syncx.Map[string, Initializer]

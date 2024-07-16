@@ -13,7 +13,7 @@ type Config struct {
 	IP         string `yaml:"IP"`
 	SubNet     string `yaml:"SubNet"`
 	PrivateKey string `yaml:"PrivateKey"`
-	Network    string `yaml:"Network"` // Network udp or ws (WIP)
+	Network    string `yaml:"Network"` // Network udp, tcp or ws (WIP)
 	EndPoint   string `yaml:"EndPoint"`
 	MTU        int64  `yaml:"MTU"`
 	SpeedLoop  uint16 `yaml:"SpeedLoop"`

@@ -51,12 +51,15 @@ type Me struct {
 	srcport, dstport, mtu, speedloop uint16
 	// 报头掩码
 	mask uint64
+	// 本机网络端点初始化配置
+	networkconfigs []any
 }
 
 type MyConfig struct {
 	MyIPwithMask                     string
 	MyEndpoint                       string
 	Network                          string
+	NetworkConfigs                   []any
 	PrivateKey                       *[32]byte
 	NIC                              lower.NICIO
 	SrcPort, DstPort, MTU, SpeedLoop uint16
@@ -71,7 +74,8 @@ func NewMe(cfg *MyConfig) (m Me) {
 	if nw == "" {
 		nw = "udp"
 	}
-	m.ep, err = p2p.NewEndPoint(nw, cfg.MyEndpoint)
+	m.networkconfigs = cfg.NetworkConfigs
+	m.ep, err = p2p.NewEndPoint(nw, cfg.MyEndpoint, m.networkconfigs...)
 	if err != nil {
 		panic(err)
 	}

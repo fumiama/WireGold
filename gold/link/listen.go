@@ -56,7 +56,7 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 				return
 			}
 			if err != nil {
-				logrus.Warnln("[listen] read from udp err, reconnect:", err)
+				logrus.Warnln("[listen] read from conn err, reconnect:", err)
 				conn, err = m.ep.Listen()
 				if err != nil {
 					logrus.Errorln("[listen] reconnect udp err:", err)

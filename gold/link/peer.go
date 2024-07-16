@@ -73,7 +73,7 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 		}
 	}
 	if cfg.EndPoint != "" {
-		e, err := p2p.NewEndPoint(m.ep.Network(), cfg.EndPoint)
+		e, err := p2p.NewEndPoint(m.ep.Network(), cfg.EndPoint, m.networkconfigs...)
 		if err != nil {
 			panic(err)
 		}

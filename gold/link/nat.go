@@ -44,7 +44,12 @@ func (l *Link) onNotify(packet []byte) {
 	// ---- 遍历 Notify，注册对方的 endpoint 到
 	// ---- connections，注意使用读写锁connmapmu
 	for peer, ep := range notify {
-		addr, err := p2p.NewEndPoint(ep[0], ep[1])
+		nw, epstr := ep[0], ep[1]
+		if nw != l.me.ep.Network() {
+			logrus.Warnln("[nat] ignore different network notify", nw, "addr", epstr)
+			continue
+		}
+		addr, err := p2p.NewEndPoint(nw, epstr, l.me.networkconfigs...)
 		if err == nil {
 			p, ok := l.me.IsInPeer(peer)
 			if ok {

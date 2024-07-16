@@ -3,7 +3,7 @@ module github.com/fumiama/WireGold
 go 1.20
 
 require (
-	github.com/FloatTech/ttl v0.0.0-20230307105452-d6f7b2b647d1
+	github.com/FloatTech/ttl v0.0.0-20240715074357-190755f3fece
 	github.com/RomiChan/syncx v0.0.0-20240418144900-b7402ffdebc7
 	github.com/fumiama/blake2b-simd v0.0.0-20220412110131-4481822068bb
 	github.com/fumiama/go-base16384 v1.7.0

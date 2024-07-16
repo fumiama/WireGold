@@ -14,6 +14,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	ErrDropBigDontFragTransPkt = errors.New("drop big don't fragmnet trans packet")
+	ErrTTL                     = errors.New("ttl exceeded")
+)
+
 // WriteAndPut 向 peer 发包并将包放回缓存池
 func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	defer p.Put()
@@ -37,7 +42,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 		return l.write(p, teatype, sndcnt, uint32(remlen), 0, istransfer, false)
 	}
 	if istransfer && p.Flags.DontFrag() && remlen > delta {
-		return 0, errors.New("drop don't fragmnet big trans packet")
+		return 0, ErrDropBigDontFragTransPkt
 	}
 	ttl := p.TTL
 	totl := uint32(remlen)
@@ -93,11 +98,11 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz ui
 		d, cl = p.Marshal(l.me.me, teatype, additional, datasz, offset, false, hasmore)
 	}
 	if d == nil {
-		return 0, errors.New("[send] ttl exceeded")
+		return 0, ErrTTL
 	}
 	peerep := l.endpoint
 	if peerep == nil {
-		return 0, errors.New("[send] nil endpoint of " + p.Dst.String())
+		return 0, errors.New("nil endpoint of " + p.Dst.String())
 	}
 	bound := 64
 	endl := "..."

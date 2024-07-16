@@ -12,6 +12,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	ErrBadCRCChecksum = errors.New("bad crc checksum")
+	ErrDataLenLT60    = errors.New("data len < 60")
+)
+
 type PacketFlags uint16
 
 func (pf PacketFlags) IsValid() bool {
@@ -97,12 +102,12 @@ func NewPacket(proto uint8, srcPort uint16, dst net.IP, dstPort uint16, data []b
 // Unmarshal 将 data 的数据解码到自身
 func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 	if len(data) < 60 {
-		err = errors.New("data len < 60")
+		err = ErrDataLenLT60
 		return
 	}
 	p.crc64 = binary.LittleEndian.Uint64(data[52:60])
 	if crc64.Checksum(data[:52], crc64.MakeTable(crc64.ISO)) != p.crc64 {
-		err = errors.New("bad crc checksum")
+		err = ErrBadCRCChecksum
 		return
 	}
 

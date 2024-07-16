@@ -136,6 +136,7 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 		peerstimeout = time.Second * 30
 	}
 	peerstimeout *= 2
+	defer conn.peers.Delete(ep.String())
 	for {
 		r := &connrecv{addr: ep}
 		if conn.addr == nil || conn.lstn == nil || conn.peers == nil || conn.recv == nil {
@@ -234,7 +235,9 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
 	if blen >= 65536 {
 		return 0, errors.New("data size " + strconv.Itoa(blen) + " is too large")
 	}
+	retried := false
 	tcpconn := conn.peers.Get(tcpep.String())
+RECONNECT:
 	if tcpconn == nil {
 		dialtimeout := tcpep.dialtimeout
 		if dialtimeout < time.Second {
@@ -269,5 +272,13 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
 		len: uint16(blen),
 		dat: b,
 	})
+	if err != nil {
+		conn.peers.Delete(tcpep.String())
+		if !retried {
+			retried = true
+			tcpconn = nil
+			goto RECONNECT
+		}
+	}
 	return int(cnt) - 3, err
 }

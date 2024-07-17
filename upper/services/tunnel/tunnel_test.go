@@ -192,6 +192,38 @@ func TestTunnelUDPSmallMTU(t *testing.T) {
 	testTunnel(t, "udp", false, &buf, 1024) // test preshared
 }
 
+func TestTunnelUDPLite(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logFormat{enableColor: false})
+
+	testTunnel(t, "udplite", true, nil, 4096) // test plain text
+
+	testTunnel(t, "udplite", false, nil, 4096) // test normal
+
+	var buf [32]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		panic(err)
+	}
+	testTunnel(t, "udplite", false, &buf, 4096) // test preshared
+}
+
+func TestTunnelUDPLiteSmallMTU(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logFormat{enableColor: false})
+
+	testTunnel(t, "udplite", true, nil, 1024) // test plain text
+
+	testTunnel(t, "udplite", false, nil, 1024) // test normal
+
+	var buf [32]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		panic(err)
+	}
+	testTunnel(t, "udplite", false, &buf, 1024) // test preshared
+}
+
 func TestTunnelTCP(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetFormatter(&logFormat{enableColor: false})

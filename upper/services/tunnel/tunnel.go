@@ -8,9 +8,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	_ "github.com/fumiama/WireGold/gold/p2p/ip"  // support ip connection
-	_ "github.com/fumiama/WireGold/gold/p2p/tcp" // support tcp connection
-	_ "github.com/fumiama/WireGold/gold/p2p/udp" // support udp connection
+	_ "github.com/fumiama/WireGold/gold/p2p/ip"      // support ip connection
+	_ "github.com/fumiama/WireGold/gold/p2p/tcp"     // support tcp connection
+	_ "github.com/fumiama/WireGold/gold/p2p/udp"     // support udp connection
+	_ "github.com/fumiama/WireGold/gold/p2p/udplite" // support udplite connection
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/link"

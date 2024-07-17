@@ -72,6 +72,10 @@ func (wg *WG) init(srcport, dstport uint16) {
 	if err != nil {
 		panic(err)
 	}
+	myip := net.ParseIP(wg.c.IP)
+	if myip == nil {
+		panic("invalid ip " + wg.c.IP)
+	}
 	for _, p := range wg.c.Peers {
 		for _, ip := range p.AllowedIPs {
 			if len(ip) == 0 || ip[0] == 'x' {
@@ -94,11 +98,11 @@ func (wg *WG) init(srcport, dstport uint16) {
 	}
 
 	wg.me = link.NewMe(&link.MyConfig{
-		MyIPwithMask: wg.c.IP + "/32",
+		MyIPwithMask: myip.String() + "/32",
 		MyEndpoint:   wg.c.EndPoint,
 		Network:      wg.c.Network,
 		PrivateKey:   &wg.key,
-		NIC:          lower.NewNIC(wg.c.IP, wg.c.SubNet, strconv.FormatInt(wg.c.MTU, 10), cidrs...),
+		NIC:          lower.NewNIC(myip, mysubnet, strconv.FormatInt(wg.c.MTU, 10), cidrs...),
 		SrcPort:      srcport,
 		DstPort:      dstport,
 		MTU:          uint16(wg.c.MTU),

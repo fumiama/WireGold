@@ -6,19 +6,14 @@ package lower
 import "net"
 
 func (n *NIC) Up() {
-	// execute("netsh", "interface", "set", "interface", n.ifce.Name(), "enabled")
-	_, ipn, err := net.ParseCIDR(n.subnet)
-	if err != nil {
-		panic(err)
-	}
-	execute("cmd", "/c", "netsh interface ip set address name=\""+n.ifce.Name()+"\" source=static addr=\""+n.ip+"\" mask=\""+(net.IP)(ipn.Mask).String()+"\" gateway=none")
+	execute("cmd", "/c", "netsh interface ip set address name=\""+n.ifce.Name()+"\" source=static addr=\""+n.ip.String()+"\" mask=\""+(net.IP)(n.subnet.Mask).String()+"\" gateway=none")
 	execute("cmd", "/c", "netsh interface ipv4 set subinterface \""+n.ifce.Name()+"\" mtu="+n.mtu)
 	for _, c := range n.cidrs {
 		ip, cidr, err := net.ParseCIDR(c)
 		if err != nil {
 			panic(err)
 		}
-		execute("cmd", "/c", "route ADD "+ip.String()+" MASK "+(net.IP)(cidr.Mask).String()+" "+n.ip)
+		execute("cmd", "/c", "route ADD "+ip.String()+" MASK "+(net.IP)(cidr.Mask).String()+" "+n.ip.String())
 	}
 }
 

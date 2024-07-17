@@ -16,7 +16,7 @@ func (l *Link) Read() *head.Packet {
 }
 
 func (m *Me) wait(data []byte) *head.Packet {
-	if len(data) < 60 { // not a valid packet
+	if len(data) < head.PacketHeadLen { // not a valid packet
 		return nil
 	}
 	bound := 64
@@ -33,7 +33,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 		logrus.Debugln("[recv] drop invalid flags packet:", hex.EncodeToString(data[11:12]), hex.EncodeToString(data[10:11]))
 		return nil
 	}
-	crc := binary.LittleEndian.Uint64(data[52:60])
+	crc := binary.LittleEndian.Uint64(data[52:head.PacketHeadLen])
 	if m.recved.Get(crc) { // 是重放攻击
 		logrus.Warnln("[recv] ignore duplicated crc packet", strconv.FormatUint(crc, 16))
 		return nil

@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	ErrDropBigDontFragTransPkt = errors.New("drop big don't fragmnet trans packet")
-	ErrTTL                     = errors.New("ttl exceeded")
+	ErrDropBigDontFragPkt = errors.New("drop big don't fragmnet packet")
+	ErrTTL                = errors.New("ttl exceeded")
 )
 
 // WriteAndPut 向 peer 发包并将包放回缓存池
@@ -32,7 +32,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	if !istransfer {
 		l.encrypt(p, sndcnt, teatype)
 	}
-	delta := (int(mtu) - 60) & 0x0000fff8
+	delta := (int(mtu) - head.PacketHeadLen) & 0x0000fff8
 	if delta <= 0 {
 		logrus.Warnln("[send] reset invalid data frag len", delta, "to 8")
 		delta = 8
@@ -42,7 +42,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 		return l.write(p, teatype, sndcnt, uint32(remlen), 0, istransfer, false)
 	}
 	if istransfer && p.Flags.DontFrag() && remlen > delta {
-		return 0, ErrDropBigDontFragTransPkt
+		return 0, ErrDropBigDontFragPkt
 	}
 	ttl := p.TTL
 	totl := uint32(remlen)
@@ -89,21 +89,25 @@ func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 }
 
 // write 向 peer 发一个包
-func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz uint32, offset uint16, istransfer, hasmore bool) (n int, err error) {
+func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz uint32, offset uint16, istransfer, hasmore bool) (int, error) {
+	peerep := l.endpoint
+	if peerep == nil {
+		return 0, errors.New("nil endpoint of " + p.Dst.String())
+	}
+
 	var d []byte
 	var cl func()
+	// TODO: now all packet allow frag, adapt to DF
 	if istransfer {
-		d, cl = p.Marshal(nil, teatype, additional, 0, 0, false, false)
+		d, cl = p.Marshal(nil, 0, 0, 0, offset, false, hasmore)
 	} else {
 		d, cl = p.Marshal(l.me.me, teatype, additional, datasz, offset, false, hasmore)
 	}
 	if d == nil {
 		return 0, ErrTTL
 	}
-	peerep := l.endpoint
-	if peerep == nil {
-		return 0, errors.New("nil endpoint of " + p.Dst.String())
-	}
+	defer cl()
+
 	bound := 64
 	endl := "..."
 	if len(d) < bound {
@@ -114,7 +118,5 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz ui
 	logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
 	d = l.me.xorenc(d)
 	logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
-	n, err = l.me.conn.WriteToPeer(d, peerep)
-	cl()
-	return
+	return l.me.conn.WriteToPeer(d, peerep)
 }

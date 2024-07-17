@@ -12,6 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const PacketHeadLen = 60
+
 var (
 	ErrBadCRCChecksum = errors.New("bad crc checksum")
 	ErrDataLenLT60    = errors.New("data len < 60")
@@ -105,7 +107,7 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		err = ErrDataLenLT60
 		return
 	}
-	p.crc64 = binary.LittleEndian.Uint64(data[52:60])
+	p.crc64 = binary.LittleEndian.Uint64(data[52:PacketHeadLen])
 	if crc64.Checksum(data[:52], crc64.MakeTable(crc64.ISO)) != p.crc64 {
 		err = ErrBadCRCChecksum
 		return
@@ -144,7 +146,7 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 	}
 
 	if p.rembytes > 0 {
-		p.rembytes -= copy(p.data[flags.Offset():], data[60:])
+		p.rembytes -= copy(p.data[flags.Offset():], data[PacketHeadLen:])
 		logrus.Debugln("[packet] copied frag", hex.EncodeToString(p.Hash[:]), "rembytes:", p.rembytes)
 	}
 
@@ -162,17 +164,18 @@ func (p *Packet) Marshal(src net.IP, teatype uint8, additional uint16, datasz ui
 	}
 
 	if src != nil {
-		p.idxdatsz = (uint32(teatype) << 27) | (uint32(additional&0x07ff) << 16) | datasz&0xffff
 		p.Src = src
-		offset &= 0x1fff
-		if dontfrag {
-			offset |= 0x4000
-		}
-		if hasmore {
-			offset |= 0x2000
-		}
-		p.Flags = PacketFlags(offset)
+		p.idxdatsz = (uint32(teatype) << 27) | (uint32(additional&0x07ff) << 16) | datasz&0xffff
 	}
+
+	offset &= 0x1fff
+	if dontfrag {
+		offset |= 0x4000
+	}
+	if hasmore {
+		offset |= 0x2000
+	}
+	p.Flags = PacketFlags(offset)
 
 	return helper.OpenWriterF(func(w *helper.Writer) {
 		w.WriteUInt32(p.idxdatsz)

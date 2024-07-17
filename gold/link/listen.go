@@ -125,7 +125,7 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 		var err error
 		data, err := p.Decode(packet.CipherIndex(), addt, packet.Body())
 		if err != nil {
-			logrus.Debugln("[listen] @", index, "drop invalid packet", ", key idx:", packet.CipherIndex(), "addt:", addt, "err:", err)
+			logrus.Debugln("[listen] @", index, "drop invalid packet key idx:", packet.CipherIndex(), "addt:", addt, "err:", err)
 			packet.Put()
 			return
 		}

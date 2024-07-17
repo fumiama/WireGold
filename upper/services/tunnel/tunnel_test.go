@@ -16,7 +16,7 @@ import (
 	"github.com/fumiama/WireGold/helper"
 )
 
-func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte) {
+func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint16) {
 	selfpk, err := curve.New(nil)
 	if err != nil {
 		panic(err)
@@ -37,7 +37,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte) {
 		PrivateKey:   selfpk.Private(),
 		SrcPort:      1,
 		DstPort:      1,
-		MTU:          4096,
+		MTU:          mtu,
 	})
 	defer m.Close()
 
@@ -48,7 +48,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte) {
 		PrivateKey:   peerpk.Private(),
 		SrcPort:      1,
 		DstPort:      1,
-		MTU:          4096,
+		MTU:          mtu,
 	})
 	defer p.Close()
 
@@ -65,8 +65,8 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte) {
 		AllowedIPs:     []string{"192.168.1.3/32"},
 		PubicKey:       ppp,
 		PresharedKey:   pshk,
-		MTU:            4096,
-		MTURandomRange: 1024,
+		MTU:            mtu,
+		MTURandomRange: mtu / 2,
 		UseZstd:        true,
 	})
 	p.AddPeer(&link.PeerConfig{
@@ -75,8 +75,8 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte) {
 		AllowedIPs:     []string{"192.168.1.2/32"},
 		PubicKey:       spp,
 		PresharedKey:   pshk,
-		MTU:            4096,
-		MTURandomRange: 1024,
+		MTU:            mtu,
+		MTURandomRange: mtu / 2,
 		UseZstd:        true,
 	})
 	tunnme, err := Create(&m, "192.168.1.3")
@@ -152,32 +152,64 @@ func TestTunnelUDP(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetFormatter(&logFormat{enableColor: false})
 
-	testTunnel(t, "udp", true, nil) // test plain text
+	testTunnel(t, "udp", true, nil, 4096) // test plain text
 
-	testTunnel(t, "udp", false, nil) // test normal
+	testTunnel(t, "udp", false, nil, 4096) // test normal
 
 	var buf [32]byte
 	_, err := rand.Read(buf[:])
 	if err != nil {
 		panic(err)
 	}
-	testTunnel(t, "udp", false, &buf) // test preshared
+	testTunnel(t, "udp", false, &buf, 4096) // test preshared
+}
+
+func TestTunnelUDPSmallMTU(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logFormat{enableColor: false})
+
+	testTunnel(t, "udp", true, nil, 1024) // test plain text
+
+	testTunnel(t, "udp", false, nil, 1024) // test normal
+
+	var buf [32]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		panic(err)
+	}
+	testTunnel(t, "udp", false, &buf, 1024) // test preshared
 }
 
 func TestTunnelTCP(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetFormatter(&logFormat{enableColor: false})
 
-	testTunnel(t, "tcp", true, nil) // test plain text
+	testTunnel(t, "tcp", true, nil, 4096) // test plain text
 
-	testTunnel(t, "tcp", false, nil) // test normal
+	testTunnel(t, "tcp", false, nil, 4096) // test normal
 
 	var buf [32]byte
 	_, err := rand.Read(buf[:])
 	if err != nil {
 		panic(err)
 	}
-	testTunnel(t, "tcp", false, &buf) // test preshared
+	testTunnel(t, "tcp", false, &buf, 4096) // test preshared
+}
+
+func TestTunnelTCPSmallMTU(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logFormat{enableColor: false})
+
+	testTunnel(t, "tcp", true, nil, 1024) // test plain text
+
+	testTunnel(t, "tcp", false, nil, 1024) // test normal
+
+	var buf [32]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		panic(err)
+	}
+	testTunnel(t, "tcp", false, &buf, 1024) // test preshared
 }
 
 // logFormat specialize for go-cqhttp

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/fumiama/WireGold/gold/p2p"
+	"github.com/fumiama/WireGold/helper"
 )
 
 type Config struct {
@@ -38,8 +39,9 @@ func newEndpoint(endpoint string, configs ...any) (*EndPoint, error) {
 }
 
 func init() {
-	_, hasexist := p2p.Register("tcp", NewEndpoint)
+	name := helper.FolderName()
+	_, hasexist := p2p.Register(name, NewEndpoint)
 	if hasexist {
-		panic("network tcp has been registered")
+		panic("network " + name + " has been registered")
 	}
 }

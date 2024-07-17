@@ -1,4 +1,4 @@
-package udp
+package ip
 
 import (
 	"net"
@@ -8,12 +8,19 @@ import (
 	"github.com/fumiama/WireGold/helper"
 )
 
-func NewEndpoint(endpoint string, _ ...any) (p2p.EndPoint, error) {
-	addr, err := netip.ParseAddrPort(endpoint)
+func NewEndpoint(endpoint string, configs ...any) (p2p.EndPoint, error) {
+	addr, err := netip.ParseAddr(endpoint)
 	if err != nil {
 		return nil, err
 	}
-	return (*EndPoint)(net.UDPAddrFromAddrPort(addr)), nil
+	ptcl := uint(0x04) // IPIP
+	return &EndPoint{
+		addr: &net.IPAddr{
+			IP:   addr.AsSlice(),
+			Zone: addr.Zone(),
+		},
+		ptcl: ptcl,
+	}, nil
 }
 
 func init() {

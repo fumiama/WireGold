@@ -30,9 +30,21 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 	t.Log("peer priv key:", hex.EncodeToString(peerpk.Private()[:]))
 	t.Log("peer publ key:", hex.EncodeToString(peerpk.Public()[:]))
 
+	epm := "127.0.0.1"
+	if nw != "ip" {
+		epm += ":0"
+	}
+	// under macos you need to run
+	//
+	// sudo ifconfig lo0 alias 127.0.0.2
+	epp := "127.0.0.2"
+	if nw != "ip" {
+		epp += ":0"
+	}
+
 	m := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.2/32",
-		MyEndpoint:   "127.0.0.1:0",
+		MyEndpoint:   epm,
 		Network:      nw,
 		PrivateKey:   selfpk.Private(),
 		SrcPort:      1,
@@ -43,7 +55,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 
 	p := link.NewMe(&link.MyConfig{
 		MyIPwithMask: "192.168.1.3/32",
-		MyEndpoint:   "127.0.0.1:0",
+		MyEndpoint:   epp,
 		Network:      nw,
 		PrivateKey:   peerpk.Private(),
 		SrcPort:      1,
@@ -210,6 +222,38 @@ func TestTunnelTCPSmallMTU(t *testing.T) {
 		panic(err)
 	}
 	testTunnel(t, "tcp", false, &buf, 1024) // test preshared
+}
+
+func TestTunnelIP(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logFormat{enableColor: false})
+
+	testTunnel(t, "ip", true, nil, 4096) // test plain text
+
+	testTunnel(t, "ip", false, nil, 4096) // test normal
+
+	var buf [32]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		panic(err)
+	}
+	testTunnel(t, "ip", false, &buf, 4096) // test preshared
+}
+
+func TestTunnelIPSmallMTU(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logFormat{enableColor: false})
+
+	testTunnel(t, "ip", true, nil, 1024) // test plain text
+
+	testTunnel(t, "ip", false, nil, 1024) // test normal
+
+	var buf [32]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		panic(err)
+	}
+	testTunnel(t, "ip", false, &buf, 1024) // test preshared
 }
 
 // logFormat specialize for go-cqhttp

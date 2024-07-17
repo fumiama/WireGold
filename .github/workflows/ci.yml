@@ -23,7 +23,7 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: go test $(go list ./...)
+        run: sudo go test $(go list ./...) # ip test needs sudo
 
   lint:
     name: Lint

@@ -31,8 +31,6 @@ type Me struct {
 	subnet net.IPNet
 	// 本机 endpoint
 	ep p2p.EndPoint
-	// 本机环回 link
-	loop *Link
 	// 本机活跃的所有连接
 	connections map[string]*Link
 	// 读写同步锁
@@ -97,17 +95,6 @@ func NewMe(cfg *MyConfig) (m Me) {
 		cache: ttl.NewCache[string, *Link](time.Minute),
 	}
 	m.router.SetDefault(nil)
-	_, localp, err := net.SplitHostPort(m.EndPoint().String())
-	if err != nil {
-		panic(err)
-	}
-	m.loop = m.AddPeer(&PeerConfig{
-		PeerIP:     m.me.String(),
-		EndPoint:   "127.0.0.1:" + localp,
-		AllowedIPs: []string{cfg.MyIPwithMask},
-		NoPipe:     cfg.NIC != nil,
-		MTU:        cfg.MTU,
-	})
 	m.srcport = cfg.SrcPort
 	m.dstport = cfg.DstPort
 	m.mtu = cfg.MTU & 0xfff8
@@ -141,7 +128,6 @@ func (m *Me) EndPoint() p2p.EndPoint {
 }
 
 func (m *Me) Close() error {
-	m.loop = nil
 	m.connections = nil
 	if m.conn != nil {
 		_ = m.conn.Close()
@@ -222,6 +208,14 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 	rem = rem[i:]
 	dst := waterutil.IPv4Destination(packet)
 	logrus.Debugln("[me] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), "remain:", len(rem), "bytes")
+	if m.me.Equal(dst) { // is to myself, write to nic (pipe not allow loopback)
+		logrus.Debugln("[me] loopback packet")
+		_, err := m.nic.Write(packet)
+		if err != nil {
+			logrus.Warnln("[me] write to loopback err:", err)
+		}
+		return
+	}
 	lnk := m.router.NextHop(dst.String())
 	if lnk == nil {
 		logrus.Warnln("[me] drop packet to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), ": nil nexthop")

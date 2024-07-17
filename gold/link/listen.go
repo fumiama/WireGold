@@ -51,7 +51,7 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 			logrus.Debugln("[listen] lock index", i)
 			lbf := listenbuff[i*lstnbufgragsz : (i+1)*lstnbufgragsz]
 			n, addr, err := conn.ReadFromPeer(lbf)
-			if m.loop == nil || errors.Is(err, net.ErrClosed) {
+			if m.connections == nil || errors.Is(err, net.ErrClosed) {
 				logrus.Warnln("[listen] quit listening")
 				return
 			}

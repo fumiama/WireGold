@@ -6,6 +6,7 @@ import (
 	"net"
 	"reflect"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/FloatTech/ttl"
@@ -71,6 +72,7 @@ func (ep *EndPoint) Listen() (p2p.Conn, error) {
 			}, nil,
 		}),
 		recv: make(chan *connrecv, chansz),
+		cplk: &sync.Mutex{},
 	}
 	go conn.accept()
 	return conn, nil
@@ -88,6 +90,7 @@ type Conn struct {
 	lstn  *net.TCPListener
 	peers *ttl.Cache[string, *net.TCPConn]
 	recv  chan *connrecv
+	cplk  *sync.Mutex
 }
 
 func (conn *Conn) accept() {
@@ -236,6 +239,8 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
 		return 0, errors.New("data size " + strconv.Itoa(blen) + " is too large")
 	}
 	retried := false
+	conn.cplk.Lock()
+	defer conn.cplk.Unlock()
 	tcpconn := conn.peers.Get(tcpep.String())
 RECONNECT:
 	if tcpconn == nil {

@@ -14,6 +14,9 @@ func NewEndpoint(endpoint string, configs ...any) (p2p.EndPoint, error) {
 		return nil, err
 	}
 	ptcl := uint(0x04) // IPIP
+	if len(configs) > 0 {
+		ptcl = configs[0].(uint)
+	}
 	return &EndPoint{
 		addr: &net.IPAddr{
 			IP:   addr.AsSlice(),

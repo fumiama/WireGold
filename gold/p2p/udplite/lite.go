@@ -49,7 +49,7 @@ func (sl *sysListener) listenUDP(ctx context.Context, laddr *net.UDPAddr) (*net.
 	sockladdr := sockaddrinterfaceinstance
 	*(**net.UDPAddr)(unsafe.Add(unsafe.Pointer(&sockladdr), unsafe.Sizeof(uintptr(0)))) = laddr
 	sockraddr := sockaddrinterfaceinstance
-	sockladdr = nil
+	sockraddr = nil
 	fd, err := internetSocket(ctx, sl.network, sockladdr, sockraddr, syscall.SOCK_DGRAM, IPPROTO_UDPLITE, "listen", ctrlCtxFn)
 	if err != nil {
 		return nil, err

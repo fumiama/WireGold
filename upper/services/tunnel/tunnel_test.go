@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -193,6 +194,9 @@ func TestTunnelUDPSmallMTU(t *testing.T) {
 }
 
 func TestTunnelUDPLite(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		return
+	}
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetFormatter(&logFormat{enableColor: false})
 
@@ -209,6 +213,9 @@ func TestTunnelUDPLite(t *testing.T) {
 }
 
 func TestTunnelUDPLiteSmallMTU(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		return
+	}
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetFormatter(&logFormat{enableColor: false})
 

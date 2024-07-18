@@ -15,7 +15,7 @@ func (ep *EndPoint) String() string {
 }
 
 func (ep *EndPoint) Network() string {
-	return (*net.UDPAddr)(ep).Network()
+	return "udplite"
 }
 
 func (ep *EndPoint) Euqal(ep2 p2p.EndPoint) bool {

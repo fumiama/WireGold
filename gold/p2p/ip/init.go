@@ -13,7 +13,7 @@ func NewEndpoint(endpoint string, configs ...any) (p2p.EndPoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	ptcl := uint(0x04) // IPIP
+	ptcl := uint(0x6C) // IPComp https://datatracker.ietf.org/doc/html/rfc3173
 	if len(configs) > 0 {
 		ptcl = configs[0].(uint)
 	}

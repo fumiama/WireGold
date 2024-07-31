@@ -34,6 +34,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 		return nil
 	}
 	crc := binary.LittleEndian.Uint64(data[52:head.PacketHeadLen])
+	logrus.Debugf("[recv] packet crc %016x", crc)
 	if m.recved.Get(crc) { // 是重放攻击
 		logrus.Warnln("[recv] ignore duplicated crc packet", strconv.FormatUint(crc, 16))
 		return nil
@@ -78,5 +79,6 @@ func (m *Me) wait(data []byte) *head.Packet {
 		return nil
 	}
 	m.recving.Set(hsh, h)
+	m.recved.Set(crc, true)
 	return nil
 }

@@ -44,6 +44,8 @@ type Link struct {
 	allowtrans bool
 	// 是否对数据进行 zstd 压缩
 	usezstd bool
+	// 是否采用双倍发包对抗强丢包
+	doublepacket bool
 	// udp 数据包的最大大小
 	mtu uint16
 	// 随机放缩 mtu 范围 (只减不增)

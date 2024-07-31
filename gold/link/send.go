@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"time"
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/helper"
@@ -88,8 +89,23 @@ func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 	logrus.Debugln("[send] data len after xchacha20:", p.BodyLen(), "addt:", sndcnt)
 }
 
-// write 向 peer 发一个包
+// write 向 peer 发包
 func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz uint32, offset uint16, istransfer, hasmore bool) (int, error) {
+	if p.DecreaseAndGetTTL() <= 0 {
+		return 0, ErrTTL
+	}
+	if l.doublepacket {
+		cpp := p.Copy()
+		time.AfterFunc(time.Millisecond*(10+time.Duration(rand.Intn(10))), func() {
+			defer cpp.Put()
+			_, _ = l.writeonce(cpp, teatype, additional, datasz, offset, istransfer, hasmore)
+		})
+	}
+	return l.writeonce(p, teatype, additional, datasz, offset, istransfer, hasmore)
+}
+
+// write 向 peer 发一个包
+func (l *Link) writeonce(p *head.Packet, teatype uint8, additional uint16, datasz uint32, offset uint16, istransfer, hasmore bool) (int, error) {
 	peerep := l.endpoint
 	if peerep == nil {
 		return 0, errors.New("nil endpoint of " + p.Dst.String())
@@ -103,9 +119,6 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz ui
 	} else {
 		d, cl = p.Marshal(l.me.me, teatype, additional, datasz, offset, false, hasmore)
 	}
-	if d == nil {
-		return 0, ErrTTL
-	}
 	defer cl()
 
 	bound := 64
@@ -118,5 +131,6 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz ui
 	logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
 	d = l.me.xorenc(d)
 	logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
+	defer helper.PutBytes(d)
 	return l.me.conn.WriteToPeer(d, peerep)
 }

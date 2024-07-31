@@ -154,6 +154,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 			AllowTrans:     peer.AllowTrans,
 			NoPipe:         true,
 			UseZstd:        peer.UseZstd,
+			DoublePacket:   peer.DoublePacket,
 		})
 	}
 }

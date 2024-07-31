@@ -155,14 +155,15 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 	return
 }
 
+// DecreaseAndGetTTL TTL 自减后返回
+func (p *Packet) DecreaseAndGetTTL() uint8 {
+	p.TTL--
+	return p.TTL
+}
+
 // Marshal 将自身数据编码为 []byte
 // offset 必须为 8 的倍数，表示偏移的 8 位
 func (p *Packet) Marshal(src net.IP, teatype uint8, additional uint16, datasz uint32, offset uint16, dontfrag, hasmore bool) ([]byte, func()) {
-	p.TTL--
-	if p.TTL == 0 {
-		return nil, nil
-	}
-
 	if src != nil {
 		p.Src = src
 		p.idxdatsz = (uint32(teatype) << 27) | (uint32(additional&0x07ff) << 16) | datasz&0xffff
@@ -175,14 +176,13 @@ func (p *Packet) Marshal(src net.IP, teatype uint8, additional uint16, datasz ui
 	if hasmore {
 		offset |= 0x2000
 	}
-	p.Flags = PacketFlags(offset)
 
 	return helper.OpenWriterF(func(w *helper.Writer) {
 		w.WriteUInt32(p.idxdatsz)
 		w.WriteUInt16((uint16(p.TTL) << 8) | uint16(p.Proto))
 		w.WriteUInt16(p.SrcPort)
 		w.WriteUInt16(p.DstPort)
-		w.WriteUInt16(uint16(p.Flags))
+		w.WriteUInt16(uint16(PacketFlags(offset)))
 		w.Write(p.Src.To4())
 		w.Write(p.Dst.To4())
 		w.Write(p.Hash[:])

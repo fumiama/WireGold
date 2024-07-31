@@ -125,25 +125,30 @@ func (m *Me) xorenc(data []byte) []byte {
 	batchsz := len(data) / 8
 	remain := len(data) % 8
 	sum := m.mask
+	newdat := helper.MakeBytes(len(data) + 8)
+	_, _ = rand.Read(newdat[:8])
 	if remain > 0 {
 		var buf [8]byte
 		p := batchsz * 8
 		copy(buf[:], data[p:])
 		sum ^= binary.LittleEndian.Uint64(buf[:])
 		binary.LittleEndian.PutUint64(buf[:], sum)
-		copy(data[p:], buf[:])
+		copy(newdat[8+p:], buf[:])
 	}
 	for i := batchsz - 1; i >= 0; i-- {
 		a := i * 8
 		b := (i + 1) * 8
 		sum ^= binary.LittleEndian.Uint64(data[a:b])
-		binary.LittleEndian.PutUint64(data[a:b], sum)
+		binary.LittleEndian.PutUint64(newdat[a+8:b+8], sum)
 	}
-	return data
+	return newdat
 }
 
 // xordec 按 8 字节, 以初始 m.mask 循环异或解码 data
 func (m *Me) xordec(data []byte) []byte {
+	if len(data) <= 8 {
+		return nil
+	}
 	batchsz := len(data) / 8
 	remain := len(data) % 8
 	this := uint64(0)
@@ -173,5 +178,5 @@ func (m *Me) xordec(data []byte) []byte {
 	} else {
 		binary.LittleEndian.PutUint64(data[len(data)-8:], next^m.mask)
 	}
-	return data
+	return data[8:]
 }

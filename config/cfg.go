@@ -33,6 +33,7 @@ type Peer struct {
 	QuerySeconds     int64    `yaml:"QuerySeconds"`
 	AllowTrans       bool     `yaml:"AllowTrans"`
 	UseZstd          bool     `yaml:"UseZstd"`
+	DoublePacket     bool     `yaml:"DoublePacket"`
 	MTU              int64    `yaml:"MTU"`
 	MTURandomRange   int64    `yaml:"MTURandomRange"`
 }

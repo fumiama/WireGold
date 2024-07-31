@@ -121,12 +121,13 @@ func decode(aead cipher.AEAD, additional uint16, b []byte) ([]byte, error) {
 }
 
 // xorenc 按 8 字节, 以初始 m.mask 循环异或编码 data
-func (m *Me) xorenc(data []byte) []byte {
+func (m *Me) xorenc(data []byte, seq uint32) []byte {
 	batchsz := len(data) / 8
 	remain := len(data) % 8
 	sum := m.mask
 	newdat := helper.MakeBytes(len(data) + 8)
-	_, _ = rand.Read(newdat[:8])
+	binary.LittleEndian.PutUint32(newdat[:4], seq)
+	_, _ = rand.Read(newdat[4:8])
 	if remain > 0 {
 		var buf [8]byte
 		p := batchsz * 8
@@ -141,13 +142,15 @@ func (m *Me) xorenc(data []byte) []byte {
 		sum ^= binary.LittleEndian.Uint64(data[a:b])
 		binary.LittleEndian.PutUint64(newdat[a+8:b+8], sum)
 	}
+	sum ^= binary.LittleEndian.Uint64(newdat[:8])
+	binary.LittleEndian.PutUint64(newdat[:8], sum)
 	return newdat
 }
 
 // xordec 按 8 字节, 以初始 m.mask 循环异或解码 data
-func (m *Me) xordec(data []byte) []byte {
+func (m *Me) xordec(data []byte) (uint32, []byte) {
 	if len(data) <= 8 {
-		return nil
+		return 0, nil
 	}
 	batchsz := len(data) / 8
 	remain := len(data) % 8
@@ -178,5 +181,5 @@ func (m *Me) xordec(data []byte) []byte {
 	} else {
 		binary.LittleEndian.PutUint64(data[len(data)-8:], next^m.mask)
 	}
-	return data[8:]
+	return binary.LittleEndian.Uint32(data[:4]), data[8:]
 }

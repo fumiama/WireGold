@@ -42,7 +42,7 @@ type Me struct {
 	// 本机路由表
 	router *Router
 	// 本机未接收完全分片池
-	recving *ttl.Cache[[32]byte, *head.Packet]
+	recving *ttl.Cache[uint64, *head.Packet]
 	// 抗重放攻击记录池
 	recved *ttl.Cache[uint64, bool]
 	// 本机上层配置
@@ -106,7 +106,7 @@ func NewMe(cfg *MyConfig) (m Me) {
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], m.mask)
 	logrus.Infoln("[me] xor mask", hex.EncodeToString(buf[:]))
-	m.recving = ttl.NewCache[[32]byte, *head.Packet](time.Second * 30)
+	m.recving = ttl.NewCache[uint64, *head.Packet](time.Second * 30)
 	m.recved = ttl.NewCache[uint64, bool](time.Second * 30)
 	return
 }

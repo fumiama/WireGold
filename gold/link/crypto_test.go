@@ -27,8 +27,9 @@ func TestXOR(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !bytes.Equal(m.xordec(m.xorenc(r1.Bytes())), r2.Bytes()) {
-			t.Fatal("unexpected xor at", i)
+		seq, dec := m.xordec(m.xorenc(r1.Bytes(), uint32(i)))
+		if !bytes.Equal(dec, r2.Bytes()) || seq != uint32(i) {
+			t.Fatal("unexpected xor at", i, "seq", seq)
 		}
 	}
 }

@@ -3,8 +3,8 @@ package link
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"hash/crc64"
 	"strconv"
-	"unsafe"
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/sirupsen/logrus"
@@ -26,7 +26,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 		endl = "."
 	}
 	logrus.Debugln("[recv] data bytes", hex.EncodeToString(data[:bound]), endl)
-	data = m.xordec(data)
+	seq, data := m.xordec(data)
 	logrus.Debugln("[recv] data xored", hex.EncodeToString(data[:bound]), endl)
 	flags := head.Flags(data)
 	if !flags.IsValid() {
@@ -34,8 +34,10 @@ func (m *Me) wait(data []byte) *head.Packet {
 		return nil
 	}
 	crc := binary.LittleEndian.Uint64(data[52:head.PacketHeadLen])
-	logrus.Debugf("[recv] packet crc %016x", crc)
-	if m.recved.Get(crc) { // 是重放攻击
+	crclog := crc
+	crc ^= (uint64(seq) << 16)
+	logrus.Debugf("[recv] packet crc %016x, seq %08x, xored crc %016x", crclog, seq, crc)
+	if m.recved.Get(crc) {
 		logrus.Warnln("[recv] ignore duplicated crc packet", strconv.FormatUint(crc, 16))
 		return nil
 	}
@@ -51,17 +53,21 @@ func (m *Me) wait(data []byte) *head.Packet {
 		return h
 	}
 
-	hashd := data[20:52]
-	hsh := *(*[32]byte)(*(*unsafe.Pointer)(unsafe.Pointer(&hashd)))
+	crchash := crc64.New(crc64.MakeTable(crc64.ISO))
+	_, _ = crchash.Write(data[20:52])
+	var buf [4]byte
+	binary.LittleEndian.PutUint32(buf[:], seq)
+	_, _ = crchash.Write(buf[:])
+	hsh := crchash.Sum64()
 	h := m.recving.Get(hsh)
 	if h != nil {
-		logrus.Debugln("[recv] get another frag part of", hex.EncodeToString(hashd))
+		logrus.Debugln("[recv] get another frag part of", strconv.FormatUint(hsh, 16))
 		ok, err := h.Unmarshal(data)
 		if err == nil {
 			if ok {
 				m.recving.Delete(hsh)
 				m.recved.Set(crc, true)
-				logrus.Debugln("[recv] all parts of", hex.EncodeToString(hashd), "has reached")
+				logrus.Debugln("[recv] all parts of", strconv.FormatUint(hsh, 16), "has reached")
 				return h
 			}
 		} else {
@@ -70,7 +76,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 		}
 		return nil
 	}
-	logrus.Debugln("[recv] get new frag part of", hex.EncodeToString(hashd))
+	logrus.Debugln("[recv] get new frag part of", strconv.FormatUint(hsh, 16))
 	h = head.SelectPacket()
 	_, err := h.Unmarshal(data)
 	if err != nil {

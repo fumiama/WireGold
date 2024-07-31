@@ -2,6 +2,8 @@ package link
 
 import (
 	"bytes"
+	crand "crypto/rand"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -25,6 +27,9 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	defer p.Put()
 	teatype := l.randkeyidx()
 	sndcnt := uint16(l.incgetsndcnt())
+	var buf [4]byte
+	_, _ = crand.Read(buf[:])
+	seq := binary.BigEndian.Uint32(buf[:])
 	mtu := l.mtu
 	if l.mturandomrange > 0 {
 		mtu -= uint16(rand.Intn(int(l.mturandomrange)))
@@ -40,7 +45,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	}
 	remlen := p.BodyLen()
 	if remlen <= delta {
-		return l.write(p, teatype, sndcnt, uint32(remlen), 0, istransfer, false)
+		return l.write(p, teatype, sndcnt, uint32(remlen), 0, istransfer, false, seq)
 	}
 	if istransfer && p.Flags.DontFrag() && remlen > delta {
 		return 0, ErrDropBigDontFragPkt
@@ -53,7 +58,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 		remlen -= delta
 		logrus.Debugln("[send] split frag [", pos, "~", pos+delta, "], remain:", remlen)
 		packet.CropBody(pos, pos+delta)
-		cnt, err := l.write(packet, teatype, sndcnt, totl, uint16(pos>>3), istransfer, true)
+		cnt, err := l.write(packet, teatype, sndcnt, totl, uint16(pos>>3), istransfer, true, seq)
 		n += cnt
 		if err != nil {
 			return n, err
@@ -66,7 +71,7 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 		logrus.Debugln("[send] last frag [", pos, "~", pos+remlen, "]")
 		p.CropBody(pos, pos+remlen)
 		cnt := 0
-		cnt, err = l.write(p, teatype, sndcnt, totl, uint16(pos>>3), istransfer, false)
+		cnt, err = l.write(p, teatype, sndcnt, totl, uint16(pos>>3), istransfer, false, seq)
 		n += cnt
 	}
 	return n, err
@@ -90,7 +95,7 @@ func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 }
 
 // write 向 peer 发包
-func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz uint32, offset uint16, istransfer, hasmore bool) (int, error) {
+func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz uint32, offset uint16, istransfer, hasmore bool, seq uint32) (int, error) {
 	if p.DecreaseAndGetTTL() <= 0 {
 		return 0, ErrTTL
 	}
@@ -98,14 +103,14 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz ui
 		cpp := p.Copy()
 		_ = time.AfterFunc(time.Millisecond*(10+time.Duration(rand.Intn(40))), func() {
 			defer cpp.Put()
-			_, _ = l.writeonce(cpp, teatype, additional, datasz, offset, istransfer, hasmore)
+			_, _ = l.writeonce(cpp, teatype, additional, datasz, offset, istransfer, hasmore, seq)
 		})
 	}
-	return l.writeonce(p, teatype, additional, datasz, offset, istransfer, hasmore)
+	return l.writeonce(p, teatype, additional, datasz, offset, istransfer, hasmore, seq)
 }
 
 // write 向 peer 发一个包
-func (l *Link) writeonce(p *head.Packet, teatype uint8, additional uint16, datasz uint32, offset uint16, istransfer, hasmore bool) (int, error) {
+func (l *Link) writeonce(p *head.Packet, teatype uint8, additional uint16, datasz uint32, offset uint16, istransfer, hasmore bool, seq uint32) (int, error) {
 	peerep := l.endpoint
 	if peerep == nil {
 		return 0, errors.New("nil endpoint of " + p.Dst.String())
@@ -129,7 +134,7 @@ func (l *Link) writeonce(p *head.Packet, teatype uint8, additional uint16, datas
 	}
 	logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.conn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
 	logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
-	d = l.me.xorenc(d)
+	d = l.me.xorenc(d, seq)
 	logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
 	defer helper.PutBytes(d)
 	return l.me.conn.WriteToPeer(d, peerep)

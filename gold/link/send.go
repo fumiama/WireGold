@@ -96,7 +96,7 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz ui
 	}
 	if l.doublepacket {
 		cpp := p.Copy()
-		time.AfterFunc(time.Millisecond*(10+time.Duration(rand.Intn(10))), func() {
+		_ = time.AfterFunc(time.Millisecond*(100+time.Duration(rand.Intn(50))), func() {
 			defer cpp.Put()
 			_, _ = l.writeonce(cpp, teatype, additional, datasz, offset, istransfer, hasmore)
 		})

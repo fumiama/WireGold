@@ -2,9 +2,9 @@ package config
 
 import (
 	"bytes"
-	"log"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -42,11 +42,11 @@ type Peer struct {
 func Parse(path string) (c Config) {
 	file, err := os.ReadFile(path)
 	if err != nil {
-		log.Fatal("open config file failed:", err)
+		logrus.Fatal("open config file failed:", err)
 	}
 	err = yaml.NewDecoder(bytes.NewReader(file)).Decode(&c)
 	if err != nil {
-		log.Fatal("invalid config file:", err)
+		logrus.Fatal("invalid config file:", err)
 	}
 	return
 }

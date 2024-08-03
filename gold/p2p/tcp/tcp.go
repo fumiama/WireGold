@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/FloatTech/ttl"
+	"github.com/sirupsen/logrus"
+
+	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/p2p"
 	"github.com/fumiama/WireGold/helper"
-	"github.com/sirupsen/logrus"
 )
 
 type EndPoint struct {
@@ -64,10 +66,12 @@ func (ep *EndPoint) Listen() (p2p.Conn, error) {
 		peers: ttl.NewCacheOn(peerstimeout, [4]func(string, *net.TCPConn){
 			nil, nil, func(_ string, t *net.TCPConn) {
 				err := t.CloseWrite()
-				if err != nil {
-					logrus.Debugln("[tcp] close write from", t.LocalAddr(), "to", t.RemoteAddr(), "err:", err)
-				} else {
-					logrus.Debugln("[tcp] close write from", t.LocalAddr(), "to", t.RemoteAddr())
+				if config.ShowDebugLog {
+					if err != nil {
+						logrus.Debugln("[tcp] close write from", t.LocalAddr(), "to", t.RemoteAddr(), "err:", err)
+					} else {
+						logrus.Debugln("[tcp] close write from", t.LocalAddr(), "to", t.RemoteAddr())
+					}
 				}
 			}, nil,
 		}),
@@ -130,7 +134,9 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 		if !isvalid(tcpconn) {
 			return
 		}
-		logrus.Debugln("[tcp] accept from", ep)
+		if config.ShowDebugLog {
+			logrus.Debugln("[tcp] accept from", ep)
+		}
 		conn.peers.Set(ep.String(), tcpconn)
 	}
 
@@ -165,7 +171,9 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 
 		select {
 		case <-stopch:
-			logrus.Debugln("[tcp] recv from", ep, "timeout")
+			if config.ShowDebugLog {
+				logrus.Debugln("[tcp] recv from", ep, "timeout")
+			}
 			_ = tcpconn.CloseRead()
 			return
 		case <-copych:
@@ -173,16 +181,22 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 		}
 
 		if err != nil {
-			logrus.Debugln("[tcp] recv from", ep, "err:", err)
+			if config.ShowDebugLog {
+				logrus.Debugln("[tcp] recv from", ep, "err:", err)
+			}
 			_ = tcpconn.CloseRead()
 			return
 		}
 		if r.pckt.typ >= packetTypeTop {
-			logrus.Debugln("[tcp] close reading invalid conn from", ep, "typ", r.pckt.typ, "len", r.pckt.len)
+			if config.ShowDebugLog {
+				logrus.Debugln("[tcp] close reading invalid conn from", ep, "typ", r.pckt.typ, "len", r.pckt.len)
+			}
 			_ = tcpconn.CloseRead()
 			return
 		}
-		logrus.Debugln("[tcp] dispatch packet from", ep, "typ", r.pckt.typ, "len", r.pckt.len)
+		if config.ShowDebugLog {
+			logrus.Debugln("[tcp] dispatch packet from", ep, "typ", r.pckt.typ, "len", r.pckt.len)
+		}
 		conn.recv <- r
 	}
 }
@@ -248,7 +262,9 @@ RECONNECT:
 		if dialtimeout < time.Second {
 			dialtimeout = time.Second
 		}
-		logrus.Debugln("[tcp] dial to", tcpep.addr, "timeout", dialtimeout)
+		if config.ShowDebugLog {
+			logrus.Debugln("[tcp] dial to", tcpep.addr, "timeout", dialtimeout)
+		}
 		var cn net.Conn
 		// must use another port to send because there's no exsiting conn
 		cn, err = net.DialTimeout(tcpep.Network(), tcpep.addr.String(), dialtimeout)
@@ -263,13 +279,17 @@ RECONNECT:
 			typ: packetTypeKeepAlive,
 		})
 		if err != nil {
-			logrus.Debugln("[tcp] dial to", tcpep.addr, "success, but write err:", err)
+			if config.ShowDebugLog {
+				logrus.Debugln("[tcp] dial to", tcpep.addr, "success, but write err:", err)
+			}
 			return 0, err
 		}
-		logrus.Debugln("[tcp] dial to", tcpep.addr, "success, local:", tcpconn.LocalAddr())
+		if config.ShowDebugLog {
+			logrus.Debugln("[tcp] dial to", tcpep.addr, "success, local:", tcpconn.LocalAddr())
+		}
 		conn.peers.Set(tcpep.String(), tcpconn)
 		go conn.receive(tcpconn, true)
-	} else {
+	} else if config.ShowDebugLog {
 		logrus.Debugln("[tcp] reuse tcpconn from", tcpconn.LocalAddr(), "to", tcpconn.RemoteAddr())
 	}
 	cnt, err := io.Copy(tcpconn, &packet{

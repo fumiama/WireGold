@@ -7,9 +7,11 @@ import (
 	"hash/crc64"
 	"net"
 
-	"github.com/fumiama/WireGold/helper"
 	blake2b "github.com/fumiama/blake2b-simd"
 	"github.com/sirupsen/logrus"
+
+	"github.com/fumiama/WireGold/config"
+	"github.com/fumiama/WireGold/helper"
 )
 
 const PacketHeadLen = 60
@@ -89,7 +91,6 @@ type Packet struct {
 
 // NewPacket 生成一个新包
 func NewPacket(proto uint8, srcPort uint16, dst net.IP, dstPort uint16, data []byte) (p *Packet) {
-	// logrus.Debugln("[packet] new: [proto:", proto, ", srcport:", srcPort, ", dstport:", dstPort, ", dst:", dst, ", data:", data)
 	p = SelectPacket()
 	p.Proto = proto
 	p.TTL = 16
@@ -147,7 +148,9 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 
 	if p.rembytes > 0 {
 		p.rembytes -= copy(p.data[flags.Offset():], data[PacketHeadLen:])
-		logrus.Debugln("[packet] copied frag", hex.EncodeToString(p.Hash[:]), "rembytes:", p.rembytes)
+		if config.ShowDebugLog {
+			logrus.Debugln("[packet] copied frag", hex.EncodeToString(p.Hash[:]), "rembytes:", p.rembytes)
+		}
 	}
 
 	complete = p.rembytes == 0
@@ -199,7 +202,10 @@ func (p *Packet) FillHash() {
 		logrus.Error("[packet] err when fill hash:", err)
 		return
 	}
-	logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(h.Sum(p.Hash[:0])))
+	hsh := h.Sum(p.Hash[:0])
+	if config.ShowDebugLog {
+		logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(hsh))
+	}
 }
 
 // IsVaildHash 验证 packet 合法性
@@ -211,8 +217,11 @@ func (p *Packet) IsVaildHash() bool {
 		return false
 	}
 	var sum [32]byte
-	logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(h.Sum(sum[:0])))
-	logrus.Debugln("[packet] sum in packet:", hex.EncodeToString(p.Hash[:]))
+	_ = h.Sum(sum[:0])
+	if config.ShowDebugLog {
+		logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(sum[:]))
+		logrus.Debugln("[packet] sum in packet:", hex.EncodeToString(p.Hash[:]))
+	}
 	return sum == p.Hash
 }
 

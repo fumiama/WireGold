@@ -13,6 +13,7 @@ import (
 	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
 
+	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
 	"github.com/fumiama/WireGold/lower"
@@ -151,7 +152,9 @@ func (m *Me) Close() error {
 
 func (m *Me) Write(packet []byte) (n int, err error) {
 	n = m.sendAllSameDst(packet)
-	logrus.Debugln("[me] writer ate", len(packet), "bytes, remain", len(packet)-n, "bytes")
+	if config.ShowDebugLog {
+		logrus.Debugln("[me] writer ate", len(packet), "bytes, remain", len(packet)-n, "bytes")
+	}
 	return
 }
 
@@ -180,7 +183,9 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 			}
 			n += pktl
 			rem = packet[n:]
-			logrus.Debugln("[me] skip to send", len(packet), "bytes ipv6 packet")
+			if config.ShowDebugLog {
+				logrus.Debugln("[me] skip to send", len(packet), "bytes ipv6 packet")
+			}
 		}
 		if len(rem) == 0 || !waterutil.IsIPv4(rem) {
 			logrus.Warnln("[me] skip to send", len(packet), "bytes full packet")
@@ -193,12 +198,16 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 	for len(ptr) > 20 && p.issame(ptr) {
 		totl := waterutil.IPv4TotalLength(ptr)
 		if int(totl) > len(ptr) {
-			logrus.Debugln("[me] wrap got invalid totl, break")
+			if config.ShowDebugLog {
+				logrus.Debugln("[me] wrap got invalid totl, break")
+			}
 			break
 		}
 		i += int(totl)
 		ptr = rem[i:]
-		logrus.Debugln("[me] wrap", totl, "bytes packet to send together")
+		if config.ShowDebugLog {
+			logrus.Debugln("[me] wrap", totl, "bytes packet to send together")
+		}
 	}
 	if i == 0 {
 		return
@@ -207,9 +216,13 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 	packet = rem[:i]
 	rem = rem[i:]
 	dst := waterutil.IPv4Destination(packet)
-	logrus.Debugln("[me] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), "remain:", len(rem), "bytes")
+	if config.ShowDebugLog {
+		logrus.Debugln("[me] sending", len(packet), "bytes packet from :"+strconv.Itoa(int(m.SrcPort())), "to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), "remain:", len(rem), "bytes")
+	}
 	if m.me.Equal(dst) { // is to myself, write to nic (pipe not allow loopback)
-		logrus.Debugln("[me] loopback packet")
+		if config.ShowDebugLog {
+			logrus.Debugln("[me] loopback packet")
+		}
 		_, err := m.nic.Write(packet)
 		if err != nil {
 			logrus.Warnln("[me] write to loopback err:", err)

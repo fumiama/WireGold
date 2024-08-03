@@ -7,6 +7,8 @@ import (
 
 	"github.com/FloatTech/ttl"
 	"github.com/sirupsen/logrus"
+
+	"github.com/fumiama/WireGold/config"
 )
 
 type Router struct {
@@ -45,7 +47,9 @@ func (r *Router) SetDefault(l *Link) {
 func (r *Router) NextHop(ip string) (l *Link) {
 	l = r.cache.Get(ip)
 	if l != nil {
-		logrus.Debugln("[router] get cached nexthop to", ip, "link", l)
+		if config.ShowDebugLog {
+			logrus.Debugln("[router] get cached nexthop to", ip, "link", l)
+		}
 		return
 	}
 	ipb := net.ParseIP(ip)
@@ -62,7 +66,9 @@ func (r *Router) NextHop(ip string) (l *Link) {
 	for _, c := range r.list {
 		if c.Contains(ipb) {
 			l = r.table[c.String()]
-			logrus.Debugln("[router] get nexthop to", ipb, "-->", c, "link", l)
+			if config.ShowDebugLog {
+				logrus.Debugln("[router] get nexthop to", ipb, "-->", c, "link", l)
+			}
 			r.cache.Set(ip, l)
 			return l
 		}

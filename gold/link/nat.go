@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
 	"github.com/fumiama/WireGold/helper"
@@ -63,7 +64,9 @@ func (l *Link) onNotify(packet []byte) {
 				continue
 			}
 		}
-		logrus.Debugln("[nat] notify drop invalid peer:", peer, "ep:", ep)
+		if config.ShowDebugLog {
+			logrus.Debugln("[nat] notify drop invalid peer:", peer, "ep:", ep)
+		}
 	}
 }
 

@@ -23,7 +23,7 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: sudo go test $(go list ./...) # ip test needs sudo
+        run: sudo go test -X github.com/fumiama/WireGold/config.ShowDebugLog=true $(go list ./...) # ip test needs sudo
 
   lint:
     name: Lint

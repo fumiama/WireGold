@@ -11,10 +11,12 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/fumiama/WireGold/gold/head"
-	"github.com/fumiama/WireGold/helper"
 	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
+
+	"github.com/fumiama/WireGold/config"
+	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/helper"
 )
 
 var (
@@ -34,7 +36,9 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	if l.mturandomrange > 0 {
 		mtu -= uint16(rand.Intn(int(l.mturandomrange)))
 	}
-	logrus.Debugln("[send] mtu:", mtu, ", addt:", sndcnt&0x07ff, ", key index:", teatype)
+	if config.ShowDebugLog {
+		logrus.Debugln("[send] mtu:", mtu, ", addt:", sndcnt&0x07ff, ", key index:", teatype)
+	}
 	if !istransfer {
 		l.encrypt(p, sndcnt, teatype)
 	}
@@ -56,7 +60,9 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	packet := p.Copy()
 	for remlen > delta {
 		remlen -= delta
-		logrus.Debugln("[send] split frag [", pos, "~", pos+delta, "], remain:", remlen)
+		if config.ShowDebugLog {
+			logrus.Debugln("[send] split frag [", pos, "~", pos+delta, "], remain:", remlen)
+		}
 		packet.CropBody(pos, pos+delta)
 		cnt, err := l.write(packet, teatype, sndcnt, totl, uint16(pos>>3), istransfer, true, seq)
 		n += cnt
@@ -68,7 +74,9 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	}
 	packet.Put()
 	if remlen > 0 {
-		logrus.Debugln("[send] last frag [", pos, "~", pos+remlen, "]")
+		if config.ShowDebugLog {
+			logrus.Debugln("[send] last frag [", pos, "~", pos+remlen, "]")
+		}
 		p.CropBody(pos, pos+remlen)
 		cnt := 0
 		cnt, err = l.write(p, teatype, sndcnt, totl, uint16(pos>>3), istransfer, false, seq)
@@ -79,7 +87,9 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 
 func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 	p.FillHash()
-	logrus.Debugln("[send] data len before encrypt:", p.BodyLen())
+	if config.ShowDebugLog {
+		logrus.Debugln("[send] data len before encrypt:", p.BodyLen())
+	}
 	data := p.Body()
 	if l.usezstd {
 		w := helper.SelectWriter()
@@ -88,10 +98,14 @@ func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 		_, _ = io.Copy(enc, bytes.NewReader(data))
 		enc.Close()
 		data = w.Bytes()
-		logrus.Debugln("[send] data len after zstd:", len(data))
+		if config.ShowDebugLog {
+			logrus.Debugln("[send] data len after zstd:", len(data))
+		}
 	}
 	p.SetBody(l.Encode(teatype, sndcnt&0x07ff, data), true)
-	logrus.Debugln("[send] data len after xchacha20:", p.BodyLen(), "addt:", sndcnt)
+	if config.ShowDebugLog {
+		logrus.Debugln("[send] data len after xchacha20:", p.BodyLen(), "addt:", sndcnt)
+	}
 }
 
 // write 向 peer 发包
@@ -132,10 +146,14 @@ func (l *Link) writeonce(p *head.Packet, teatype uint8, additional uint16, datas
 		bound = len(d)
 		endl = "."
 	}
-	logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.conn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
-	logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
+	if config.ShowDebugLog {
+		logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.conn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
+		logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
+	}
 	d = l.me.xorenc(d, seq)
-	logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
+	if config.ShowDebugLog {
+		logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
+	}
 	defer helper.PutBytes(d)
 	return l.me.conn.WriteToPeer(d, peerep)
 }

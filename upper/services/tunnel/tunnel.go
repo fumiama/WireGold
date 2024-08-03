@@ -13,6 +13,7 @@ import (
 	_ "github.com/fumiama/WireGold/gold/p2p/udp"     // support udp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udplite" // support udplite connection
 
+	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/link"
 )
@@ -107,14 +108,20 @@ func (s *Tunnel) handleWrite() {
 			end = len(b)
 			endl = "."
 		}
-		logrus.Debugln("[tunnel] write send", hex.EncodeToString(b[:end]), endl)
+		if config.ShowDebugLog {
+			logrus.Debugln("[tunnel] write send", hex.EncodeToString(b[:end]), endl)
+		}
 		if b == nil {
 			logrus.Errorln("[tunnel] write recv nil")
 			break
 		}
-		logrus.Debugln("[tunnel] writing", len(b), "bytes...")
+		if config.ShowDebugLog {
+			logrus.Debugln("[tunnel] writing", len(b), "bytes...")
+		}
 		for len(b) > int(s.mtu)-4 {
-			logrus.Debugln("[tunnel] seq", seq, "split buffer")
+			if config.ShowDebugLog {
+				logrus.Debugln("[tunnel] seq", seq, "split buffer")
+			}
 			binary.LittleEndian.PutUint32(buf[:4], seq)
 			seq++
 			copy(buf[4:], b[:s.mtu-4])
@@ -125,7 +132,9 @@ func (s *Tunnel) handleWrite() {
 				logrus.Errorln("[tunnel] seq", seq-1, "write err:", err)
 				return
 			}
-			logrus.Debugln("[tunnel] seq", seq-1, "write succeeded")
+			if config.ShowDebugLog {
+				logrus.Debugln("[tunnel] seq", seq-1, "write succeeded")
+			}
 			b = b[s.mtu-4:]
 		}
 		binary.LittleEndian.PutUint32(buf[:4], seq)
@@ -138,7 +147,9 @@ func (s *Tunnel) handleWrite() {
 			logrus.Errorln("[tunnel] seq", seq-1, "write err:", err)
 			break
 		}
-		logrus.Debugln("[tunnel] seq", seq-1, "write succeeded")
+		if config.ShowDebugLog {
+			logrus.Debugln("[tunnel] seq", seq-1, "write succeeded")
+		}
 	}
 }
 
@@ -147,7 +158,9 @@ func (s *Tunnel) handleRead() {
 	seqmap := make(map[uint32]*head.Packet)
 	for {
 		if p, ok := seqmap[seq]; ok {
-			logrus.Debugln("[tunnel] dispatch cached seq", seq)
+			if config.ShowDebugLog {
+				logrus.Debugln("[tunnel] dispatch cached seq", seq)
+			}
 			delete(seqmap, seq)
 			seq++
 			s.out <- p
@@ -164,15 +177,21 @@ func (s *Tunnel) handleRead() {
 			end = p.BodyLen()
 			endl = "."
 		}
-		logrus.Debugln("[tunnel] read recv", hex.EncodeToString(p.Body()[:end]), endl)
+		if config.ShowDebugLog {
+			logrus.Debugln("[tunnel] read recv", hex.EncodeToString(p.Body()[:end]), endl)
+		}
 		recvseq := binary.LittleEndian.Uint32(p.Body()[:4])
 		if recvseq == seq {
-			logrus.Debugln("[tunnel] dispatch seq", seq)
+			if config.ShowDebugLog {
+				logrus.Debugln("[tunnel] dispatch seq", seq)
+			}
 			seq++
 			s.out <- p
 			continue
 		}
 		seqmap[recvseq] = p
-		logrus.Debugln("[tunnel] cache seq", recvseq)
+		if config.ShowDebugLog {
+			logrus.Debugln("[tunnel] cache seq", recvseq)
+		}
 	}
 }

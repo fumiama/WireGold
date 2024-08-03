@@ -6,6 +6,7 @@ import (
 	"hash/crc64"
 	"strconv"
 
+	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/sirupsen/logrus"
 )
@@ -25,23 +26,33 @@ func (m *Me) wait(data []byte) *head.Packet {
 		bound = len(data)
 		endl = "."
 	}
-	logrus.Debugln("[recv] data bytes", hex.EncodeToString(data[:bound]), endl)
+	if config.ShowDebugLog {
+		logrus.Debugln("[recv] data bytes", hex.EncodeToString(data[:bound]), endl)
+	}
 	seq, data := m.xordec(data)
-	logrus.Debugln("[recv] data xored", hex.EncodeToString(data[:bound]), endl)
+	if config.ShowDebugLog {
+		logrus.Debugln("[recv] data xored", hex.EncodeToString(data[:bound]), endl)
+	}
 	flags := head.Flags(data)
 	if !flags.IsValid() {
-		logrus.Debugln("[recv] drop invalid flags packet:", hex.EncodeToString(data[11:12]), hex.EncodeToString(data[10:11]))
+		if config.ShowDebugLog {
+			logrus.Debugln("[recv] drop invalid flags packet:", hex.EncodeToString(data[11:12]), hex.EncodeToString(data[10:11]))
+		}
 		return nil
 	}
 	crc := binary.LittleEndian.Uint64(data[52:head.PacketHeadLen])
 	crclog := crc
 	crc ^= (uint64(seq) << 16)
-	logrus.Debugf("[recv] packet crc %016x, seq %08x, xored crc %016x", crclog, seq, crc)
+	if config.ShowDebugLog {
+		logrus.Debugf("[recv] packet crc %016x, seq %08x, xored crc %016x", crclog, seq, crc)
+	}
 	if m.recved.Get(crc) {
 		logrus.Warnln("[recv] ignore duplicated crc packet", strconv.FormatUint(crc, 16))
 		return nil
 	}
-	logrus.Debugln("[recv]", len(data), "bytes data with flag", hex.EncodeToString(data[11:12]), hex.EncodeToString(data[10:11]))
+	if config.ShowDebugLog {
+		logrus.Debugln("[recv]", len(data), "bytes data with flag", hex.EncodeToString(data[11:12]), hex.EncodeToString(data[10:11]))
+	}
 	if flags.IsSingle() || flags.NoFrag() {
 		h := head.SelectPacket()
 		_, err := h.Unmarshal(data)
@@ -61,13 +72,17 @@ func (m *Me) wait(data []byte) *head.Packet {
 	hsh := crchash.Sum64()
 	h := m.recving.Get(hsh)
 	if h != nil {
-		logrus.Debugln("[recv] get another frag part of", strconv.FormatUint(hsh, 16))
+		if config.ShowDebugLog {
+			logrus.Debugln("[recv] get another frag part of", strconv.FormatUint(hsh, 16))
+		}
 		ok, err := h.Unmarshal(data)
 		if err == nil {
 			if ok {
 				m.recving.Delete(hsh)
 				m.recved.Set(crc, true)
-				logrus.Debugln("[recv] all parts of", strconv.FormatUint(hsh, 16), "has reached")
+				if config.ShowDebugLog {
+					logrus.Debugln("[recv] all parts of", strconv.FormatUint(hsh, 16), "has reached")
+				}
 				return h
 			}
 		} else {
@@ -76,7 +91,9 @@ func (m *Me) wait(data []byte) *head.Packet {
 		}
 		return nil
 	}
-	logrus.Debugln("[recv] get new frag part of", strconv.FormatUint(hsh, 16))
+	if config.ShowDebugLog {
+		logrus.Debugln("[recv] get new frag part of", strconv.FormatUint(hsh, 16))
+	}
 	h = head.SelectPacket()
 	_, err := h.Unmarshal(data)
 	if err != nil {

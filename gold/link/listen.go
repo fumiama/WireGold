@@ -13,6 +13,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
 
+	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
 	"github.com/fumiama/WireGold/helper"
@@ -48,7 +49,9 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 					time.Sleep(time.Millisecond * 10)
 				}
 			}
-			logrus.Debugln("[listen] lock index", i)
+			if config.ShowDebugLog {
+				logrus.Debugln("[listen] lock index", i)
+			}
 			lbf := listenbuff[i*lstnbufgragsz : (i+1)*lstnbufgragsz]
 			n, addr, err := conn.ReadFromPeer(lbf)
 			if m.connections == nil || errors.Is(err, net.ErrClosed) {
@@ -62,7 +65,9 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 					logrus.Errorln("[listen] reconnect udp err:", err)
 					return
 				}
-				logrus.Debugln("[listen] unlock index", i)
+				if config.ShowDebugLog {
+					logrus.Debugln("[listen] unlock index", i)
+				}
 				hasntfinished[i].Unlock()
 				i--
 				continue
@@ -77,7 +82,9 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 			}
 			packet := m.wait(lbf[:n:lstnbufgragsz])
 			if packet == nil {
-				logrus.Debugln("[listen] waiting, unlock index", i)
+				if config.ShowDebugLog {
+					logrus.Debugln("[listen] waiting, unlock index", i)
+				}
 				hasntfinished[i].Unlock()
 				i--
 				continue
@@ -90,8 +97,10 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 
 func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish func()) {
 	defer finish()
-	defer logrus.Debugln("[listen] dispatched, unlock index", index)
-	logrus.Debugln("[listen] start dispatching index", index)
+	if config.ShowDebugLog {
+		defer logrus.Debugln("[listen] dispatched, unlock index", index)
+		logrus.Debugln("[listen] start dispatching index", index)
+	}
 	r := packet.Len() - packet.BodyLen()
 	if r > 0 {
 		logrus.Warnln("[listen] @", index, "packet from endpoint", addr, "len", packet.BodyLen(), "is smaller than it declared len", packet.Len(), ", drop it")
@@ -99,7 +108,9 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 		return
 	}
 	p, ok := m.IsInPeer(packet.Src.String())
-	logrus.Debugln("[listen] @", index, "recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
+	if config.ShowDebugLog {
+		logrus.Debugln("[listen] @", index, "recv from endpoint", addr, "src", packet.Src, "dst", packet.Dst)
+	}
 	if !ok {
 		logrus.Warnln("[listen] @", index, "packet from", packet.Src, "to", packet.Dst, "is refused")
 		packet.Put()
@@ -125,7 +136,9 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 		var err error
 		data, err := p.Decode(packet.CipherIndex(), addt, packet.Body())
 		if err != nil {
-			logrus.Debugln("[listen] @", index, "drop invalid packet key idx:", packet.CipherIndex(), "addt:", addt, "err:", err)
+			if config.ShowDebugLog {
+				logrus.Debugln("[listen] @", index, "drop invalid packet key idx:", packet.CipherIndex(), "addt:", addt, "err:", err)
+			}
 			packet.Put()
 			return
 		}
@@ -137,14 +150,18 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 			_, err = io.Copy(w, dec)
 			dec.Close()
 			if err != nil {
-				logrus.Debugln("[listen] @", index, "drop invalid zstd packet:", err)
+				if config.ShowDebugLog {
+					logrus.Debugln("[listen] @", index, "drop invalid zstd packet:", err)
+				}
 				packet.Put()
 				return
 			}
 			packet.SetBody(w.Bytes(), true)
 		}
 		if !packet.IsVaildHash() {
-			logrus.Debugln("[listen] @", index, "drop invalid hash packet")
+			if config.ShowDebugLog {
+				logrus.Debugln("[listen] @", index, "drop invalid hash packet")
+			}
 			packet.Put()
 			return
 		}
@@ -154,7 +171,9 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 			case LINK_STATUS_DOWN:
 				n, err := p.WriteAndPut(head.NewPacket(head.ProtoHello, m.SrcPort(), p.peerip, m.DstPort(), nil), false)
 				if err == nil {
-					logrus.Debugln("[listen] @", index, "send", n, "bytes hello ack packet")
+					if config.ShowDebugLog {
+						logrus.Debugln("[listen] @", index, "send", n, "bytes hello ack packet")
+					}
 					p.status = LINK_STATUS_HALFUP
 				} else {
 					logrus.Errorln("[listen] @", index, "send hello ack packet error:", err)
@@ -175,12 +194,14 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 		case head.ProtoData:
 			if p.pipe != nil {
 				p.pipe <- packet
-				logrus.Debugln("[listen] @", index, "deliver to pipe of", p.peerip)
+				if config.ShowDebugLog {
+					logrus.Debugln("[listen] @", index, "deliver to pipe of", p.peerip)
+				}
 			} else {
 				_, err := m.nic.Write(packet.Body())
 				if err != nil {
 					logrus.Errorln("[listen] @", index, "deliver", packet.BodyLen(), "bytes data to nic err:", err)
-				} else {
+				} else if config.ShowDebugLog {
 					logrus.Debugln("[listen] @", index, "deliver", packet.BodyLen(), "bytes data to nic")
 				}
 				packet.Put()
@@ -204,7 +225,9 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 		}
 		n, err := lnk.WriteAndPut(packet, true)
 		if err == nil {
-			logrus.Debugln("[listen] @", index, "trans", n, "bytes packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
+			if config.ShowDebugLog {
+				logrus.Debugln("[listen] @", index, "trans", n, "bytes packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)))
+			}
 		} else {
 			logrus.Errorln("[listen] @", index, "trans packet to", packet.Dst.String()+":"+strconv.Itoa(int(packet.DstPort)), "err:", err)
 		}

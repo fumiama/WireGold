@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/helper"
 	"github.com/sirupsen/logrus"
 )
@@ -103,21 +104,29 @@ func isvalid(tcpconn *net.TCPConn) bool {
 
 	select {
 	case <-stopch:
-		logrus.Debugln("[tcp] validate recv from", tcpconn.RemoteAddr(), "timeout")
+		if config.ShowDebugLog {
+			logrus.Debugln("[tcp] validate recv from", tcpconn.RemoteAddr(), "timeout")
+		}
 		return false
 	case <-copych:
 		t.Stop()
 	}
 
 	if err != nil {
-		logrus.Debugln("[tcp] validate recv from", tcpconn.RemoteAddr(), "err:", err)
+		if config.ShowDebugLog {
+			logrus.Debugln("[tcp] validate recv from", tcpconn.RemoteAddr(), "err:", err)
+		}
 		return false
 	}
 	if pckt.typ != packetTypeKeepAlive {
-		logrus.Debugln("[tcp] validate got invalid typ", pckt.typ, "from", tcpconn.RemoteAddr())
+		if config.ShowDebugLog {
+			logrus.Debugln("[tcp] validate got invalid typ", pckt.typ, "from", tcpconn.RemoteAddr())
+		}
 		return false
 	}
 
-	logrus.Debugln("[tcp] passed validate recv from", tcpconn.RemoteAddr())
+	if config.ShowDebugLog {
+		logrus.Debugln("[tcp] passed validate recv from", tcpconn.RemoteAddr())
+	}
 	return true
 }

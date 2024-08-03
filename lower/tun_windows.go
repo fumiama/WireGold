@@ -5,7 +5,7 @@ package lower
 
 import "net"
 
-func (n *NIC) Up() {
+func (n *NICIO) Up() {
 	execute("cmd", "/c", "netsh interface ip set address name=\""+n.ifce.Name()+"\" source=static addr=\""+n.ip.String()+"\" mask=\""+(net.IP)(n.subnet.Mask).String()+"\" gateway=none")
 	execute("cmd", "/c", "netsh interface ipv4 set subinterface \""+n.ifce.Name()+"\" mtu="+n.mtu)
 	for _, c := range n.cidrs {
@@ -17,7 +17,7 @@ func (n *NIC) Up() {
 	}
 }
 
-func (n *NIC) Down() {
+func (n *NICIO) Down() {
 	// execute("netsh", "interface", "set", "interface", n.ifce.Name(), "disabled")
 	for _, c := range n.cidrs {
 		ip, _, err := net.ParseCIDR(c)

@@ -5,7 +5,7 @@ package lower
 
 import "net"
 
-func (n *NIC) Up() {
+func (n *NICIO) Up() {
 	execute("ifconfig", n.ifce.Name(), "mtu", n.mtu) // max: 9159
 	execute(
 		"ifconfig", n.ifce.Name(),
@@ -19,7 +19,7 @@ func (n *NIC) Up() {
 	}
 }
 
-func (n *NIC) Down() {
+func (n *NICIO) Down() {
 	execute("route", "delete", n.subnet.String(), "-interface", n.ifce.Name())
 	for _, c := range n.cidrs {
 		execute("route", "delete", c, "-interface", n.ifce.Name())

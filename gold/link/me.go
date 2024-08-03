@@ -39,7 +39,7 @@ type Me struct {
 	// 本机监听的连接端点, 也用于向对端直接发送报文
 	conn p2p.Conn
 	// 本机网卡
-	nic lower.NICIO
+	nic *lower.NICIO
 	// 本机路由表
 	router *Router
 	// 本机未接收完全分片池
@@ -60,9 +60,15 @@ type MyConfig struct {
 	Network                          string
 	NetworkConfigs                   []any
 	PrivateKey                       *[32]byte
-	NIC                              lower.NICIO
+	NICConfig                        *NICConfig
 	SrcPort, DstPort, MTU, SpeedLoop uint16
 	Mask                             uint64
+}
+
+type NICConfig struct {
+	IP     net.IP
+	SubNet *net.IPNet
+	CIDRs  []string
 }
 
 // NewMe 设置本机参数
@@ -89,7 +95,6 @@ func NewMe(cfg *MyConfig) (m Me) {
 		panic(err)
 	}
 	m.connections = make(map[string]*Link)
-	m.nic = cfg.NIC
 	m.router = &Router{
 		list:  make([]*net.IPNet, 1, 16),
 		table: make(map[string]*Link, 16),
@@ -98,7 +103,13 @@ func NewMe(cfg *MyConfig) (m Me) {
 	m.router.SetDefault(nil)
 	m.srcport = cfg.SrcPort
 	m.dstport = cfg.DstPort
-	m.mtu = cfg.MTU & 0xfff8
+	m.mtu = (cfg.MTU - head.PacketHeadLen) & 0xfff8
+	if cfg.NICConfig != nil {
+		m.nic = lower.NewNIC(
+			cfg.NICConfig.IP, cfg.NICConfig.SubNet,
+			strconv.FormatUint(uint64(m.MTU()), 10), cfg.NICConfig.CIDRs...,
+		)
+	}
 	m.speedloop = cfg.SpeedLoop
 	if m.speedloop == 0 {
 		m.speedloop = 4096

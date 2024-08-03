@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/config"
+	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/helper"
 	"github.com/fumiama/WireGold/upper"
 	"github.com/fumiama/WireGold/upper/services/wg"
@@ -144,8 +145,8 @@ func main() {
 	if c.EndPoint == "" {
 		displayHelp("nil endpoint")
 	}
-	if c.MTU == 0 {
-		displayHelp("nil mtu")
+	if c.MTU <= head.PacketHeadLen {
+		displayHelp("invalid mtu")
 	}
 	w, err := wg.NewWireGold(&c)
 	if err != nil {

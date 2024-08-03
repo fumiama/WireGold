@@ -17,7 +17,6 @@ import (
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/link"
 	"github.com/fumiama/WireGold/helper"
-	"github.com/fumiama/WireGold/lower"
 )
 
 const suffix32 = "㴄"
@@ -104,12 +103,16 @@ func (wg *WG) init(srcport, dstport uint16) {
 		MyEndpoint:   wg.c.EndPoint,
 		Network:      wg.c.Network,
 		PrivateKey:   &wg.key,
-		NIC:          lower.NewNIC(myip, mysubnet, strconv.FormatInt(wg.c.MTU, 10), cidrs...),
-		SrcPort:      srcport,
-		DstPort:      dstport,
-		MTU:          uint16(wg.c.MTU),
-		SpeedLoop:    wg.c.SpeedLoop,
-		Mask:         wg.c.Mask,
+		NICConfig: &link.NICConfig{
+			IP:     myip,
+			SubNet: mysubnet,
+			CIDRs:  cidrs,
+		},
+		SrcPort:   srcport,
+		DstPort:   dstport,
+		MTU:       uint16(wg.c.MTU),
+		SpeedLoop: wg.c.SpeedLoop,
+		Mask:      wg.c.Mask,
 	})
 
 	for _, peer := range wg.c.Peers {

@@ -3,10 +3,10 @@
 
 package lower
 
-func (n *NIC) Up() {
+func (n *NICIO) Up() {
 	panic("not support lower on this os now")
 }
 
-func (n *NIC) Down() {
+func (n *NICIO) Down() {
 	panic("not support lower on this os now")
 }

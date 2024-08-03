@@ -1,7 +1,6 @@
 package lower
 
 import (
-	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -11,14 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type NICIO interface {
-	io.ReadWriteCloser
-	Up()
-	Down()
-}
-
-// NIC 虚拟网卡
-type NIC struct {
+// NICIO 虚拟网卡
+type NICIO struct {
 	ifce     *water.Interface
 	ip       net.IP
 	subnet   *net.IPNet
@@ -31,7 +24,7 @@ type NIC struct {
 // 网卡地址为 ip, 所属子网为 subnet
 // 以本网卡为下一跳的所有子网为 cidrs
 // cidrs 不包括本网卡 subnet
-func NewNIC(ip net.IP, subnet *net.IPNet, mtu string, cidrs ...string) NICIO {
+func NewNIC(ip net.IP, subnet *net.IPNet, mtu string, cidrs ...string) *NICIO {
 	ifce, err := water.New(water.Config{DeviceType: water.TUN})
 	if err != nil {
 		logrus.Error(err)
@@ -41,7 +34,7 @@ func NewNIC(ip net.IP, subnet *net.IPNet, mtu string, cidrs ...string) NICIO {
 	if bitsn != 32 {
 		panic("mask len " + strconv.Itoa(bitsn) + " is not supported")
 	}
-	n := &NIC{
+	n := &NICIO{
 		ifce:     ifce,
 		ip:       ip,
 		subnet:   subnet,
@@ -53,16 +46,16 @@ func NewNIC(ip net.IP, subnet *net.IPNet, mtu string, cidrs ...string) NICIO {
 }
 
 // Read 匹配 PacketsIO Interface
-func (nc *NIC) Read(buf []byte) (int, error) {
+func (nc *NICIO) Read(buf []byte) (int, error) {
 	return nc.ifce.Read(buf)
 }
 
-func (nc *NIC) Write(packet []byte) (int, error) {
+func (nc *NICIO) Write(packet []byte) (int, error) {
 	return nc.ifce.Write(packet)
 }
 
 // Close 关闭网卡
-func (n *NIC) Close() error {
+func (n *NICIO) Close() error {
 	return n.ifce.Close()
 }
 

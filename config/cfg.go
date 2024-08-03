@@ -15,7 +15,7 @@ type Config struct {
 	PrivateKey string `yaml:"PrivateKey"`
 	Network    string `yaml:"Network"` // Network udp, tcp or ws (WIP)
 	EndPoint   string `yaml:"EndPoint"`
-	MTU        int64  `yaml:"MTU"`
+	MTU        int64  `yaml:"MTU"` // MTU of nic (will minus packet header len)
 	SpeedLoop  uint16 `yaml:"SpeedLoop"`
 	Mask       uint64 `yaml:"Mask"` // Mask 是异或报文所用掩码, 必须保证各端统一
 	Peers      []Peer `yaml:"Peers"`
@@ -34,7 +34,7 @@ type Peer struct {
 	AllowTrans       bool     `yaml:"AllowTrans"`
 	UseZstd          bool     `yaml:"UseZstd"`
 	DoublePacket     bool     `yaml:"DoublePacket"`
-	MTU              int64    `yaml:"MTU"`
+	MTU              int64    `yaml:"MTU"` // MTU of PDU passed to p2p
 	MTURandomRange   int64    `yaml:"MTURandomRange"`
 }
 

@@ -3,7 +3,7 @@
 
 package lower
 
-func (n *NIC) Up() {
+func (n *NICIO) Up() {
 	execute("/sbin/ip", "link", "set", "dev", n.ifce.Name(), "mtu", n.mtu)
 	execute("/sbin/ip", "addr", "add", n.rawipnet, "dev", n.ifce.Name())
 	execute("/sbin/ip", "link", "set", "dev", n.ifce.Name(), "up")
@@ -12,7 +12,7 @@ func (n *NIC) Up() {
 	}
 }
 
-func (n *NIC) Down() {
+func (n *NICIO) Down() {
 	for _, c := range n.cidrs {
 		execute("/sbin/ip", "route", "del", c, "dev", n.ifce.Name())
 	}

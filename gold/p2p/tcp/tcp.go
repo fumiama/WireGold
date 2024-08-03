@@ -64,7 +64,10 @@ func (ep *EndPoint) Listen() (p2p.Conn, error) {
 		addr: ep,
 		lstn: lstn,
 		peers: ttl.NewCacheOn(peerstimeout, [4]func(string, *net.TCPConn){
-			nil, nil, func(_ string, t *net.TCPConn) {
+			func(_ string, t *net.TCPConn) {
+				_ = t.SetLinger(0)
+				_ = t.SetNoDelay(true)
+			}, nil, func(_ string, t *net.TCPConn) {
 				err := t.CloseWrite()
 				if config.ShowDebugLog {
 					if err != nil {

@@ -23,13 +23,10 @@ const (
 	packetTypeTop
 )
 
-const magic = 0x12d3fde9
-
-var magicbuf [4]byte
-
-func init() {
-	binary.LittleEndian.PutUint32(magicbuf[:], magic)
-}
+var (
+	magicbuf = []byte("GET ")
+	magic    = binary.LittleEndian.Uint32(magicbuf)
+)
 
 type packet struct {
 	typ packetType
@@ -44,7 +41,7 @@ func (p *packet) pack() (net.Buffers, func()) {
 		w.WriteByte(byte(p.typ))
 		w.WriteUInt16(p.len)
 	})
-	return net.Buffers{magicbuf[:], d, p.dat}, cl
+	return net.Buffers{magicbuf, d, p.dat}, cl
 }
 
 func (p *packet) Read(_ []byte) (int, error) {

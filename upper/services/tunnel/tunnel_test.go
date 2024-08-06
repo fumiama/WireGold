@@ -107,7 +107,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 	time.Sleep(time.Second) // wait link up
 
 	sendb := ([]byte)("1234")
-	tunnme.Write(sendb)
+	go tunnme.Write(sendb)
 	buf := make([]byte, 4)
 	tunnpeer.Read(buf)
 	if string(sendb) != string(buf) {
@@ -117,7 +117,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 
 	sendb = make([]byte, 4096)
 	rand.Read(sendb)
-	tunnme.Write(sendb)
+	go tunnme.Write(sendb)
 	buf = make([]byte, 4096)
 	_, err = io.ReadFull(&tunnpeer, buf)
 	if err != nil {
@@ -127,13 +127,22 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 		t.Fatal("error: recv 4096 bytes data")
 	}
 
-	sendb = make([]byte, 65535)
+	sendbufs := make(chan []byte, 32)
+
+	go func() {
+		for i := 0; i < 32; i++ {
+			sendb := make([]byte, 65535)
+			rand.Read(sendb)
+			n, _ := tunnme.Write(sendb)
+			sendbufs <- sendb
+			t.Log("loop", i, "write", n, "bytes")
+		}
+		close(sendbufs)
+	}()
 	buf = make([]byte, 65535)
-	for i := 0; i < 32; i++ {
-		rand.Read(sendb)
-		n, _ := tunnme.Write(sendb)
-		t.Log("loop", i, "write", n, "bytes")
-		n, err = io.ReadFull(&tunnpeer, buf)
+	i := 0
+	for sendb := range sendbufs {
+		n, err := io.ReadFull(&tunnpeer, buf)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -141,6 +150,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 		if string(sendb) != string(buf) {
 			t.Fatal("loop", i, "error: recv 65535 bytes data")
 		}
+		i++
 	}
 
 	rand.Read(sendb)

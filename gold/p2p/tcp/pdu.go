@@ -21,6 +21,7 @@ type packetType uint8
 const (
 	packetTypeKeepAlive packetType = iota
 	packetTypeNormal
+	packetTypeSubKeepAlive
 	packetTypeTop
 )
 
@@ -87,7 +88,7 @@ func (p *packet) WriteTo(w io.Writer) (n int64, err error) {
 	return io.Copy(w, &buf)
 }
 
-func isvalid(tcpconn *net.TCPConn) bool {
+func isvalid(tcpconn *net.TCPConn) (issub, ok bool) {
 	pckt := packet{}
 
 	stopch := make(chan struct{})
@@ -107,7 +108,7 @@ func isvalid(tcpconn *net.TCPConn) bool {
 		if config.ShowDebugLog {
 			logrus.Debugln("[tcp] validate recv from", tcpconn.RemoteAddr(), "timeout")
 		}
-		return false
+		return
 	case <-copych:
 		t.Stop()
 	}
@@ -116,17 +117,17 @@ func isvalid(tcpconn *net.TCPConn) bool {
 		if config.ShowDebugLog {
 			logrus.Debugln("[tcp] validate recv from", tcpconn.RemoteAddr(), "err:", err)
 		}
-		return false
+		return
 	}
-	if pckt.typ != packetTypeKeepAlive {
+	if pckt.typ != packetTypeKeepAlive && pckt.typ != packetTypeSubKeepAlive {
 		if config.ShowDebugLog {
 			logrus.Debugln("[tcp] validate got invalid typ", pckt.typ, "from", tcpconn.RemoteAddr())
 		}
-		return false
+		return
 	}
 
 	if config.ShowDebugLog {
 		logrus.Debugln("[tcp] passed validate recv from", tcpconn.RemoteAddr())
 	}
-	return true
+	return pckt.typ == packetTypeSubKeepAlive, true
 }

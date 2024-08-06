@@ -47,7 +47,9 @@ func (m *Me) wait(data []byte) *head.Packet {
 		logrus.Debugf("[recv] packet crc %016x, seq %08x, xored crc %016x", crclog, seq, crc)
 	}
 	if m.recved.Get(crc) {
-		logrus.Warnln("[recv] ignore duplicated crc packet", strconv.FormatUint(crc, 16))
+		if config.ShowDebugLog {
+			logrus.Debugln("[recv] ignore duplicated crc packet", strconv.FormatUint(crc, 16))
+		}
 		return nil
 	}
 	if config.ShowDebugLog {

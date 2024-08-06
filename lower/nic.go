@@ -27,7 +27,7 @@ type NICIO struct {
 func NewNIC(ip net.IP, subnet *net.IPNet, mtu string, cidrs ...string) *NICIO {
 	ifce, err := water.New(water.Config{DeviceType: water.TUN})
 	if err != nil {
-		logrus.Error(err)
+		logrus.Errorln(err)
 		os.Exit(1)
 	}
 	subn, bitsn := subnet.Mask.Size()

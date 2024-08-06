@@ -21,6 +21,7 @@ type EndPoint struct {
 	addr         *net.TCPAddr
 	dialtimeout  time.Duration
 	peerstimeout time.Duration
+	keepinterval time.Duration
 	recvchansize int
 }
 
@@ -80,6 +81,7 @@ func (ep *EndPoint) Listen() (p2p.Conn, error) {
 		}),
 		recv: make(chan *connrecv, chansz),
 		cplk: &sync.Mutex{},
+		sblk: &sync.RWMutex{},
 	}
 	go conn.accept()
 	return conn, nil
@@ -91,6 +93,11 @@ type connrecv struct {
 	pckt packet
 }
 
+type subconn struct {
+	cplk sync.Mutex
+	conn *net.TCPConn
+}
+
 // Conn 伪装成无状态的有状态连接
 type Conn struct {
 	addr  *EndPoint
@@ -98,6 +105,8 @@ type Conn struct {
 	peers *ttl.Cache[string, *net.TCPConn]
 	recv  chan *connrecv
 	cplk  *sync.Mutex
+	sblk  *sync.RWMutex
+	subs  []*subconn
 }
 
 func (conn *Conn) accept() {
@@ -115,32 +124,54 @@ func (conn *Conn) accept() {
 			_ = conn.Close()
 			newc, err := conn.addr.Listen()
 			if err != nil {
-				logrus.Warn("[tcp] re-listen on", conn.addr, "err:", err)
+				logrus.Warnln("[tcp] re-listen on", conn.addr, "err:", err)
 				return
 			}
 			*conn = *newc.(*Conn)
-			logrus.Info("[tcp] re-listen on", conn.addr)
+			logrus.Infoln("[tcp] re-listen on", conn.addr)
 			continue
 		}
 		go conn.receive(tcpconn, false)
 	}
 }
 
+func delsubs(i int, subs []*subconn) []*subconn {
+	switch i {
+	case 0:
+		subs = subs[1:]
+	case len(subs) - 1:
+		subs = subs[:len(subs)-1]
+	default:
+		subs = append(subs[:i], subs[i+1:]...)
+	}
+	return subs
+}
+
 func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 	ep, _ := newEndpoint(tcpconn.RemoteAddr().String(), &Config{
 		DialTimeout:        conn.addr.dialtimeout,
 		PeersTimeout:       conn.addr.peerstimeout,
+		KeepInterval:       conn.addr.keepinterval,
 		ReceiveChannelSize: conn.addr.recvchansize,
 	})
 
+	issub, ok := false, false
+
 	if !hasvalidated {
-		if !isvalid(tcpconn) {
+		issub, ok = isvalid(tcpconn)
+		if !ok {
 			return
 		}
 		if config.ShowDebugLog {
-			logrus.Debugln("[tcp] accept from", ep)
+			logrus.Debugln("[tcp] accept from", ep, "issub:", issub)
 		}
-		conn.peers.Set(ep.String(), tcpconn)
+		if issub {
+			conn.sblk.Lock()
+			conn.subs = append(conn.subs, &subconn{conn: tcpconn})
+			conn.sblk.Unlock()
+		} else {
+			conn.peers.Set(ep.String(), tcpconn)
+		}
 	}
 
 	peerstimeout := conn.addr.peerstimeout
@@ -148,15 +179,33 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 		peerstimeout = time.Second * 30
 	}
 	peerstimeout *= 2
-	defer conn.peers.Delete(ep.String())
+	if issub {
+		defer conn.peers.Delete(ep.String())
+	} else {
+		defer func() {
+			conn.sblk.Lock()
+			for i, sub := range conn.subs {
+				if sub.conn == tcpconn {
+					conn.subs = delsubs(i, conn.subs)
+					break
+				}
+			}
+			conn.sblk.Unlock()
+		}()
+	}
+
+	go conn.keep(ep)
+
 	for {
 		r := &connrecv{addr: ep}
 		if conn.addr == nil || conn.lstn == nil || conn.peers == nil || conn.recv == nil {
 			return
 		}
-		tcpconn := conn.peers.Get(ep.String())
-		if tcpconn == nil {
-			return
+		if !issub {
+			tcpconn = conn.peers.Get(ep.String())
+			if tcpconn == nil {
+				return
+			}
 		}
 		r.conn = tcpconn
 
@@ -204,6 +253,46 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 	}
 }
 
+func (conn *Conn) keep(ep *EndPoint) {
+	keepinterval := ep.keepinterval
+	if keepinterval < time.Second*4 {
+		keepinterval = time.Second * 4
+	}
+	t := time.NewTicker(keepinterval)
+	defer t.Stop()
+	for range t.C {
+		if conn.addr == nil {
+			return
+		}
+		tcpconn := conn.peers.Get(ep.String())
+		if tcpconn != nil {
+			_, err := io.Copy(tcpconn, &packet{typ: packetTypeKeepAlive})
+			if conn.addr == nil {
+				return
+			}
+			if err != nil {
+				logrus.Warnln("[tcp] keep main conn alive to", ep, "err:", err)
+				conn.peers.Delete(ep.String())
+			} else if config.ShowDebugLog {
+				logrus.Debugln("[tcp] keep main conn alive to", ep)
+			}
+		}
+		conn.sblk.RLock()
+		for i, sub := range conn.subs {
+			_, err := io.Copy(sub.conn, &packet{typ: packetTypeSubKeepAlive})
+			if conn.addr == nil {
+				return
+			}
+			if err != nil {
+				logrus.Warnln("[tcp] keep sub conn alive to", sub.conn.RemoteAddr(), "err:", err)
+				conn.subs = delsubs(i, conn.subs) // del 1 link at once
+				break
+			}
+		}
+		conn.sblk.RUnlock()
+	}
+}
+
 func (conn *Conn) Close() error {
 	if conn.lstn != nil {
 		_ = conn.lstn.Close()
@@ -246,20 +335,28 @@ func (conn *Conn) ReadFromPeer(b []byte) (int, p2p.EndPoint, error) {
 	return n, p.addr, nil
 }
 
-func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
-	tcpep, ok := ep.(*EndPoint)
-	if !ok {
-		return 0, p2p.ErrEndpointTypeMistatch
-	}
-	blen := len(b)
-	if blen >= 65536 {
-		return 0, errors.New("data size " + strconv.Itoa(blen) + " is too large")
-	}
+// writeToPeer after acquiring lock
+func (conn *Conn) writeToPeer(b []byte, tcpep *EndPoint, issub bool) (n int, err error) {
 	retried := false
-	conn.cplk.Lock()
-	defer conn.cplk.Unlock()
-	tcpconn := conn.peers.Get(tcpep.String())
+	ok := false
+	var (
+		tcpconn *net.TCPConn
+		subc    *subconn
+	)
 RECONNECT:
+	if issub {
+		conn.sblk.RLock()
+		for _, sub := range conn.subs {
+			if sub.cplk.TryLock() {
+				tcpconn = sub.conn
+				subc = sub
+				break
+			}
+		}
+		conn.sblk.RUnlock()
+	} else {
+		tcpconn = conn.peers.Get(tcpep.String())
+	}
 	if tcpconn == nil {
 		dialtimeout := tcpep.dialtimeout
 		if dialtimeout < time.Second {
@@ -278,9 +375,13 @@ RECONNECT:
 		if !ok {
 			return 0, errors.New("expect *net.TCPConn but got " + reflect.ValueOf(cn).Type().String())
 		}
-		_, err = io.Copy(tcpconn, &packet{
-			typ: packetTypeKeepAlive,
-		})
+		pkt := &packet{}
+		if issub {
+			pkt.typ = packetTypeSubKeepAlive
+		} else {
+			pkt.typ = packetTypeKeepAlive
+		}
+		_, err = io.Copy(tcpconn, pkt)
 		if err != nil {
 			if config.ShowDebugLog {
 				logrus.Debugln("[tcp] dial to", tcpep.addr, "success, but write err:", err)
@@ -290,23 +391,58 @@ RECONNECT:
 		if config.ShowDebugLog {
 			logrus.Debugln("[tcp] dial to", tcpep.addr, "success, local:", tcpconn.LocalAddr())
 		}
-		conn.peers.Set(tcpep.String(), tcpconn)
-		go conn.receive(tcpconn, true)
+		if !issub {
+			conn.peers.Set(tcpep.String(), tcpconn)
+		} else {
+			conn.sblk.Lock()
+			conn.subs = append(conn.subs, &subconn{conn: tcpconn})
+			conn.sblk.Unlock()
+			go conn.receive(tcpconn, true)
+		}
 	} else if config.ShowDebugLog {
 		logrus.Debugln("[tcp] reuse tcpconn from", tcpconn.LocalAddr(), "to", tcpconn.RemoteAddr())
 	}
 	cnt, err := io.Copy(tcpconn, &packet{
 		typ: packetTypeNormal,
-		len: uint16(blen),
+		len: uint16(len(b)),
 		dat: b,
 	})
 	if err != nil {
-		conn.peers.Delete(tcpep.String())
+		if subc == nil {
+			conn.peers.Delete(tcpep.String())
+		} else {
+			conn.sblk.Lock()
+			for i, sub := range conn.subs {
+				if sub == subc {
+					conn.subs = delsubs(i, conn.subs)
+					break
+				}
+			}
+			conn.sblk.Unlock()
+		}
 		if !retried {
 			retried = true
 			tcpconn = nil
 			goto RECONNECT
 		}
 	}
+	if subc != nil {
+		subc.cplk.Unlock()
+	}
 	return int(cnt) - 3, err
+}
+
+func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
+	tcpep, ok := ep.(*EndPoint)
+	if !ok {
+		return 0, p2p.ErrEndpointTypeMistatch
+	}
+	if len(b) >= 65536 {
+		return 0, errors.New("data size " + strconv.Itoa(len(b)) + " is too large")
+	}
+	if !conn.cplk.TryLock() {
+		return conn.writeToPeer(b, tcpep, true)
+	}
+	defer conn.cplk.Unlock()
+	return conn.writeToPeer(b, tcpep, false)
 }

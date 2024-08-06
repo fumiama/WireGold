@@ -199,7 +199,7 @@ func (p *Packet) FillHash() {
 	h := blake2b.New256()
 	_, err := h.Write(p.Body())
 	if err != nil {
-		logrus.Error("[packet] err when fill hash:", err)
+		logrus.Errorln("[packet] err when fill hash:", err)
 		return
 	}
 	hsh := h.Sum(p.Hash[:0])
@@ -213,7 +213,7 @@ func (p *Packet) IsVaildHash() bool {
 	h := blake2b.New256()
 	_, err := h.Write(p.Body())
 	if err != nil {
-		logrus.Error("[packet] err when check hash:", err)
+		logrus.Errorln("[packet] err when check hash:", err)
 		return false
 	}
 	var sum [32]byte

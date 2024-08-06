@@ -59,7 +59,7 @@ func (wg *WG) Start(srcport, destport uint16) {
 func (wg *WG) Run(srcport, destport uint16) {
 	wg.init(srcport, destport)
 	_, _ = wg.me.ListenNIC()
-	logrus.Info("[wg] stopped")
+	logrus.Infoln("[wg] stopped")
 }
 
 func (wg *WG) Stop() {

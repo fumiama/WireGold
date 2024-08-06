@@ -88,11 +88,11 @@ func (p *packet) WriteTo(w io.Writer) (n int64, err error) {
 	return io.Copy(w, &buf)
 }
 
-func isvalid(tcpconn *net.TCPConn) (issub, ok bool) {
+func isvalid(tcpconn *net.TCPConn, timeout time.Duration) (issub, ok bool) {
 	pckt := packet{}
 
 	stopch := make(chan struct{})
-	t := time.AfterFunc(time.Second, func() {
+	t := time.AfterFunc(timeout, func() {
 		stopch <- struct{}{}
 	})
 

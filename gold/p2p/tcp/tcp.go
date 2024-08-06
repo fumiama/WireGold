@@ -100,13 +100,14 @@ type subconn struct {
 
 // Conn 伪装成无状态的有状态连接
 type Conn struct {
-	addr  *EndPoint
-	lstn  *net.TCPListener
-	peers *ttl.Cache[string, *net.TCPConn]
-	recv  chan *connrecv
-	cplk  *sync.Mutex
-	sblk  *sync.RWMutex
-	subs  []*subconn
+	addr   *EndPoint
+	lstn   *net.TCPListener
+	peers  *ttl.Cache[string, *net.TCPConn]
+	recv   chan *connrecv
+	cplk   *sync.Mutex
+	sblk   *sync.RWMutex
+	subs   []*subconn
+	suberr bool
 }
 
 func (conn *Conn) accept() {
@@ -440,8 +441,13 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
 	if len(b) >= 65536 {
 		return 0, errors.New("data size " + strconv.Itoa(len(b)) + " is too large")
 	}
-	if !conn.cplk.TryLock() {
-		return conn.writeToPeer(b, tcpep, true)
+	if !conn.suberr && !conn.cplk.TryLock() {
+		n, err = conn.writeToPeer(b, tcpep, true) // try sub write
+		if err == nil {
+			return
+		}
+		conn.suberr = true // fast fail
+		conn.cplk.Lock()   // add to main queue
 	}
 	defer conn.cplk.Unlock()
 	return conn.writeToPeer(b, tcpep, false)

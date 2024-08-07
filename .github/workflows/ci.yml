@@ -20,7 +20,7 @@ jobs:
         run: go mod tidy
       
       - name: Enable Debug Log
-        run: sed -i '' 's/false/true/g' config/global.go
+        run: sed -i 's/false/true/g' config/global.go
 
       - name: Build
         run: go build -v ./...

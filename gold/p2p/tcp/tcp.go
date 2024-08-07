@@ -182,8 +182,6 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 	}
 
 	if issub {
-		defer conn.peers.Delete(ep.String())
-	} else {
 		defer func() {
 			conn.sblk.Lock()
 			for i, sub := range conn.subs {
@@ -194,6 +192,8 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 			}
 			conn.sblk.Unlock()
 		}()
+	} else {
+		defer conn.peers.Delete(ep.String())
 	}
 
 	go conn.keep(ep)
@@ -242,9 +242,8 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 			if config.ShowDebugLog {
 				logrus.Debugln("[tcp] recv from", ep, "err:", err)
 			}
-			// _ = tcpconn.CloseRead()
-			// return
-			continue
+			_ = tcpconn.CloseRead()
+			return
 		}
 		if r.pckt.typ >= packetTypeTop {
 			if config.ShowDebugLog {

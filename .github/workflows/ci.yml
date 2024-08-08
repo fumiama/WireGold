@@ -19,7 +19,7 @@ jobs:
       - name: Get dependencies
         run: go mod tidy
       
-      - name: Enable Debug Log
+      - name: Enable debug log
         run: sed -i 's/false/true/g' config/global.go
 
       - name: Build

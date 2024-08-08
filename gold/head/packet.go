@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"hash/crc64"
 	"net"
 
 	blake2b "github.com/fumiama/blake2b-simd"
@@ -20,37 +19,6 @@ var (
 	ErrBadCRCChecksum = errors.New("bad crc checksum")
 	ErrDataLenLT60    = errors.New("data len < 60")
 )
-
-type PacketFlags uint16
-
-func (pf PacketFlags) IsValid() bool {
-	return pf&0x8000 == 0
-}
-
-func (pf PacketFlags) DontFrag() bool {
-	return pf&0x4000 == 0x4000
-}
-
-func (pf PacketFlags) NoFrag() bool {
-	return pf == 0x4000
-}
-
-func (pf PacketFlags) IsSingle() bool {
-	return pf == 0
-}
-
-func (pf PacketFlags) ZeroOffset() bool {
-	return pf&0x1fff == 0
-}
-
-func (pf PacketFlags) Offset() uint16 {
-	return uint16(pf << 3)
-}
-
-// Flags extract flags from raw data
-func Flags(data []byte) PacketFlags {
-	return PacketFlags(binary.LittleEndian.Uint16(data[10:12]))
-}
 
 // Packet 是发送和接收的最小单位
 type Packet struct {
@@ -77,7 +45,7 @@ type Packet struct {
 	// 生成时 Hash 全 0
 	// https://github.com/fumiama/blake2b-simd
 	Hash [32]byte
-	// crc64 包头字段的 checksum 值，可以认为在一定时间内唯一
+	// crc64 包头字段的 checksum 值，可以认为在一定时间内唯一 (现已更改算法为 md5 但名字未变)
 	crc64 uint64
 	// data 承载的数据
 	data []byte
@@ -108,8 +76,8 @@ func (p *Packet) Unmarshal(data []byte) (complete bool, err error) {
 		err = ErrDataLenLT60
 		return
 	}
-	p.crc64 = binary.LittleEndian.Uint64(data[52:PacketHeadLen])
-	if crc64.Checksum(data[:52], crc64.MakeTable(crc64.ISO)) != p.crc64 {
+	p.crc64 = CRC64(data)
+	if CalcCRC64(data) != p.crc64 {
 		err = ErrBadCRCChecksum
 		return
 	}
@@ -189,7 +157,7 @@ func (p *Packet) Marshal(src net.IP, teatype uint8, additional uint16, datasz ui
 		w.Write(p.Src.To4())
 		w.Write(p.Dst.To4())
 		w.Write(p.Hash[:])
-		w.WriteUInt64(crc64.Checksum(w.Bytes(), crc64.MakeTable(crc64.ISO)))
+		w.WriteUInt64(CalcCRC64(w.Bytes()))
 		w.Write(p.Body())
 	})
 }

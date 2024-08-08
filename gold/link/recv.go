@@ -40,7 +40,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 		}
 		return nil
 	}
-	crc := binary.LittleEndian.Uint64(data[52:head.PacketHeadLen])
+	crc := head.CRC64(data)
 	crclog := crc
 	crc ^= (uint64(seq) << 16)
 	if config.ShowDebugLog {
@@ -67,7 +67,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 	}
 
 	crchash := crc64.New(crc64.MakeTable(crc64.ISO))
-	_, _ = crchash.Write(data[20:52])
+	_, _ = crchash.Write(head.Hash(data))
 	var buf [4]byte
 	binary.LittleEndian.PutUint32(buf[:], seq)
 	_, _ = crchash.Write(buf[:])

@@ -137,6 +137,15 @@ func (conn *Conn) accept() {
 }
 
 func delsubs(i int, subs []*subconn) []*subconn {
+	tcpconn := subs[i].conn
+	err := tcpconn.CloseWrite()
+	if config.ShowDebugLog {
+		if err != nil {
+			logrus.Debugln("[tcp] close sub write from", tcpconn.LocalAddr(), "to", tcpconn.RemoteAddr(), "err:", err)
+		} else {
+			logrus.Debugln("[tcp] close sub write from", tcpconn.LocalAddr(), "to", tcpconn.RemoteAddr())
+		}
+	}
 	switch i {
 	case 0:
 		subs = subs[1:]

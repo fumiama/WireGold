@@ -242,8 +242,11 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 			if config.ShowDebugLog {
 				logrus.Debugln("[tcp] recv from", ep, "err:", err)
 			}
-			_ = tcpconn.CloseRead()
-			return
+			if errors.Is(err, net.ErrClosed) || errors.Is(err, io.ErrClosedPipe) {
+				_ = tcpconn.CloseRead()
+				return
+			}
+			continue
 		}
 		if r.pckt.typ >= packetTypeTop {
 			if config.ShowDebugLog {

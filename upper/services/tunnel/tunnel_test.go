@@ -111,7 +111,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 	buf := make([]byte, 4)
 	tunnpeer.Read(buf)
 	if string(sendb) != string(buf) {
-		t.Log("error: recv", buf)
+		logrus.Errorln("error: recv", buf, "expect", sendb)
 		t.Fail()
 	}
 
@@ -130,12 +130,13 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 	sendbufs := make(chan []byte, 32)
 
 	go func() {
+		time.Sleep(time.Second)
 		for i := 0; i < 32; i++ {
 			sendb := make([]byte, 65535)
 			rand.Read(sendb)
 			n, _ := tunnme.Write(sendb)
 			sendbufs <- sendb
-			t.Log("loop", i, "write", n, "bytes")
+			logrus.Infoln("loop", i, "write", n, "bytes")
 		}
 		close(sendbufs)
 	}()
@@ -146,7 +147,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Log("loop", i, "read", n, "bytes")
+		logrus.Infoln("loop", i, "read", n, "bytes")
 		if string(sendb) != string(buf) {
 			t.Fatal("loop", i, "error: recv 65535 bytes data")
 		}

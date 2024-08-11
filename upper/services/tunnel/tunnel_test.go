@@ -81,6 +81,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 		MTU:            mtu,
 		MTURandomRange: mtu / 2,
 		UseZstd:        true,
+		DoublePacket:   true,
 	})
 	p.AddPeer(&link.PeerConfig{
 		PeerIP:         "192.168.1.2",

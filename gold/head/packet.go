@@ -147,17 +147,19 @@ func (p *Packet) Marshal(src net.IP, teatype uint8, additional uint16, datasz ui
 	if hasmore {
 		offset |= 0x2000
 	}
+	p.Flags = PacketFlags(offset)
 
 	return helper.OpenWriterF(func(w *helper.Writer) {
 		w.WriteUInt32(p.idxdatsz)
 		w.WriteUInt16((uint16(p.TTL) << 8) | uint16(p.Proto))
 		w.WriteUInt16(p.SrcPort)
 		w.WriteUInt16(p.DstPort)
-		w.WriteUInt16(uint16(PacketFlags(offset)))
+		w.WriteUInt16(uint16(p.Flags))
 		w.Write(p.Src.To4())
 		w.Write(p.Dst.To4())
 		w.Write(p.Hash[:])
-		w.WriteUInt64(CalcCRC64(w.Bytes()))
+		p.crc64 = CalcCRC64(w.Bytes())
+		w.WriteUInt64(p.crc64)
 		w.Write(p.Body())
 	})
 }
@@ -213,6 +215,10 @@ func (p *Packet) Put() {
 	PutPacket(p)
 }
 
+func (p *Packet) CRC64() uint64 {
+	return p.crc64
+}
+
 // Body returns data
 func (p *Packet) Body() []byte {
 	return p.data[p.a:p.b]
@@ -254,5 +260,12 @@ func (p *Packet) Copy() *Packet {
 	newp := SelectPacket()
 	*newp = *p
 	newp.buffered = false
+	return newp
+}
+
+func (p *Packet) CopyWithBody() *Packet {
+	newp := p.Copy()
+	newp.data = helper.MakeBytes(len(p.data))
+	copy(newp.data, p.data)
 	return newp
 }

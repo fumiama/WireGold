@@ -21,6 +21,52 @@ import (
 
 const lstnbufgragsz = 65536
 
+type lstnq struct {
+	index int
+	addr  p2p.EndPoint
+	buf   []byte
+}
+
+type listenqueue chan lstnq
+
+func (q listenqueue) listen(m *Me, hasntfinished []sync.Mutex) {
+	recvtotlcnt := uint64(0)
+	recvloopcnt := uint16(0)
+	recvlooptime := time.Now().UnixMilli()
+	for lstn := range q {
+		recvtotlcnt += uint64(len(lstn.buf))
+		recvloopcnt++
+		if recvloopcnt%m.speedloop == 0 {
+			now := time.Now().UnixMilli()
+			logrus.Infof("[listen] queue recv avg speed: %.2f KB/s", float64(recvtotlcnt)/float64(now-recvlooptime))
+			recvtotlcnt = 0
+			recvlooptime = now
+		}
+		packet := m.wait(lstn.buf[:len(lstn.buf):lstnbufgragsz])
+		if packet == nil {
+			if lstn.index < 0 {
+				if config.ShowDebugLog {
+					logrus.Debugln("[listen] queue waiting")
+				}
+				helper.PutBytes(lstn.buf)
+				continue
+			}
+			if config.ShowDebugLog {
+				logrus.Debugln("[listen] queue waiting, unlock index", lstn.index)
+			}
+			hasntfinished[lstn.index].Unlock()
+			continue
+		}
+		if lstn.index >= 0 {
+			go m.dispatch(packet, lstn.addr, lstn.index, hasntfinished[lstn.index].Unlock)
+		} else {
+			go m.dispatch(packet, lstn.addr, lstn.index, func() {
+				helper.PutBytes(lstn.buf)
+			})
+		}
+	}
+}
+
 // 监听本机 endpoint
 func (m *Me) listen() (conn p2p.Conn, err error) {
 	conn, err = m.ep.Listen()
@@ -30,29 +76,40 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 	m.ep = conn.LocalAddr()
 	logrus.Infoln("[listen] at", m.ep)
 	go func() {
-		recvtotlcnt := uint64(0)
-		recvloopcnt := uint16(0)
-		recvlooptime := time.Now().UnixMilli()
-		n := runtime.NumCPU()
+		n := uint(runtime.NumCPU())
 		if n > 64 {
 			n = 64 // 只用最多 64 核
 		}
 		logrus.Infoln("[listen] use cpu num:", n)
-		listenbuff := make([]byte, lstnbufgragsz*n)
+		listenbuf := make([]byte, lstnbufgragsz*n)
 		hasntfinished := make([]sync.Mutex, n)
-		for i := 0; err == nil; i++ {
+		q := make(listenqueue, n)
+		defer close(q)
+		go q.listen(m, hasntfinished)
+		i := uint(0)
+		for {
+			usenewbuf := false
 			i %= n
 			for !hasntfinished[i].TryLock() {
 				i++
 				i %= n
-				if i == 0 { // looked up a full round
-					time.Sleep(time.Millisecond * 10)
+				if i == 0 { // looked up a full round, make a new buf
+					usenewbuf = true
+					if config.ShowDebugLog {
+						logrus.Debugln("[listen] use new buf")
+					}
+					break
 				}
 			}
-			if config.ShowDebugLog {
+			if config.ShowDebugLog && !usenewbuf {
 				logrus.Debugln("[listen] lock index", i)
 			}
-			lbf := listenbuff[i*lstnbufgragsz : (i+1)*lstnbufgragsz]
+			var lbf []byte
+			if usenewbuf {
+				lbf = helper.MakeBytes(lstnbufgragsz)
+			} else {
+				lbf = listenbuf[i*lstnbufgragsz : (i+1)*lstnbufgragsz]
+			}
 			n, addr, err := conn.ReadFromPeer(lbf)
 			if m.connections == nil || errors.Is(err, net.ErrClosed) {
 				logrus.Warnln("[listen] quit listening")
@@ -65,31 +122,24 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 					logrus.Errorln("[listen] reconnect udp err:", err)
 					return
 				}
-				if config.ShowDebugLog {
-					logrus.Debugln("[listen] unlock index", i)
+				if !usenewbuf {
+					if config.ShowDebugLog {
+						logrus.Debugln("[listen] unlock index", i)
+					}
+					hasntfinished[i].Unlock()
+					i--
 				}
-				hasntfinished[i].Unlock()
-				i--
 				continue
 			}
-			recvtotlcnt += uint64(n)
-			recvloopcnt++
-			if recvloopcnt%m.speedloop == 0 {
-				now := time.Now().UnixMilli()
-				logrus.Infof("[listen] recv avg speed: %.2f KB/s", float64(recvtotlcnt)/float64(now-recvlooptime))
-				recvtotlcnt = 0
-				recvlooptime = now
+			lq := lstnq{
+				index: -1,
+				addr:  addr,
+				buf:   lbf[:n],
 			}
-			packet := m.wait(lbf[:n:lstnbufgragsz])
-			if packet == nil {
-				if config.ShowDebugLog {
-					logrus.Debugln("[listen] waiting, unlock index", i)
-				}
-				hasntfinished[i].Unlock()
-				i--
-				continue
+			if !usenewbuf {
+				lq.index = int(i)
 			}
-			go m.dispatch(packet, addr, i, hasntfinished[i].Unlock)
+			q <- lq
 		}
 	}()
 	return
@@ -193,7 +243,7 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 			packet.Put()
 		case head.ProtoData:
 			if p.pipe != nil {
-				p.pipe <- packet
+				p.pipe <- packet.CopyWithBody()
 				if config.ShowDebugLog {
 					logrus.Debugln("[listen] @", index, "deliver to pipe of", p.peerip)
 				}
@@ -204,8 +254,8 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 				} else if config.ShowDebugLog {
 					logrus.Debugln("[listen] @", index, "deliver", packet.BodyLen(), "bytes data to nic")
 				}
-				packet.Put()
 			}
+			packet.Put()
 		default:
 			logrus.Warnln("[listen] @", index, "recv unknown proto:", packet.Proto)
 			packet.Put()

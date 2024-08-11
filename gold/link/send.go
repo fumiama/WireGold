@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"time"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
@@ -30,7 +29,8 @@ func (l *Link) WriteAndPut(p *head.Packet, istransfer bool) (n int, err error) {
 	teatype := l.randkeyidx()
 	sndcnt := uint16(l.incgetsndcnt())
 	var buf [4]byte
-	_, _ = crand.Read(buf[:])
+	_, _ = crand.Read(buf[:2])
+	binary.BigEndian.PutUint16(buf[2:4], sndcnt)
 	seq := binary.BigEndian.Uint32(buf[:])
 	mtu := l.mtu
 	if l.mturandomrange > 0 {
@@ -114,11 +114,7 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz ui
 		return 0, ErrTTL
 	}
 	if l.doublepacket {
-		cpp := p.Copy()
-		_ = time.AfterFunc(time.Millisecond*(10+time.Duration(rand.Intn(40))), func() {
-			defer cpp.Put()
-			_, _ = l.writeonce(cpp, teatype, additional, datasz, offset, istransfer, hasmore, seq)
-		})
+		_, _ = l.writeonce(p, teatype, additional, datasz, offset, istransfer, hasmore, seq)
 	}
 	return l.writeonce(p, teatype, additional, datasz, offset, istransfer, hasmore, seq)
 }
@@ -147,7 +143,7 @@ func (l *Link) writeonce(p *head.Packet, teatype uint8, additional uint16, datas
 		endl = "."
 	}
 	if config.ShowDebugLog {
-		logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.conn.LocalAddr(), "to", peerep, "offset:", fmt.Sprintf("%04x", offset))
+		logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.conn.LocalAddr(), "to", peerep, "offset", fmt.Sprintf("%04x", offset), "crc", fmt.Sprintf("%016x", p.CRC64()))
 		logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
 	}
 	d = l.me.xorenc(d, seq)

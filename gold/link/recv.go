@@ -52,17 +52,17 @@ func (m *Me) wait(data []byte) *head.Packet {
 		}
 		return nil
 	}
+	m.recved.Set(crc, true)
 	if config.ShowDebugLog {
-		logrus.Debugln("[recv]", len(data), "bytes data with flag", hex.EncodeToString(data[11:12]), hex.EncodeToString(data[10:11]))
+		logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), len(data), "bytes data with flag", hex.EncodeToString(data[11:12]), hex.EncodeToString(data[10:11]))
 	}
 	if flags.IsSingle() || flags.NoFrag() {
 		h := head.SelectPacket()
 		_, err := h.Unmarshal(data)
 		if err != nil {
-			logrus.Errorln("[recv] unmarshal err:", err)
+			logrus.Errorln("[recv]", strconv.FormatUint(crc, 16), "unmarshal err:", err)
 			return nil
 		}
-		m.recved.Set(crc, true)
 		return h
 	}
 
@@ -75,35 +75,33 @@ func (m *Me) wait(data []byte) *head.Packet {
 	h := m.recving.Get(hsh)
 	if h != nil {
 		if config.ShowDebugLog {
-			logrus.Debugln("[recv] get another frag part of", strconv.FormatUint(hsh, 16))
+			logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), "get another frag part of", strconv.FormatUint(hsh, 16))
 		}
 		ok, err := h.Unmarshal(data)
 		if err == nil {
 			if ok {
 				m.recving.Delete(hsh)
-				m.recved.Set(crc, true)
 				if config.ShowDebugLog {
-					logrus.Debugln("[recv] all parts of", strconv.FormatUint(hsh, 16), "has reached")
+					logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), "all parts of", strconv.FormatUint(hsh, 16), "has reached")
 				}
 				return h
 			}
 		} else {
 			h.Put()
-			logrus.Errorln("[recv] unmarshal err:", err)
+			logrus.Errorln("[recv]", strconv.FormatUint(crc, 16), "unmarshal err:", err)
 		}
 		return nil
 	}
 	if config.ShowDebugLog {
-		logrus.Debugln("[recv] get new frag part of", strconv.FormatUint(hsh, 16))
+		logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), "get new frag part of", strconv.FormatUint(hsh, 16))
 	}
 	h = head.SelectPacket()
 	_, err := h.Unmarshal(data)
 	if err != nil {
 		h.Put()
-		logrus.Errorln("[recv] unmarshal err:", err)
+		logrus.Errorln("[recv]", strconv.FormatUint(crc, 16), "unmarshal err:", err)
 		return nil
 	}
 	m.recving.Set(hsh, h)
-	m.recved.Set(crc, true)
 	return nil
 }

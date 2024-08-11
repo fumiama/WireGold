@@ -86,10 +86,9 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 		q := make(listenqueue, n)
 		defer close(q)
 		go q.listen(m, hasntfinished)
-		i := uint(0)
 		for {
 			usenewbuf := false
-			i %= n
+			i := uint(0)
 			for !hasntfinished[i].TryLock() {
 				i++
 				i %= n

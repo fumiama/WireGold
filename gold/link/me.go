@@ -90,6 +90,10 @@ func NewMe(cfg *MyConfig) (m Me) {
 	}
 	m.me = ip
 	m.subnet = *cidr
+	m.speedloop = cfg.SpeedLoop
+	if m.speedloop == 0 {
+		m.speedloop = 4096
+	}
 	m.conn, err = m.listen()
 	if err != nil {
 		panic(err)
@@ -109,10 +113,6 @@ func NewMe(cfg *MyConfig) (m Me) {
 			cfg.NICConfig.IP, cfg.NICConfig.SubNet,
 			strconv.FormatUint(uint64(m.MTU()), 10), cfg.NICConfig.CIDRs...,
 		)
-	}
-	m.speedloop = cfg.SpeedLoop
-	if m.speedloop == 0 {
-		m.speedloop = 4096
 	}
 	m.mask = cfg.Mask
 	var buf [8]byte

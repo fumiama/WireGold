@@ -131,7 +131,7 @@ func (w *Writer) Skip(n int) (int, error) {
 		}
 		return 0, io.EOF
 	}
-	n = min(n, len(b.buf[b.off:]))
+	n = minnum(n, len(b.buf[b.off:]))
 	b.off += n
 	if n > 0 {
 		b.lastRead = opRead
@@ -168,8 +168,8 @@ const (
 	opReadRune4 readOp = 4  // Read rune of size 4.
 )
 
-// min 返回两数最小值，该函数将被内联
-func min[T int | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](a, b T) T {
+// minnum 返回两数最小值，该函数将被内联
+func minnum[T int | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64](a, b T) T {
 	if a > b {
 		return b
 	}

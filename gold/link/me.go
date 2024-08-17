@@ -16,6 +16,7 @@ import (
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
+	"github.com/fumiama/WireGold/helper"
 	"github.com/fumiama/WireGold/lower"
 )
 
@@ -245,9 +246,14 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 		logrus.Warnln("[me] drop packet to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), ": nil nexthop")
 		return
 	}
-	_, err := lnk.WriteAndPut(head.NewPacket(head.ProtoData, m.SrcPort(), lnk.peerip, m.DstPort(), packet), false)
-	if err != nil {
-		logrus.Warnln("[me] write to peer", lnk.peerip, "err:", err)
-	}
+	pcp := helper.MakeBytes(len(packet))
+	copy(pcp, packet)
+	go func(packet []byte) {
+		defer helper.PutBytes(packet)
+		_, err := lnk.WriteAndPut(head.NewPacket(head.ProtoData, m.SrcPort(), lnk.peerip, m.DstPort(), packet), false)
+		if err != nil {
+			logrus.Warnln("[me] write to peer", lnk.peerip, "err:", err)
+		}
+	}(pcp)
 	return
 }

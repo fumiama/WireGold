@@ -79,7 +79,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 	}
 	for _, p := range wg.c.Peers {
 		for _, ip := range p.AllowedIPs {
-			if len(ip) == 0 || ip[0] == 'x' {
+			if len(ip) == 0 || ip[0] == 'x' || ip[0] == 'y' {
 				continue
 			}
 			ipnet, _, err := net.ParseCIDR(ip)

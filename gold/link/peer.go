@@ -89,7 +89,8 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 				continue
 			}
 			noroute := ipnet[0] == 'x'
-			if noroute {
+			innerroute := ipnet[0] == 'y'
+			if noroute || innerroute {
 				ipnet = ipnet[1:]
 				if len(ipnet) == 0 {
 					continue

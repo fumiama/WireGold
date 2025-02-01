@@ -16,7 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.20
+          go-version: ^1.23
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
@@ -33,25 +33,25 @@ jobs:
         run: go mod tidy
 
       - name: Build linux-x64
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -checklinkname=0 -o artifacts/wg-linux-x64 -trimpath
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-x64 -trimpath
       - name: Build linux-x86
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w" -checklinkname=0 -o artifacts/wg-linux-x86 -trimpath
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-x86 -trimpath
       - name: Build windows-x64
-        run: CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -checklinkname=0 -o artifacts/wg-windows-x64.exe -trimpath
+        run: CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-windows-x64.exe -trimpath
       - name: Build windows-x86
-        run: CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="-s -w" -checklinkname=0 -o artifacts/wg-windows-x86.exe -trimpath
+        run: CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-windows-x86.exe -trimpath
       - name: Build arm64
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 GOARM=7 go build -ldflags="-s -w" -checklinkname=0 -o artifacts/wg-linux-arm64 -trimpath
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 GOARM=7 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-arm64 -trimpath
       - name: Build armv6
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w" -checklinkname=0 -o artifacts/wg-linux-armv6 -trimpath
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-armv6 -trimpath
       - name: Build mips
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=mips go build -ldflags="-s -w" -checklinkname=0 -o artifacts/wg-linux-mips -trimpath
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=mips go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-mips -trimpath
       - name: Build mips-softfloat
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=mips GOMIPS=softfloat go build -ldflags="-s -w" -checklinkname=0 -o artifacts/wg-linux-mips-softfloat -trimpath
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=mips GOMIPS=softfloat go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-mips-softfloat -trimpath
       - name: Build mipsel
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=mipsle go build -ldflags="-s -w" -checklinkname=0 -o artifacts/wg-linux-mipsel -trimpath
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=mipsle go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-mipsel -trimpath
       - name: Build mipsel-softfloat
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -ldflags="-s -w" -checklinkname=0 -o artifacts/wg-linux-mipsel-softfloat -trimpath
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-mipsel-softfloat -trimpath
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

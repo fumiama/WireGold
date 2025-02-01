@@ -41,6 +41,7 @@ EndPoint: 0.0.0.0:56789
 MTU: 1504
 SpeedLoop: 4096
 Mask: 0x1234567890abcdef
+Base14: true
 Peers:
   -
     IP: "192.168.233.2"

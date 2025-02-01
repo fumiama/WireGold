@@ -17,7 +17,8 @@ type Config struct {
 	EndPoint   string `yaml:"EndPoint"`
 	MTU        int64  `yaml:"MTU"` // MTU of nic (will minus packet header len)
 	SpeedLoop  uint16 `yaml:"SpeedLoop"`
-	Mask       uint64 `yaml:"Mask"` // Mask 是异或报文所用掩码, 必须保证各端统一
+	Mask       uint64 `yaml:"Mask"`   // Mask 是异或报文所用掩码, 必须保证各端统一
+	Base14     bool   `yaml:"Base14"` // Base14 是否将最终报文进行 base16384 编码后再发送
 	Peers      []Peer `yaml:"Peers"`
 }
 

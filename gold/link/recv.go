@@ -8,6 +8,7 @@ import (
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
+	base14 "github.com/fumiama/go-base16384"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,6 +29,9 @@ func (m *Me) wait(data []byte) *head.Packet {
 	}
 	if config.ShowDebugLog {
 		logrus.Debugln("[recv] data bytes", hex.EncodeToString(data[:bound]), endl)
+	}
+	if m.base14 {
+		data = base14.Decode(data)
 	}
 	seq, data := m.xordec(data)
 	if config.ShowDebugLog {

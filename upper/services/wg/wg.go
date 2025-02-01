@@ -113,6 +113,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 		MTU:       uint16(wg.c.MTU),
 		SpeedLoop: wg.c.SpeedLoop,
 		Mask:      wg.c.Mask,
+		Base14:    wg.c.Base14,
 	})
 
 	for _, peer := range wg.c.Peers {

@@ -16,6 +16,7 @@ import (
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/helper"
+	base14 "github.com/fumiama/go-base16384"
 )
 
 var (
@@ -147,6 +148,9 @@ func (l *Link) writeonce(p *head.Packet, teatype uint8, additional uint16, datas
 		logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
 	}
 	d = l.me.xorenc(d, seq)
+	if l.me.base14 {
+		d = base14.Encode(d)
+	}
 	if config.ShowDebugLog {
 		logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
 	}

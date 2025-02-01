@@ -51,6 +51,8 @@ type Me struct {
 	srcport, dstport, mtu, speedloop uint16
 	// 报头掩码
 	mask uint64
+	// 是否进行 base16384 编码
+	base14 bool
 	// 本机网络端点初始化配置
 	networkconfigs []any
 }
@@ -64,6 +66,7 @@ type MyConfig struct {
 	NICConfig                        *NICConfig
 	SrcPort, DstPort, MTU, SpeedLoop uint16
 	Mask                             uint64
+	Base14                           bool
 }
 
 type NICConfig struct {
@@ -116,6 +119,7 @@ func NewMe(cfg *MyConfig) (m Me) {
 		)
 	}
 	m.mask = cfg.Mask
+	m.base14 = cfg.Base14
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], m.mask)
 	logrus.Infoln("[me] xor mask", hex.EncodeToString(buf[:]))

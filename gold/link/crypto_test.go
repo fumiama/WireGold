@@ -17,7 +17,7 @@ func TestXOR(t *testing.T) {
 	}
 	buf := make([]byte, 4096)
 	buf2 := make([]byte, 4096)
-	for i := 1; i < 4096; i++ {
+	for i := 0; i < 4096; i++ {
 		data := buf[:i]
 		orgdata := buf2[:i]
 		r1 := bytes.NewBuffer(data[:0])
@@ -28,7 +28,10 @@ func TestXOR(t *testing.T) {
 			t.Fatal(err)
 		}
 		seq, dec := m.xordec(m.xorenc(r1.Bytes(), uint32(i)))
-		if !bytes.Equal(dec, r2.Bytes()) || seq != uint32(i) {
+		if !bytes.Equal(dec, r2.Bytes()) {
+			t.Fatal("unexpected xor at", i, "except", hex.EncodeToString(r2.Bytes()), "got", hex.EncodeToString(dec))
+		}
+		if seq != uint32(i) {
 			t.Fatal("unexpected xor at", i, "seq", seq)
 		}
 	}

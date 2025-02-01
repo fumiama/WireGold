@@ -125,61 +125,43 @@ func (m *Me) xorenc(data []byte, seq uint32) []byte {
 	batchsz := len(data) / 8
 	remain := len(data) % 8
 	sum := m.mask
-	newdat := helper.MakeBytes(len(data) + 8)
+	newdat := helper.MakeBytes(8 + batchsz*8 + 8) // seqrand dat tail
 	binary.LittleEndian.PutUint32(newdat[:4], seq)
-	_, _ = rand.Read(newdat[4:8])
-	if remain > 0 {
-		var buf [8]byte
-		p := batchsz * 8
-		copy(buf[:], data[p:])
-		sum ^= binary.LittleEndian.Uint64(buf[:])
-		binary.LittleEndian.PutUint64(buf[:], sum)
-		copy(newdat[8+p:], buf[:])
-	}
-	for i := batchsz - 1; i >= 0; i-- {
+	_, _ = rand.Read(newdat[4:8])                 // seqrand
+	sum ^= binary.LittleEndian.Uint64(newdat[:8]) // init from seqrand
+	binary.LittleEndian.PutUint64(newdat[:8], sum)
+	for i := 0; i < batchsz; i++ { // range on batch data
 		a := i * 8
 		b := (i + 1) * 8
 		sum ^= binary.LittleEndian.Uint64(data[a:b])
 		binary.LittleEndian.PutUint64(newdat[a+8:b+8], sum)
 	}
-	sum ^= binary.LittleEndian.Uint64(newdat[:8])
-	binary.LittleEndian.PutUint64(newdat[:8], sum)
+	p := batchsz * 8
+	copy(newdat[8+p:], data[p:])
+	newdat[len(newdat)-1] = byte(remain)
+	sum ^= binary.LittleEndian.Uint64(newdat[8+p:])
+	binary.LittleEndian.PutUint64(newdat[8+p:], sum)
 	return newdat
 }
 
 // xordec 按 8 字节, 以初始 m.mask 循环异或解码 data
 func (m *Me) xordec(data []byte) (uint32, []byte) {
-	if len(data) <= 8 {
+	if len(data) < 16 || len(data)%8 != 0 {
 		return 0, nil
 	}
 	batchsz := len(data) / 8
-	remain := len(data) % 8
-	this := uint64(0)
-	next := uint64(0)
-	if len(data) >= 8 {
-		next = binary.LittleEndian.Uint64(data[:8])
-	}
-	for i := 0; i < batchsz-1; i++ {
+	sum := m.mask
+	for i := 0; i < batchsz; i++ {
 		a := i * 8
 		b := (i + 1) * 8
-		this = next
-		next = binary.LittleEndian.Uint64(data[a+8 : b+8])
-		binary.LittleEndian.PutUint64(data[a:b], this^next)
+		x := binary.LittleEndian.Uint64(data[a:b])
+		sum ^= x
+		binary.LittleEndian.PutUint64(data[a:b], sum)
+		sum = x
 	}
-	if remain > 0 {
-		var buf [8]byte
-		a := (batchsz - 1) * 8
-		b := batchsz * 8
-		copy(buf[:], data[b:])
-		this = next
-		next = binary.LittleEndian.Uint64(buf[:]) | (m.mask & (uint64(0xffffffff_ffffffff) << (uint64(remain) * 8)))
-		if batchsz > 0 {
-			binary.LittleEndian.PutUint64(data[a:b], this^next)
-		}
-		binary.LittleEndian.PutUint64(buf[:], next^m.mask)
-		copy(data[b:], buf[:])
-	} else {
-		binary.LittleEndian.PutUint64(data[len(data)-8:], next^m.mask)
+	remain := data[len(data)-1]
+	if remain >= 8 {
+		return 0, nil
 	}
-	return binary.LittleEndian.Uint32(data[:4]), data[8:]
+	return binary.LittleEndian.Uint32(data[:4]), data[8 : len(data)-8+int(remain)]
 }

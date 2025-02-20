@@ -97,6 +97,9 @@ func (l *Link) onQuery(packet []byte) {
 		lnk, ok := l.me.IsInPeer(p)
 		eps := ""
 		if l.me.ep.Network() == "udp" { // udp has real p2p
+			if lnk.endpoint == nil {
+				continue
+			}
 			eps = lnk.endpoint.String()
 		}
 		if eps == "" {

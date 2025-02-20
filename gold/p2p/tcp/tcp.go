@@ -459,7 +459,8 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
 	if len(b) >= 65536 {
 		return 0, errors.New("data size " + strconv.Itoa(len(b)) + " is too large")
 	}
-	if (!conn.suberr || len(conn.subs) > 0) && !conn.cplk.TryLock() {
+	locked := conn.cplk.TryLock()
+	if !locked && (!conn.suberr || len(conn.subs) > 0) {
 		if config.ShowDebugLog {
 			logrus.Debug("[tcp] try sub write to", tcpep)
 		}

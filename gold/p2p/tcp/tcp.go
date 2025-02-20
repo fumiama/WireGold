@@ -158,6 +158,10 @@ func delsubs(i int, subs []*subconn) []*subconn {
 }
 
 func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
+	if conn.peers == nil {
+		return
+	}
+
 	ep, _ := newEndpoint(tcpconn.RemoteAddr().String(), &Config{
 		DialTimeout:        conn.addr.dialtimeout,
 		PeersTimeout:       conn.addr.peerstimeout,
@@ -186,6 +190,9 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 			conn.subs = append(conn.subs, &subconn{conn: tcpconn})
 			conn.sblk.Unlock()
 		} else {
+			if conn.peers == nil {
+				return
+			}
 			conn.peers.Set(ep.String(), tcpconn)
 		}
 	}
@@ -202,6 +209,9 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 			conn.sblk.Unlock()
 		}()
 	} else {
+		if conn.peers == nil {
+			return
+		}
 		defer conn.peers.Delete(ep.String())
 	}
 
@@ -279,7 +289,7 @@ func (conn *Conn) keep(ep *EndPoint) {
 	t := time.NewTicker(keepinterval)
 	defer t.Stop()
 	for range t.C {
-		if conn.addr == nil {
+		if conn.addr == nil || conn.peers == nil {
 			return
 		}
 		tcpconn := conn.peers.Get(ep.String())
@@ -312,19 +322,24 @@ func (conn *Conn) keep(ep *EndPoint) {
 }
 
 func (conn *Conn) Close() error {
-	if conn.lstn != nil {
-		_ = conn.lstn.Close()
-	}
-	if conn.peers != nil {
-		conn.peers.Destroy()
-	}
-	if conn.recv != nil {
-		close(conn.recv)
-	}
+	lstn := conn.lstn
+	peers := conn.peers
+	recv := conn.recv
 	conn.addr = nil
 	conn.lstn = nil
 	conn.peers = nil
 	conn.recv = nil
+
+	if lstn != nil {
+		_ = lstn.Close()
+	}
+	if peers != nil {
+		peers.Destroy()
+	}
+	if recv != nil {
+		close(recv)
+	}
+
 	return nil
 }
 
@@ -341,6 +356,9 @@ func (conn *Conn) ReadFromPeer(b []byte) (int, p2p.EndPoint, error) {
 	for {
 		p = <-conn.recv
 		if p == nil {
+			return 0, nil, net.ErrClosed
+		}
+		if conn.peers == nil {
 			return 0, nil, net.ErrClosed
 		}
 		conn.peers.Set(p.addr.String(), p.conn)

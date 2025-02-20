@@ -24,7 +24,7 @@ linters:
     - dogsled
     - dupl
     - errcheck
-    - exportloopref
+    #- exportloopref
     - exhaustive
     #- funlen
     #- goconst

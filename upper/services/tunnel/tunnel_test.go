@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"runtime"
 	"strings"
@@ -17,7 +18,46 @@ import (
 	"github.com/fumiama/WireGold/helper"
 )
 
-func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint16) {
+func TestTunnelUDP(t *testing.T) {
+	testTunnelNetwork(t, "udp", 4096)
+}
+
+func TestTunnelUDPSmallMTU(t *testing.T) {
+	testTunnelNetwork(t, "udp", 1024)
+}
+
+func TestTunnelUDPLite(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		return
+	}
+	testTunnelNetwork(t, "udplite", 4096)
+}
+
+func TestTunnelUDPLiteSmallMTU(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		return
+	}
+	testTunnelNetwork(t, "udplite", 1024)
+}
+
+func TestTunnelTCP(t *testing.T) {
+	testTunnelNetwork(t, "tcp", 4096)
+}
+
+func TestTunnelTCPSmallMTU(t *testing.T) {
+	testTunnelNetwork(t, "tcp", 1024)
+}
+
+func TestTunnelIP(t *testing.T) {
+	testTunnelNetwork(t, "ip", 4096)
+}
+
+func TestTunnelIPSmallMTU(t *testing.T) {
+	testTunnelNetwork(t, "ip", 1024)
+}
+
+func testTunnel(t *testing.T, nw string, isplain, isbase14 bool, pshk *[32]byte, mtu uint16) {
+	fmt.Println("start", nw, "testing")
 	selfpk, err := curve.New(nil)
 	if err != nil {
 		panic(err)
@@ -51,6 +91,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 		SrcPort:      1,
 		DstPort:      1,
 		MTU:          mtu,
+		Base14:       isbase14,
 	})
 	defer m.Close()
 
@@ -62,6 +103,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 		SrcPort:      1,
 		DstPort:      1,
 		MTU:          mtu,
+		Base14:       isbase14,
 	})
 	defer p.Close()
 
@@ -136,7 +178,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 			rand.Read(sendb)
 			n, _ := tunnme.Write(sendb)
 			sendbufs <- sendb
-			logrus.Infoln("loop", i, "write", n, "bytes")
+			logrus.Debugln("loop", i, "write", n, "bytes")
 		}
 		close(sendbufs)
 	}()
@@ -147,7 +189,7 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 		if err != nil {
 			t.Fatal(err)
 		}
-		logrus.Infoln("loop", i, "read", n, "bytes")
+		logrus.Debugln("loop", i, "read", n, "bytes")
 		if string(sendb) != string(buf) {
 			t.Fatal("loop", i, "error: recv 65535 bytes data")
 		}
@@ -173,138 +215,28 @@ func testTunnel(t *testing.T, nw string, isplain bool, pshk *[32]byte, mtu uint1
 	}
 }
 
-func TestTunnelUDP(t *testing.T) {
+func testTunnelNetwork(t *testing.T, nw string, mtu uint16) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetFormatter(&logFormat{enableColor: false})
 
-	testTunnel(t, "udp", true, nil, 4096) // test plain text
+	// test without base14
+	testTunnel(t, nw, true, false, nil, mtu)  // test plain text
+	testTunnel(t, nw, false, false, nil, mtu) // test normal
 
-	testTunnel(t, "udp", false, nil, 4096) // test normal
+	// test with base14
+	testTunnel(t, nw, true, true, nil, mtu)  // test plain text
+	testTunnel(t, nw, false, true, nil, mtu) // test normal
 
 	var buf [32]byte
 	_, err := rand.Read(buf[:])
 	if err != nil {
 		panic(err)
 	}
-	testTunnel(t, "udp", false, &buf, 4096) // test preshared
-}
+	// test without base14
+	testTunnel(t, nw, false, false, &buf, mtu) // test preshared
 
-func TestTunnelUDPSmallMTU(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetFormatter(&logFormat{enableColor: false})
-
-	testTunnel(t, "udp", true, nil, 1024) // test plain text
-
-	testTunnel(t, "udp", false, nil, 1024) // test normal
-
-	var buf [32]byte
-	_, err := rand.Read(buf[:])
-	if err != nil {
-		panic(err)
-	}
-	testTunnel(t, "udp", false, &buf, 1024) // test preshared
-}
-
-func TestTunnelUDPLite(t *testing.T) {
-	if runtime.GOOS == "darwin" {
-		return
-	}
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetFormatter(&logFormat{enableColor: false})
-
-	testTunnel(t, "udplite", true, nil, 4096) // test plain text
-
-	testTunnel(t, "udplite", false, nil, 4096) // test normal
-
-	var buf [32]byte
-	_, err := rand.Read(buf[:])
-	if err != nil {
-		panic(err)
-	}
-	testTunnel(t, "udplite", false, &buf, 4096) // test preshared
-}
-
-func TestTunnelUDPLiteSmallMTU(t *testing.T) {
-	if runtime.GOOS == "darwin" {
-		return
-	}
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetFormatter(&logFormat{enableColor: false})
-
-	testTunnel(t, "udplite", true, nil, 1024) // test plain text
-
-	testTunnel(t, "udplite", false, nil, 1024) // test normal
-
-	var buf [32]byte
-	_, err := rand.Read(buf[:])
-	if err != nil {
-		panic(err)
-	}
-	testTunnel(t, "udplite", false, &buf, 1024) // test preshared
-}
-
-func TestTunnelTCP(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetFormatter(&logFormat{enableColor: false})
-
-	testTunnel(t, "tcp", true, nil, 4096) // test plain text
-
-	testTunnel(t, "tcp", false, nil, 4096) // test normal
-
-	var buf [32]byte
-	_, err := rand.Read(buf[:])
-	if err != nil {
-		panic(err)
-	}
-	testTunnel(t, "tcp", false, &buf, 4096) // test preshared
-}
-
-func TestTunnelTCPSmallMTU(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetFormatter(&logFormat{enableColor: false})
-
-	testTunnel(t, "tcp", true, nil, 1024) // test plain text
-
-	testTunnel(t, "tcp", false, nil, 1024) // test normal
-
-	var buf [32]byte
-	_, err := rand.Read(buf[:])
-	if err != nil {
-		panic(err)
-	}
-	testTunnel(t, "tcp", false, &buf, 1024) // test preshared
-}
-
-func TestTunnelIP(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetFormatter(&logFormat{enableColor: false})
-
-	testTunnel(t, "ip", true, nil, 4096) // test plain text
-
-	testTunnel(t, "ip", false, nil, 4096) // test normal
-
-	var buf [32]byte
-	_, err := rand.Read(buf[:])
-	if err != nil {
-		panic(err)
-	}
-	testTunnel(t, "ip", false, &buf, 4096) // test preshared
-}
-
-func TestTunnelIPSmallMTU(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetFormatter(&logFormat{enableColor: false})
-
-	testTunnel(t, "ip", true, nil, 1024) // test plain text
-
-	testTunnel(t, "ip", false, nil, 1024) // test normal
-
-	var buf [32]byte
-	_, err := rand.Read(buf[:])
-	if err != nil {
-		panic(err)
-	}
-	testTunnel(t, "ip", false, &buf, 1024) // test preshared
+	// test with base14
+	testTunnel(t, nw, false, true, &buf, mtu) // test preshared
 }
 
 // logFormat specialize for go-cqhttp

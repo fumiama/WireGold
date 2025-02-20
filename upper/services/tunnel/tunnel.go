@@ -42,7 +42,7 @@ func Create(me *link.Me, peer string) (s Tunnel, err error) {
 }
 
 func (s *Tunnel) Start(srcport, destport, mtu uint16) {
-	logrus.Infoln("[tunnel] start from", srcport, "to", destport)
+	logrus.Infoln("[tunnel] start port through", srcport, "->", destport, "mtu", mtu)
 	s.src = srcport
 	s.dest = destport
 	s.mtu = mtu

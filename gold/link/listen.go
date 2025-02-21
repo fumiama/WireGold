@@ -8,7 +8,9 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
@@ -180,6 +182,8 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 			p.endpoint = addr
 		}
 	}
+	now := time.Now()
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&p.lastalive)), unsafe.Pointer(&now))
 	switch {
 	case p.IsToMe(packet.Dst):
 		if !p.Accept(packet.Src) {
@@ -222,20 +226,13 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 		}
 		switch packet.Proto {
 		case head.ProtoHello:
-			switch p.status {
-			case LINK_STATUS_DOWN:
-				n, err := p.WriteAndPut(head.NewPacket(head.ProtoHello, m.SrcPort(), p.peerip, m.DstPort(), nil), false)
-				if err == nil {
-					if config.ShowDebugLog {
-						logrus.Debugln("[listen] @", index, "send", n, "bytes hello ack packet")
-					}
-					p.status = LINK_STATUS_HALFUP
-				} else {
-					logrus.Errorln("[listen] @", index, "send hello ack packet error:", err)
+			n, err := p.WriteAndPut(head.NewPacket(head.ProtoHello, m.SrcPort(), p.peerip, m.DstPort(), nil), false)
+			if err == nil {
+				if config.ShowDebugLog {
+					logrus.Debugln("[listen] @", index, "send", n, "bytes hello ack packet")
 				}
-			case LINK_STATUS_HALFUP:
-				p.status = LINK_STATUS_UP
-			case LINK_STATUS_UP:
+			} else {
+				logrus.Errorln("[listen] @", index, "send hello ack packet error:", err)
 			}
 			packet.Put()
 		case head.ProtoNotify:

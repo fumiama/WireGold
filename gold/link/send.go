@@ -143,8 +143,13 @@ func (l *Link) writeonce(p *head.Packet, teatype uint8, additional uint16, datas
 		bound = len(d)
 		endl = "."
 	}
+	conn := l.me.conn
+	if conn == nil {
+		return 0, io.ErrClosedPipe
+	}
 	if config.ShowDebugLog {
-		logrus.Debugln("[send] write", len(d), "bytes data from ep", l.me.conn.LocalAddr(), "to", peerep, "offset", fmt.Sprintf("%04x", offset), "crc", fmt.Sprintf("%016x", p.CRC64()))
+
+		logrus.Debugln("[send] write", len(d), "bytes data from ep", conn.LocalAddr(), "to", peerep, "offset", fmt.Sprintf("%04x", offset), "crc", fmt.Sprintf("%016x", p.CRC64()))
 		logrus.Debugln("[send] data bytes", hex.EncodeToString(d[:bound]), endl)
 	}
 	d = l.me.xorenc(d, seq)
@@ -155,5 +160,5 @@ func (l *Link) writeonce(p *head.Packet, teatype uint8, additional uint16, datas
 		logrus.Debugln("[send] data xored", hex.EncodeToString(d[:bound]), endl)
 	}
 	defer helper.PutBytes(d)
-	return l.me.conn.WriteToPeer(d, peerep)
+	return conn.WriteToPeer(d, peerep)
 }

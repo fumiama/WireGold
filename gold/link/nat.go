@@ -2,7 +2,9 @@ package link
 
 import (
 	"encoding/json"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/sirupsen/logrus"
 
@@ -23,11 +25,21 @@ func (l *Link) keepAlive(dur int64) {
 			if l.me.connections == nil {
 				return
 			}
+			la := (*time.Time)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&l.lastalive))))
+			if la != nil && time.Since(*la) > 10*time.Second*time.Duration(dur) { // 可能已经被阻断， 断开重连
+				logrus.Warnln("[nat] no response after 10 keep alive tries, re-connecting...")
+				err := l.me.Restart()
+				if err != nil {
+					logrus.Errorln("[nat] re-connect me err:", err)
+				} else {
+					logrus.Infoln("[nat] re-connect me succeeded")
+				}
+			}
 			n, err := l.WriteAndPut(head.NewPacket(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, nil), false)
 			if err == nil {
 				logrus.Infoln("[nat] send", n, "bytes keep alive packet")
 			} else {
-				logrus.Errorln("[nat] send keep alive packet error:", err)
+				logrus.Warnln("[nat] send keep alive packet error:", err)
 			}
 		}
 	}

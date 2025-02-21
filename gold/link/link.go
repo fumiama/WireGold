@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"sync/atomic"
+	"time"
 
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
@@ -38,8 +39,8 @@ type Link struct {
 	keys [32]cipher.AEAD
 	// 本机信息
 	me *Me
-	// 连接的状态，详见下方 const
-	status int8
+	// 最后一次收到报文的时间
+	lastalive *time.Time
 	// 是否允许转发
 	allowtrans bool
 	// 是否对数据进行 zstd 压缩
@@ -52,12 +53,6 @@ type Link struct {
 	mturandomrange uint16
 }
 
-const (
-	LINK_STATUS_DOWN = iota
-	LINK_STATUS_HALFUP
-	LINK_STATUS_UP
-)
-
 // Connect 初始化与 peer 的连接
 func (m *Me) Connect(peer string) (*Link, error) {
 	p, ok := m.IsInPeer(net.ParseIP(peer).String())
@@ -69,7 +64,7 @@ func (m *Me) Connect(peer string) (*Link, error) {
 
 // Close 关闭到 peer 的连接
 func (l *Link) Close() {
-	l.status = LINK_STATUS_DOWN
+	l.Destroy()
 }
 
 // Destroy 从 connections 移除 peer

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"io"
 	"net"
+	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -22,6 +23,8 @@ import (
 
 // Me 是本机的抽象
 type Me struct {
+	// 用于自我重连
+	cfg *MyConfig
 	// 本机私钥
 	// 利用 Curve25519 生成
 	// https://pkg.go.dev/golang.org/x/crypto/curve25519
@@ -77,6 +80,7 @@ type NICConfig struct {
 
 // NewMe 设置本机参数
 func NewMe(cfg *MyConfig) (m Me) {
+	m.cfg = cfg
 	m.privKey = *cfg.PrivateKey
 	var err error
 	nw := cfg.Network
@@ -128,6 +132,33 @@ func NewMe(cfg *MyConfig) (m Me) {
 	return
 }
 
+// Restart 重新连接
+func (m *Me) Restart() error {
+	oldconn := m.conn
+	m.conn = nil
+	if !reflect.ValueOf(oldconn).IsZero() {
+		_ = oldconn.Close()
+	}
+	var err error
+	nw := m.cfg.Network
+	if nw == "" {
+		nw = "udp"
+	}
+	m.networkconfigs = m.cfg.NetworkConfigs
+	m.ep, err = p2p.NewEndPoint(nw, m.cfg.MyEndpoint, m.networkconfigs...)
+	if err != nil {
+		return err
+	}
+	ip, cidr, err := net.ParseCIDR(m.cfg.MyIPwithMask)
+	if err != nil {
+		return err
+	}
+	m.me = ip
+	m.subnet = *cidr
+	m.conn, err = m.listen()
+	return err
+}
+
 func (m *Me) SrcPort() uint16 {
 	return m.srcport
 }
@@ -146,7 +177,7 @@ func (m *Me) EndPoint() p2p.EndPoint {
 
 func (m *Me) Close() error {
 	m.connections = nil
-	if m.conn != nil {
+	if !reflect.ValueOf(m.conn).IsZero() {
 		_ = m.conn.Close()
 		m.conn = nil
 	}

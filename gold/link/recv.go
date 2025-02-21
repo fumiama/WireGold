@@ -19,6 +19,9 @@ func (l *Link) Read() *head.Packet {
 
 func (m *Me) wait(data []byte) *head.Packet {
 	if len(data) < head.PacketHeadLen { // not a valid packet
+		if config.ShowDebugLog {
+			logrus.Debugln("[recv] invalid data len", len(data))
+		}
 		return nil
 	}
 	bound := 64
@@ -28,7 +31,7 @@ func (m *Me) wait(data []byte) *head.Packet {
 		endl = "."
 	}
 	if config.ShowDebugLog {
-		logrus.Debugln("[recv] data bytes", hex.EncodeToString(data[:bound]), endl)
+		logrus.Debugln("[recv] data bytes, len", len(data), "val", hex.EncodeToString(data[:bound]), endl)
 	}
 	if m.base14 {
 		data = base14.Decode(data)
@@ -37,7 +40,13 @@ func (m *Me) wait(data []byte) *head.Packet {
 			endl = "."
 		}
 		if config.ShowDebugLog {
-			logrus.Debugln("[recv] data b14ed", hex.EncodeToString(data[:bound]), endl)
+			logrus.Debugln("[recv] data b14ed, len", len(data), "val", hex.EncodeToString(data[:bound]), endl)
+		}
+		if len(data) < head.PacketHeadLen { // not a valid packet
+			if config.ShowDebugLog {
+				logrus.Debugln("[recv] invalid data len", len(data))
+			}
+			return nil
 		}
 	}
 	seq, data := m.xordec(data)
@@ -46,7 +55,13 @@ func (m *Me) wait(data []byte) *head.Packet {
 		endl = "."
 	}
 	if config.ShowDebugLog {
-		logrus.Debugln("[recv] data xored", hex.EncodeToString(data[:bound]), endl)
+		logrus.Debugln("[recv] data xored, len", len(data), "val", hex.EncodeToString(data[:bound]), endl)
+	}
+	if len(data) < head.PacketHeadLen { // not a valid packet
+		if config.ShowDebugLog {
+			logrus.Debugln("[recv] invalid data len", len(data))
+		}
+		return nil
 	}
 	flags := head.Flags(data)
 	if !flags.IsValid() {

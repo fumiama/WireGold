@@ -258,7 +258,10 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 			if config.ShowDebugLog {
 				logrus.Debugln("[tcp] recv from", ep, "err:", err)
 			}
-			if errors.Is(err, net.ErrClosed) || errors.Is(err, io.ErrClosedPipe) || errors.Is(err, io.EOF) {
+			if errors.Is(err, net.ErrClosed) ||
+				errors.Is(err, io.ErrClosedPipe) ||
+				errors.Is(err, io.EOF) ||
+				errors.Is(err, ErrInvalidMagic) {
 				_ = tcpconn.CloseRead()
 				return
 			}

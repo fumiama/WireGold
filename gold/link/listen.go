@@ -130,6 +130,12 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 				}
 				continue
 			}
+			if n <= 0 {
+				if config.ShowDebugLog {
+					logrus.Debugln("[listen] unexpected read n =", n)
+				}
+				continue
+			}
 			lq := lstnq{
 				index: -1,
 				addr:  addr,

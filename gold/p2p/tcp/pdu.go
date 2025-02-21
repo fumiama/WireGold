@@ -63,6 +63,9 @@ func (p *packet) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 	if binary.LittleEndian.Uint32(buf[:]) != magic {
 		err = ErrInvalidMagic
+		if config.ShowDebugLog {
+			logrus.Debugf("[tcp] expect magic %08x but got %08x", magic, binary.LittleEndian.Uint32(buf[:]))
+		}
 		return
 	}
 	cnt, err = io.ReadFull(r, buf[:3])

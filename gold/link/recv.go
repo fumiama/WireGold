@@ -32,8 +32,19 @@ func (m *Me) wait(data []byte) *head.Packet {
 	}
 	if m.base14 {
 		data = base14.Decode(data)
+		if len(data) < bound {
+			bound = len(data)
+			endl = "."
+		}
+		if config.ShowDebugLog {
+			logrus.Debugln("[recv] data b14ed", hex.EncodeToString(data[:bound]), endl)
+		}
 	}
 	seq, data := m.xordec(data)
+	if len(data) < bound {
+		bound = len(data)
+		endl = "."
+	}
 	if config.ShowDebugLog {
 		logrus.Debugln("[recv] data xored", hex.EncodeToString(data[:bound]), endl)
 	}

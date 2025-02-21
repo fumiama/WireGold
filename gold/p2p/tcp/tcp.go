@@ -478,16 +478,18 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (n int, err error) {
 		return 0, errors.New("data size " + strconv.Itoa(len(b)) + " is too large")
 	}
 	locked := conn.cplk.TryLock()
-	if !locked && (!conn.suberr || len(conn.subs) > 0) {
-		if config.ShowDebugLog {
-			logrus.Debug("[tcp] try sub write to", tcpep)
+	if !locked {
+		if !conn.suberr || len(conn.subs) > 0 {
+			if config.ShowDebugLog {
+				logrus.Debug("[tcp] try sub write to", tcpep)
+			}
+			n, err = conn.writeToPeer(b, tcpep, true) // try sub write
+			if err == nil {
+				return
+			}
+			conn.suberr = true // fast fail
 		}
-		n, err = conn.writeToPeer(b, tcpep, true) // try sub write
-		if err == nil {
-			return
-		}
-		conn.suberr = true // fast fail
-		conn.cplk.Lock()   // add to main queue
+		conn.cplk.Lock() // add to main queue
 	}
 	defer conn.cplk.Unlock()
 	return conn.writeToPeer(b, tcpep, false)

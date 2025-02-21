@@ -166,10 +166,10 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 		return
 	}
 	if p.endpoint == nil || !p.endpoint.Euqal(addr) {
-		if m.ep.Network() == "udp" {
+		if m.ep.Network() == "tcp" && !addr.Euqal(p.endpoint) {
 			logrus.Infoln("[listen] @", index, "set endpoint of peer", p.peerip, "to", addr.String())
 			p.endpoint = addr
-		} else if !addr.Euqal(p.endpoint) && p.rawep == "" { // tcp/ws, ep not registered
+		} else { // others are all no status link
 			logrus.Infoln("[listen] @", index, "set endpoint of peer", p.peerip, "to", addr.String())
 			p.endpoint = addr
 		}

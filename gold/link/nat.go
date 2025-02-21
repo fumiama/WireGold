@@ -108,7 +108,7 @@ func (l *Link) onQuery(packet []byte) {
 		if eps == "" {
 			continue
 		}
-		if ok {
+		if ok && lnk.endpoint != nil {
 			notify[p] = [2]string{
 				lnk.endpoint.Network(),
 				eps,

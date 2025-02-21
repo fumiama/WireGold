@@ -230,10 +230,7 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 		}
 		r.conn = tcpconn
 
-		stopch := make(chan struct{})
-		t := time.AfterFunc(peerstimeout, func() {
-			stopch <- struct{}{}
-		})
+		t := time.NewTimer(peerstimeout)
 
 		var err error
 		copych := make(chan struct{})
@@ -243,7 +240,7 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 		}()
 
 		select {
-		case <-stopch:
+		case <-t.C:
 			if config.ShowDebugLog {
 				logrus.Debugln("[tcp] recv from", ep, "timeout")
 			}
@@ -261,7 +258,7 @@ func (conn *Conn) receive(tcpconn *net.TCPConn, hasvalidated bool) {
 			if config.ShowDebugLog {
 				logrus.Debugln("[tcp] recv from", ep, "err:", err)
 			}
-			if errors.Is(err, net.ErrClosed) || errors.Is(err, io.ErrClosedPipe) {
+			if errors.Is(err, net.ErrClosed) || errors.Is(err, io.ErrClosedPipe) || errors.Is(err, io.EOF) {
 				_ = tcpconn.CloseRead()
 				return
 			}

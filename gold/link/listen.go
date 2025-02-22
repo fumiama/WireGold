@@ -226,13 +226,18 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 		}
 		switch packet.Proto {
 		case head.ProtoHello:
-			n, err := p.WriteAndPut(head.NewPacket(head.ProtoHello, m.SrcPort(), p.peerip, m.DstPort(), nil), false)
-			if err == nil {
-				if config.ShowDebugLog {
-					logrus.Debugln("[listen] @", index, "send", n, "bytes hello ack packet")
+			switch {
+			case len(packet.Body()) == 0:
+				logrus.Warnln("[listen] @", index, "recv old hello packet, do nothing")
+			case packet.Body()[0] == byte(head.HelloPing):
+				n, err := p.WriteAndPut(head.NewPacket(head.ProtoHello, m.SrcPort(), p.peerip, m.DstPort(), []byte{byte(head.HelloPong)}), false)
+				if err == nil {
+					logrus.Infoln("[listen] @", index, "recv hello, send", n, "bytes hello ack packet")
+				} else {
+					logrus.Errorln("[listen] @", index, "send hello ack packet error:", err)
 				}
-			} else {
-				logrus.Errorln("[listen] @", index, "send hello ack packet error:", err)
+			default:
+				logrus.Infoln("[listen] @", index, "recv hello ack packet, do nothing")
 			}
 			packet.Put()
 		case head.ProtoNotify:

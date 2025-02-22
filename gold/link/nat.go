@@ -35,7 +35,7 @@ func (l *Link) keepAlive(dur int64) {
 					logrus.Infoln("[nat] re-connect me succeeded")
 				}
 			}
-			n, err := l.WriteAndPut(head.NewPacket(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, nil), false)
+			n, err := l.WriteAndPut(head.NewPacket(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, []byte{byte(head.HelloPing)}), false)
 			if err == nil {
 				logrus.Infoln("[nat] send", n, "bytes keep alive packet")
 			} else {

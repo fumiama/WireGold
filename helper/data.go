@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"reflect"
 	"unsafe"
 )
 
@@ -29,4 +30,12 @@ func StringToBytes(s string) (b []byte) {
 	bh.len = sh.len
 	bh.cap = sh.len
 	return b
+}
+
+func IsNilInterface(x any) bool {
+	return x == nil || reflect.ValueOf(x).IsZero()
+}
+
+func IsNonNilInterface(x any) bool {
+	return !IsNilInterface(x)
 }

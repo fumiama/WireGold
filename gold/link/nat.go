@@ -2,7 +2,6 @@ package link
 
 import (
 	"encoding/json"
-	"reflect"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -70,7 +69,7 @@ func (l *Link) onNotify(packet []byte) {
 		if err == nil {
 			p, ok := l.me.IsInPeer(peer)
 			if ok {
-				if reflect.ValueOf(p.endpoint).IsZero() || !p.endpoint.Euqal(addr) {
+				if helper.IsNilInterface(p.endpoint) || !p.endpoint.Euqal(addr) {
 					p.endpoint = addr
 					logrus.Infoln("[nat] notify set ep of peer", peer, "to", ep)
 				}
@@ -110,7 +109,7 @@ func (l *Link) onQuery(packet []byte) {
 		lnk, ok := l.me.IsInPeer(p)
 		eps := ""
 		if l.me.ep.Network() == "udp" { // udp has real p2p
-			if reflect.ValueOf(lnk.endpoint).IsZero() {
+			if helper.IsNilInterface(lnk.endpoint) {
 				continue
 			}
 			eps = lnk.endpoint.String()
@@ -121,7 +120,7 @@ func (l *Link) onQuery(packet []byte) {
 		if eps == "" {
 			continue
 		}
-		if ok && !reflect.ValueOf(lnk.endpoint).IsZero() {
+		if ok && helper.IsNonNilInterface(lnk.endpoint) {
 			notify[p] = [2]string{
 				lnk.endpoint.Network(),
 				eps,

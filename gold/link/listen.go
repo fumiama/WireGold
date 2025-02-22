@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"reflect"
 	"runtime"
 	"strconv"
 	"sync"
@@ -174,7 +173,7 @@ func (m *Me) dispatch(packet *head.Packet, addr p2p.EndPoint, index int, finish 
 		packet.Put()
 		return
 	}
-	if reflect.ValueOf(p.endpoint).IsZero() || !p.endpoint.Euqal(addr) {
+	if helper.IsNilInterface(p.endpoint) || !p.endpoint.Euqal(addr) {
 		if m.ep.Network() == "tcp" && !addr.Euqal(p.endpoint) {
 			logrus.Infoln("[listen] @", index, "set endpoint of peer", p.peerip, "to", addr.String())
 			p.endpoint = addr

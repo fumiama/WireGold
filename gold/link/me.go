@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"io"
 	"net"
-	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -136,7 +135,7 @@ func NewMe(cfg *MyConfig) (m Me) {
 func (m *Me) Restart() error {
 	oldconn := m.conn
 	m.conn = nil
-	if !reflect.ValueOf(oldconn).IsZero() {
+	if helper.IsNonNilInterface(oldconn) {
 		_ = oldconn.Close()
 	}
 	var err error
@@ -177,7 +176,7 @@ func (m *Me) EndPoint() p2p.EndPoint {
 
 func (m *Me) Close() error {
 	m.connections = nil
-	if !reflect.ValueOf(m.conn).IsZero() {
+	if helper.IsNonNilInterface(m.conn) {
 		_ = m.conn.Close()
 		m.conn = nil
 	}

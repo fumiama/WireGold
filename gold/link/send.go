@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"reflect"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
@@ -123,7 +124,7 @@ func (l *Link) write(p *head.Packet, teatype uint8, additional uint16, datasz ui
 // write 向 peer 发一个包
 func (l *Link) writeonce(p *head.Packet, teatype uint8, additional uint16, datasz uint32, offset uint16, istransfer, hasmore bool, seq uint32) (int, error) {
 	peerep := l.endpoint
-	if peerep == nil {
+	if reflect.ValueOf(peerep).IsZero() {
 		return 0, errors.New("nil endpoint of " + p.Dst.String())
 	}
 

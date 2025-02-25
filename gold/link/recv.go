@@ -46,7 +46,7 @@ func (m *Me) wait(data []byte) *orbyte.Item[head.Packet] {
 			}
 			return nil
 		}
-		data = w.TransBytes()
+		data = w.TransUnderlyingBytes()
 		if len(data) < bound {
 			bound = len(data)
 			endl = "."

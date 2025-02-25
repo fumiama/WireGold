@@ -80,7 +80,7 @@ func (p *packet) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return
 	}
-	p.dat = w.TransBytes()
+	p.dat = w.TransUnderlyingBytes()
 	return
 }
 

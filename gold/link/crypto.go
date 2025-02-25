@@ -7,7 +7,6 @@ import (
 	"errors"
 	"math/bits"
 	mrand "math/rand"
-	"runtime"
 
 	"github.com/fumiama/orbyte/pbuf"
 	"github.com/sirupsen/logrus"
@@ -53,13 +52,13 @@ func expandkeyunit(v1, v2 byte) (v uint16) {
 	return
 }
 
-// Encode by aead and put b into pool
-func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb pbuf.Bytes) {
+// encode by aead and put b into pool
+func (l *Link) encode(teatype uint8, additional uint16, b []byte) (eb pbuf.Bytes) {
 	if len(b) == 0 || teatype >= 32 {
 		return
 	}
 	if l.keys[0] == nil {
-		return pbuf.ParseBytes(b...)
+		return pbuf.ParseBytes(b...).Copy()
 	}
 	aead := l.keys[teatype]
 	if aead == nil {
@@ -70,13 +69,13 @@ func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb pbuf.Bytes
 	return
 }
 
-// Decode by aead and put b into pool
-func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db pbuf.Bytes, err error) {
+// decode by aead and put b into pool
+func (l *Link) decode(teatype uint8, additional uint16, b []byte) (db pbuf.Bytes, err error) {
 	if len(b) == 0 || teatype >= 32 {
 		return
 	}
 	if l.keys[0] == nil {
-		return pbuf.ParseBytes(b...), nil
+		return pbuf.ParseBytes(b...).Copy(), nil
 	}
 	aead := l.keys[teatype]
 	if aead == nil {
@@ -142,7 +141,6 @@ func (m *Me) xorenc(data []byte, seq uint32) pbuf.Bytes {
 	}
 	p := batchsz * 8
 	copy(newdat.Bytes()[8+p:], data[p:])
-	runtime.KeepAlive(data)
 	newdat.Bytes()[newdat.Len()-1] = byte(remain)
 	sum ^= binary.LittleEndian.Uint64(newdat.Bytes()[8+p:])
 	binary.LittleEndian.PutUint64(newdat.Bytes()[8+p:], sum)

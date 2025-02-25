@@ -1,7 +1,6 @@
 package link
 
 import (
-	"bytes"
 	crand "crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
@@ -11,7 +10,6 @@ import (
 	"math/rand"
 	"runtime"
 
-	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/config"
@@ -100,16 +98,12 @@ func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 	}
 	data := p.Body()
 	if l.usezstd {
-		w := helper.SelectWriter()
-		enc, _ := zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedFastest))
-		_, _ = io.Copy(enc, bytes.NewReader(data))
-		enc.Close()
-		data = w.TransBytes().Bytes()
+		data = encodezstd(data).Trans().Bytes()
 		if config.ShowDebugLog {
 			logrus.Debugln("[send] data len after zstd:", len(data))
 		}
 	}
-	p.SetBody(l.Encode(teatype, sndcnt&0x07ff, data).Trans().Bytes())
+	p.SetBody(l.encode(teatype, sndcnt&0x07ff, data).Trans().Bytes())
 	if config.ShowDebugLog {
 		logrus.Debugln("[send] data len after xchacha20:", p.BodyLen(), "addt:", sndcnt)
 	}

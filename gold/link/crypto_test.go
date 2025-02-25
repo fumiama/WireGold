@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"io"
-	"runtime"
 	"testing"
 
 	"golang.org/x/crypto/chacha20poly1305"
@@ -32,7 +31,6 @@ func TestXOR(t *testing.T) {
 		if !bytes.Equal(dec, r2.Bytes()) {
 			t.Fatal("unexpected xor at", i, "except", hex.EncodeToString(r2.Bytes()), "got", hex.EncodeToString(dec))
 		}
-		runtime.KeepAlive(dec)
 		if seq != uint32(i) {
 			t.Fatal("unexpected xor at", i, "seq", seq)
 		}

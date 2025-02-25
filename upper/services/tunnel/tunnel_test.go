@@ -360,6 +360,9 @@ func benchmarkTunnel(b *testing.B, sz int, nw string, isplain, isbase14 bool, ps
 		}
 	}
 	b.StopTimer()
+
+	time.Sleep(time.Second) // wait packets all received
+
 	tunnme.Stop()
 	tunnpeer.Stop()
 }

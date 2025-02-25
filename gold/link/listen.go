@@ -1,9 +1,7 @@
 package link
 
 import (
-	"bytes"
 	"errors"
-	"io"
 	"net"
 	"runtime"
 	"strconv"
@@ -12,7 +10,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/klauspost/compress/zstd"
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/config"
@@ -179,7 +176,7 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 		}
 		addt := pp.AdditionalData()
 		var err error
-		data, err := p.Decode(pp.CipherIndex(), addt, pp.Body())
+		data, err := p.decode(pp.CipherIndex(), addt, pp.Body())
 		if err != nil {
 			if config.ShowDebugLog {
 				logrus.Debugln("[listen] @", index, "drop invalid packet key idx:", pp.CipherIndex(), "addt:", addt, "err:", err)
@@ -188,21 +185,14 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 		}
 		pp.SetBody(data.Trans().Bytes())
 		if p.usezstd {
-			dec, _ := zstd.NewReader(bytes.NewReader(pp.Body()))
-			var err error
-			w := helper.SelectWriter()
-			_, err = io.Copy(w, dec)
-			dec.Close()
+			dat, err := decodezstd(pp.Body())
 			if err != nil {
 				if config.ShowDebugLog {
 					logrus.Debugln("[listen] @", index, "drop invalid zstd packet:", err)
 				}
 				return
 			}
-			if config.ShowDebugLog {
-				logrus.Debugln("[listen] @", index, "zstd decoded len:", w.Len())
-			}
-			pp.SetBody(w.TransBytes().Bytes())
+			pp.SetBody(dat.Trans().Bytes())
 		}
 		if !pp.IsVaildHash() {
 			if config.ShowDebugLog {

@@ -1,8 +1,15 @@
 package head
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
 type PacketFlags uint16
+
+func (pf PacketFlags) String() string {
+	return fmt.Sprintf("%04x", uint16(pf))
+}
 
 func (pf PacketFlags) IsValid() bool {
 	return pf&0x8000 == 0

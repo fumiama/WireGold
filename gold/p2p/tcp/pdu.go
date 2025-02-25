@@ -1,14 +1,18 @@
 package tcp
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
 	"net"
+	"runtime"
 	"time"
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/orbyte"
+	"github.com/fumiama/orbyte/pbuf"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,17 +37,19 @@ var (
 type packet struct {
 	typ packetType
 	len uint16
-	dat []byte
+	dat pbuf.Bytes
 	io.ReaderFrom
 	io.WriterTo
 }
 
 func (p *packet) pack() (net.Buffers, func()) {
-	d, cl := helper.OpenWriterF(func(w *helper.Writer) {
+	d := helper.NewWriterF(func(w *helper.Writer) {
 		w.WriteByte(byte(p.typ))
 		w.WriteUInt16(p.len)
 	})
-	return net.Buffers{magicbuf, d, p.dat}, cl
+	return net.Buffers{magicbuf, d.Bytes(), p.dat.Bytes()}, func() {
+		runtime.KeepAlive(d)
+	}
 }
 
 func (p *packet) Read(_ []byte) (int, error) {
@@ -81,7 +87,7 @@ func (p *packet) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return
 	}
-	p.dat = w.Bytes()
+	p.dat = pbuf.BufferItemToBytes((*orbyte.Item[bytes.Buffer])(w).Trans())
 	return
 }
 

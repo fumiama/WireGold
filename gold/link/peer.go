@@ -7,6 +7,7 @@ import (
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
 	curve "github.com/fumiama/go-x25519"
+	"github.com/fumiama/orbyte"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/chacha20poly1305"
 )
@@ -49,7 +50,7 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 	}
 
 	if !cfg.NoPipe {
-		l.pipe = make(chan *head.Packet, 32)
+		l.pipe = make(chan *orbyte.Item[head.Packet], 65536)
 	}
 	var k, p []byte
 	if cfg.PubicKey != nil {

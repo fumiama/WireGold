@@ -7,8 +7,9 @@ import (
 	"errors"
 	"math/bits"
 	mrand "math/rand"
+	"runtime"
 
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/orbyte/pbuf"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,14 +54,12 @@ func expandkeyunit(v1, v2 byte) (v uint16) {
 }
 
 // Encode by aead and put b into pool
-func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb []byte) {
+func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb pbuf.Bytes) {
 	if len(b) == 0 || teatype >= 32 {
 		return
 	}
 	if l.keys[0] == nil {
-		eb = helper.MakeBytes(len(b))
-		copy(eb, b)
-		return
+		return pbuf.ParseBytes(b...)
 	}
 	aead := l.keys[teatype]
 	if aead == nil {
@@ -72,14 +71,12 @@ func (l *Link) Encode(teatype uint8, additional uint16, b []byte) (eb []byte) {
 }
 
 // Decode by aead and put b into pool
-func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db []byte, err error) {
+func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db pbuf.Bytes, err error) {
 	if len(b) == 0 || teatype >= 32 {
 		return
 	}
 	if l.keys[0] == nil {
-		db = helper.MakeBytes(len(b))
-		copy(db, b)
-		return
+		return pbuf.ParseBytes(b...), nil
 	}
 	aead := l.keys[teatype]
 	if aead == nil {
@@ -88,59 +85,67 @@ func (l *Link) Decode(teatype uint8, additional uint16, b []byte) (db []byte, er
 	return decode(aead, additional, b)
 }
 
-func encode(aead cipher.AEAD, additional uint16, b []byte) []byte {
+func encode(aead cipher.AEAD, additional uint16, b []byte) pbuf.Bytes {
 	nsz := aead.NonceSize()
 	// Accocate capacity for all the stuffs.
-	buf := helper.MakeBytes(2 + nsz + len(b) + aead.Overhead())
-	binary.LittleEndian.PutUint16(buf[:2], additional)
-	nonce := buf[2 : 2+nsz]
+	buf := pbuf.NewBytes(2 + nsz + len(b) + aead.Overhead())
+	binary.LittleEndian.PutUint16(buf.Bytes()[:2], additional)
+	nonce := buf.Bytes()[2 : 2+nsz]
 	// Select a random nonce
 	_, err := rand.Read(nonce)
 	if err != nil {
 		panic(err)
 	}
 	// Encrypt the message and append the ciphertext to the nonce.
-	eb := aead.Seal(nonce[nsz:nsz], nonce, b, buf[:2])
-	return nonce[:nsz+len(eb)]
+	eb := aead.Seal(nonce[nsz:nsz], nonce, b, buf.Bytes()[:2])
+	return buf.Trans().Slice(2, 2+nsz+len(eb))
 }
 
-func decode(aead cipher.AEAD, additional uint16, b []byte) ([]byte, error) {
+func decode(aead cipher.AEAD, additional uint16, b []byte) (pbuf.Bytes, error) {
 	nsz := aead.NonceSize()
 	if len(b) < nsz {
-		return nil, ErrCipherTextTooShort
+		return pbuf.Bytes{}, ErrCipherTextTooShort
 	}
 	// Split nonce and ciphertext.
 	nonce, ciphertext := b[:nsz], b[nsz:]
 	if len(ciphertext) == 0 {
-		return nil, nil
+		return pbuf.Bytes{}, nil
 	}
 	// Decrypt the message and check it wasn't tampered with.
 	var buf [2]byte
 	binary.LittleEndian.PutUint16(buf[:], additional)
-	return aead.Open(helper.SelectWriter().Bytes(), nonce, ciphertext, buf[:])
+	data, err := aead.Open(
+		pbuf.NewBytes(4096).Trans().Bytes()[:0],
+		nonce, ciphertext, buf[:],
+	)
+	if err != nil {
+		return pbuf.Bytes{}, nil
+	}
+	return pbuf.ParseBytes(data...), nil
 }
 
 // xorenc 按 8 字节, 以初始 m.mask 循环异或编码 data
-func (m *Me) xorenc(data []byte, seq uint32) []byte {
+func (m *Me) xorenc(data []byte, seq uint32) pbuf.Bytes {
 	batchsz := len(data) / 8
 	remain := len(data) % 8
 	sum := m.mask
-	newdat := helper.MakeBytes(8 + batchsz*8 + 8) // seqrand dat tail
-	binary.LittleEndian.PutUint32(newdat[:4], seq)
-	_, _ = rand.Read(newdat[4:8])                 // seqrand
-	sum ^= binary.LittleEndian.Uint64(newdat[:8]) // init from seqrand
-	binary.LittleEndian.PutUint64(newdat[:8], sum)
+	newdat := pbuf.NewBytes(8 + batchsz*8 + 8) // seqrand dat tail
+	binary.LittleEndian.PutUint32(newdat.Bytes()[:4], seq)
+	_, _ = rand.Read(newdat.Bytes()[4:8])                 // seqrand
+	sum ^= binary.LittleEndian.Uint64(newdat.Bytes()[:8]) // init from seqrand
+	binary.LittleEndian.PutUint64(newdat.Bytes()[:8], sum)
 	for i := 0; i < batchsz; i++ { // range on batch data
 		a := i * 8
 		b := (i + 1) * 8
 		sum ^= binary.LittleEndian.Uint64(data[a:b])
-		binary.LittleEndian.PutUint64(newdat[a+8:b+8], sum)
+		binary.LittleEndian.PutUint64(newdat.Bytes()[a+8:b+8], sum)
 	}
 	p := batchsz * 8
-	copy(newdat[8+p:], data[p:])
-	newdat[len(newdat)-1] = byte(remain)
-	sum ^= binary.LittleEndian.Uint64(newdat[8+p:])
-	binary.LittleEndian.PutUint64(newdat[8+p:], sum)
+	copy(newdat.Bytes()[8+p:], data[p:])
+	runtime.KeepAlive(data)
+	newdat.Bytes()[newdat.Len()-1] = byte(remain)
+	sum ^= binary.LittleEndian.Uint64(newdat.Bytes()[8+p:])
+	binary.LittleEndian.PutUint64(newdat.Bytes()[8+p:], sum)
 	return newdat
 }
 
@@ -163,5 +168,6 @@ func (m *Me) xordec(data []byte) (uint32, []byte) {
 	if remain >= 8 {
 		return 0, nil
 	}
-	return binary.LittleEndian.Uint32(data[:4]), data[8 : len(data)-8+int(remain)]
+	return binary.LittleEndian.Uint32(data[:4]),
+		data[8 : len(data)-8+int(remain)]
 }

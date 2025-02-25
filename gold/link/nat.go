@@ -1,6 +1,7 @@
 package link
 
 import (
+	"bytes"
 	"encoding/json"
 	"sync/atomic"
 	"time"
@@ -12,6 +13,8 @@ import (
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
 	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/orbyte"
+	"github.com/fumiama/orbyte/pbuf"
 )
 
 // 保持 NAT
@@ -35,7 +38,7 @@ func (l *Link) keepAlive(dur int64) {
 					logrus.Infoln("[nat] re-connect me succeeded")
 				}
 			}
-			n, err := l.WriteAndPut(head.NewPacket(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, []byte{byte(head.HelloPing)}), false)
+			n, err := l.WritePacket(head.NewPacketPartial(head.ProtoHello, l.me.srcport, l.peerip, l.me.dstport, pbuf.ParseBytes(byte(head.HelloPing))), false)
 			if err == nil {
 				logrus.Infoln("[nat] send", n, "bytes keep alive packet")
 			} else {
@@ -131,12 +134,14 @@ func (l *Link) onQuery(packet []byte) {
 		logrus.Infoln("[nat] query wrap", len(notify), "notify")
 		w := helper.SelectWriter()
 		_ = json.NewEncoder(w).Encode(&notify)
-		_, err = l.WriteAndPut(head.NewPacket(head.ProtoNotify, l.me.srcport, l.peerip, l.me.dstport, w.Bytes()), false)
+		_, err = l.WritePacket(head.NewPacketPartial(
+			head.ProtoNotify, l.me.srcport, l.peerip, l.me.dstport,
+			pbuf.BufferItemToBytes((*orbyte.Item[bytes.Buffer])(w).Trans()),
+		), false)
 		if err != nil {
 			logrus.Errorln("[nat] notify peer", l, "err:", err)
 			return
 		}
-		helper.PutWriter(w)
 	}
 }
 
@@ -152,7 +157,10 @@ func (l *Link) sendquery(tick time.Duration, peers ...string) {
 	t := time.NewTicker(tick)
 	for range t.C {
 		logrus.Infoln("[nat] query send query to", l.peerip)
-		_, err = l.WriteAndPut(head.NewPacket(head.ProtoQuery, l.me.srcport, l.peerip, l.me.dstport, data), false)
+		_, err = l.WritePacket(head.NewPacketPartial(
+			head.ProtoQuery, l.me.srcport, l.peerip, l.me.dstport,
+			pbuf.ParseBytes(data...),
+		), false)
 		if err != nil {
 			logrus.Errorln("[nat] query write err:", err)
 		}

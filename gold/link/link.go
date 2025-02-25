@@ -11,6 +11,7 @@ import (
 	"github.com/fumiama/WireGold/gold/p2p"
 	"github.com/fumiama/WireGold/helper"
 	base14 "github.com/fumiama/go-base16384"
+	"github.com/fumiama/orbyte"
 )
 
 var (
@@ -26,7 +27,7 @@ type Link struct {
 	// 收到的包的队列
 	// 没有下层 nic 时
 	// 包会分发到此
-	pipe chan *head.Packet
+	pipe chan *orbyte.Item[head.Packet]
 	// peer 的虚拟 ip
 	peerip net.IP
 	// peer 的公网 endpoint

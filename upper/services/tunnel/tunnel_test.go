@@ -12,6 +12,7 @@ import (
 	"time"
 
 	curve "github.com/fumiama/go-x25519"
+	"github.com/fumiama/orbyte"
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/gold/link"
@@ -196,7 +197,9 @@ func testTunnel(t *testing.T, nw string, isplain, isbase14 bool, pshk *[32]byte,
 	}
 
 	sendb = make([]byte, 4096)
-	rand.Read(sendb)
+	for i := 0; i < 4096; i++ {
+		sendb[i] = byte(i)
+	}
 	go tunnme.Write(sendb)
 	buf = make([]byte, 4096)
 	_, err = io.ReadFull(&tunnpeer, buf)
@@ -213,7 +216,9 @@ func testTunnel(t *testing.T, nw string, isplain, isbase14 bool, pshk *[32]byte,
 		time.Sleep(time.Second)
 		for i := 0; i < 32; i++ {
 			sendb := make([]byte, 65535)
-			rand.Read(sendb)
+			for j := 0; j < 65535; j++ {
+				sendb[j] = byte(i + j)
+			}
 			n, _ := tunnme.Write(sendb)
 			sendbufs <- sendb
 			logrus.Debugln("loop", i, "write", n, "bytes")
@@ -234,7 +239,9 @@ func testTunnel(t *testing.T, nw string, isplain, isbase14 bool, pshk *[32]byte,
 		i++
 	}
 
-	rand.Read(sendb)
+	for i := 0; i < 4096; i++ {
+		sendb[i] = ^byte(i)
+	}
 	tunnme.Write(sendb)
 	rd := bytes.NewBuffer(nil)
 
@@ -420,7 +427,9 @@ type logFormat struct {
 
 // Format implements logrus.Formatter
 func (f logFormat) Format(entry *logrus.Entry) ([]byte, error) {
-	buf := helper.SelectWriter() // this writer will not be put back
+	// this writer will not be put back
+
+	buf := (*orbyte.Item[bytes.Buffer])(helper.SelectWriter()).Trans().Pointer()
 
 	buf.WriteByte('[')
 	if f.enableColor {

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"io"
+	"runtime"
 	"testing"
 
 	"golang.org/x/crypto/chacha20poly1305"
@@ -27,10 +28,11 @@ func TestXOR(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		seq, dec := m.xordec(m.xorenc(r1.Bytes(), uint32(i)))
+		seq, dec := m.xordec(m.xorenc(r1.Bytes(), uint32(i)).Trans().Bytes())
 		if !bytes.Equal(dec, r2.Bytes()) {
 			t.Fatal("unexpected xor at", i, "except", hex.EncodeToString(r2.Bytes()), "got", hex.EncodeToString(dec))
 		}
+		runtime.KeepAlive(dec)
 		if seq != uint32(i) {
 			t.Fatal("unexpected xor at", i, "seq", seq)
 		}
@@ -53,11 +55,11 @@ func TestXChacha20(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < 4096; i++ {
-		db, err := decode(aead, uint16(i), encode(aead, uint16(i), data[:i]))
+		db, err := decode(aead, uint16(i), encode(aead, uint16(i), data[:i]).Trans().Bytes())
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !bytes.Equal(db, data[:i]) {
+		if !bytes.Equal(db.Bytes(), data[:i]) {
 			t.Fatal("unexpected preshared at idx(len)", i, "addt", uint16(i))
 		}
 	}

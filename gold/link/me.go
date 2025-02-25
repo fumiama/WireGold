@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/FloatTech/ttl"
+	"github.com/fumiama/orbyte"
+	"github.com/fumiama/orbyte/pbuf"
 	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
 
@@ -46,13 +48,19 @@ type Me struct {
 	// 本机路由表
 	router *Router
 	// 本机未接收完全分片池
-	recving *ttl.Cache[uint64, *head.Packet]
+	recving *ttl.Cache[uint64, *orbyte.Item[head.Packet]]
 	// 抗重放攻击记录池
-	recved *ttl.Cache[uint64, bool]
+	recved *ttl.Cache[uint64, struct{}]
 	// 本机上层配置
 	srcport, dstport, mtu, speedloop uint16
 	// 报头掩码
 	mask uint64
+	// 本机总接收字节数
+	recvtotlcnt uint64
+	// 上一次触发循环计数时间
+	recvlooptime int64
+	// 本机总接收数据包计数
+	recvloopcnt uintptr
 	// 是否进行 base16384 编码
 	base14 bool
 	// 本机网络端点初始化配置
@@ -122,12 +130,13 @@ func NewMe(cfg *MyConfig) (m Me) {
 		)
 	}
 	m.mask = cfg.Mask
+	m.recvlooptime = time.Now().UnixMilli()
 	m.base14 = cfg.Base14
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], m.mask)
 	logrus.Infoln("[me] xor mask", hex.EncodeToString(buf[:]))
-	m.recving = ttl.NewCache[uint64, *head.Packet](time.Second * 30)
-	m.recved = ttl.NewCache[uint64, bool](time.Second * 30)
+	m.recving = ttl.NewCache[uint64, *orbyte.Item[head.Packet]](time.Second * 10)
+	m.recved = ttl.NewCache[uint64, struct{}](time.Minute)
 	return
 }
 
@@ -154,6 +163,7 @@ func (m *Me) Restart() error {
 	}
 	m.me = ip
 	m.subnet = *cidr
+	m.recvlooptime = time.Now().UnixMilli()
 	m.conn, err = m.listen()
 	return err
 }
@@ -280,11 +290,10 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 		logrus.Warnln("[me] drop packet to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), ": nil nexthop")
 		return
 	}
-	pcp := helper.MakeBytes(len(packet))
-	copy(pcp, packet)
-	go func(packet []byte) {
-		defer helper.PutBytes(packet)
-		_, err := lnk.WriteAndPut(head.NewPacket(head.ProtoData, m.SrcPort(), lnk.peerip, m.DstPort(), packet), false)
+	pcp := pbuf.NewBytes(len(packet))
+	copy(pcp.Bytes(), packet)
+	go func(packet pbuf.Bytes) {
+		_, err := lnk.WritePacket(head.NewPacketPartial(head.ProtoData, m.SrcPort(), lnk.peerip, m.DstPort(), packet), false)
 		if err != nil {
 			logrus.Warnln("[me] write to peer", lnk.peerip, "err:", err)
 		}

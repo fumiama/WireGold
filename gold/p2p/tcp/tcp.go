@@ -14,7 +14,7 @@ import (
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/p2p"
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/orbyte/pbuf"
 )
 
 type EndPoint struct {
@@ -377,9 +377,8 @@ func (conn *Conn) ReadFromPeer(b []byte) (int, p2p.EndPoint, error) {
 		if p.pckt.typ == packetTypeNormal {
 			break
 		}
-		defer helper.PutBytes(p.pckt.dat)
 	}
-	n := copy(b, p.pckt.dat)
+	n := copy(b, p.pckt.dat.Bytes())
 	return n, p.addr, nil
 }
 
@@ -453,7 +452,7 @@ RECONNECT:
 	cnt, err := io.Copy(tcpconn, &packet{
 		typ: packetTypeNormal,
 		len: uint16(len(b)),
-		dat: b,
+		dat: pbuf.ParseBytes(b...),
 	})
 	if err != nil {
 		if subc == nil {

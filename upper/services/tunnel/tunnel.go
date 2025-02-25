@@ -12,6 +12,8 @@ import (
 	_ "github.com/fumiama/WireGold/gold/p2p/tcp"     // support tcp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udp"     // support udp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udplite" // support udplite connection
+	"github.com/fumiama/orbyte"
+	"github.com/fumiama/orbyte/pbuf"
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
@@ -21,7 +23,7 @@ import (
 type Tunnel struct {
 	l        *link.Link
 	in       chan []byte
-	out      chan *head.Packet
+	out      chan *orbyte.Item[head.Packet]
 	outcache []byte
 	peerip   net.IP
 	src      uint16
@@ -33,7 +35,7 @@ func Create(me *link.Me, peer string) (s Tunnel, err error) {
 	s.l, err = me.Connect(peer)
 	if err == nil {
 		s.in = make(chan []byte, 4)
-		s.out = make(chan *head.Packet, 4)
+		s.out = make(chan *orbyte.Item[head.Packet], 4)
 		s.peerip = net.ParseIP(peer)
 	} else {
 		logrus.Errorln("[tunnel] create err:", err)
@@ -73,12 +75,11 @@ func (s *Tunnel) Read(p []byte) (int, error) {
 		if pkt == nil {
 			return 0, io.EOF
 		}
-		defer pkt.Put()
-		if pkt.BodyLen() < 4 {
-			logrus.Warnln("[tunnel] unexpected packet data len", pkt.BodyLen(), "content", hex.EncodeToString(pkt.Body()))
+		if pkt.Pointer().BodyLen() < 4 {
+			logrus.Warnln("[tunnel] unexpected packet data len", pkt.Pointer().BodyLen(), "content", hex.EncodeToString(pkt.Pointer().Body()))
 			return 0, io.EOF
 		}
-		d = pkt.Body()[4:]
+		d = pkt.Pointer().Body()[4:]
 	}
 	if d != nil {
 		if len(p) >= len(d) {
@@ -125,8 +126,8 @@ func (s *Tunnel) handleWrite() {
 			binary.LittleEndian.PutUint32(buf[:4], seq)
 			seq++
 			copy(buf[4:], b[:s.mtu-4])
-			_, err := s.l.WriteAndPut(
-				head.NewPacket(head.ProtoData, s.src, s.peerip, s.dest, buf), false,
+			_, err := s.l.WritePacket(
+				head.NewPacketPartial(head.ProtoData, s.src, s.peerip, s.dest, pbuf.ParseBytes(buf...)), false,
 			)
 			if err != nil {
 				logrus.Errorln("[tunnel] seq", seq-1, "write err:", err)
@@ -140,8 +141,8 @@ func (s *Tunnel) handleWrite() {
 		binary.LittleEndian.PutUint32(buf[:4], seq)
 		seq++
 		copy(buf[4:], b)
-		_, err := s.l.WriteAndPut(
-			head.NewPacket(head.ProtoData, s.src, s.peerip, s.dest, buf[:len(b)+4]), false,
+		_, err := s.l.WritePacket(
+			head.NewPacketPartial(head.ProtoData, s.src, s.peerip, s.dest, pbuf.ParseBytes(buf[:len(b)+4]...)), false,
 		)
 		if err != nil {
 			logrus.Errorln("[tunnel] seq", seq-1, "write err:", err)
@@ -155,7 +156,7 @@ func (s *Tunnel) handleWrite() {
 
 func (s *Tunnel) handleRead() {
 	seq := uint32(0)
-	seqmap := make(map[uint32]*head.Packet)
+	seqmap := make(map[uint32]*orbyte.Item[head.Packet])
 	for {
 		if p, ok := seqmap[seq]; ok {
 			if config.ShowDebugLog {
@@ -173,14 +174,15 @@ func (s *Tunnel) handleRead() {
 		}
 		end := 64
 		endl := "..."
-		if p.BodyLen() < 64 {
-			end = p.BodyLen()
+		pp := p.Pointer()
+		if pp.BodyLen() < 64 {
+			end = pp.BodyLen()
 			endl = "."
 		}
 		if config.ShowDebugLog {
-			logrus.Debugln("[tunnel] read recv", hex.EncodeToString(p.Body()[:end]), endl)
+			logrus.Debugln("[tunnel] read recv", hex.EncodeToString(pp.Body()[:end]), endl)
 		}
-		recvseq := binary.LittleEndian.Uint32(p.Body()[:4])
+		recvseq := binary.LittleEndian.Uint32(pp.Body()[:4])
 		if recvseq == seq {
 			if config.ShowDebugLog {
 				logrus.Debugln("[tunnel] dispatch seq", seq)

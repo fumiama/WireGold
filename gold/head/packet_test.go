@@ -2,14 +2,20 @@ package head
 
 import (
 	crand "crypto/rand"
+	"encoding/hex"
 	"math/rand"
 	"net"
 	"testing"
+
+	"github.com/fumiama/orbyte/pbuf"
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
-	data := make([]byte, 4096)
-	_, err := crand.Read(data)
+	data := pbuf.NewBytes(4096)
+	n, err := crand.Read(data.Bytes())
+	if n != 4096 {
+		t.Fatal("unexpected")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,40 +34,40 @@ func TestMarshalUnmarshal(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		p := NewPacket(proto, srcPort, dst, dstPort, data)
-		p.FillHash()
-		d, cl := p.Marshal(src, teatype, uint16(i), uint32(len(data)), 0, true, false)
-		p = SelectPacket()
-		ok, err := p.Unmarshal(d)
-		cl()
+		p := NewPacketPartial(proto, srcPort, dst, dstPort, data.SliceTo(i))
+		p.Pointer().FillHash()
+		d := p.Pointer().MarshalWith(src, teatype, uint16(i), uint32(i), 0, true, false)
+		t.Log("data:", hex.EncodeToString(d.Bytes()))
+		p, err := ParsePacketHeader(d.Bytes())
+		if err != nil {
+			t.Fatal("index", i, err)
+		}
+		ok := p.Pointer().ParseData(d.Bytes())
 		if !ok {
 			t.Fatal("index", i)
 		}
-		if err != nil {
-			t.Fatal(err)
+		if !p.Pointer().IsVaildHash() {
+			t.Fatal("index", i, "expect body", hex.EncodeToString(data.SliceTo(i).Bytes()), "got", hex.EncodeToString(p.Pointer().Body()))
 		}
-		if !p.IsVaildHash() {
+		if p.Pointer().Proto != proto {
 			t.Fatal("index", i)
 		}
-		if p.Proto != proto {
+		if p.Pointer().CipherIndex() != teatype {
+			t.Fatal("index", i, "expect", teatype, "got", p.Pointer().CipherIndex())
+		}
+		if p.Pointer().SrcPort != srcPort {
 			t.Fatal("index", i)
 		}
-		if p.CipherIndex() != teatype {
-			t.Fatal("index", i, "expect", teatype, "got", p.CipherIndex())
-		}
-		if p.SrcPort != srcPort {
+		if p.Pointer().DstPort != dstPort {
 			t.Fatal("index", i)
 		}
-		if p.DstPort != dstPort {
+		if !p.Pointer().Src.Equal(src) {
 			t.Fatal("index", i)
 		}
-		if !p.Src.Equal(src) {
+		if !p.Pointer().Dst.Equal(dst) {
 			t.Fatal("index", i)
 		}
-		if !p.Dst.Equal(dst) {
-			t.Fatal("index", i)
-		}
-		if p.AdditionalData() != uint16(i) {
+		if p.Pointer().AdditionalData() != uint16(i) {
 			t.Fatal("index", i)
 		}
 	}

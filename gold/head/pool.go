@@ -1,31 +1,37 @@
 package head
 
 import (
-	"sync"
-
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/orbyte"
+	"github.com/fumiama/orbyte/pbuf"
 )
 
-var packetPool = sync.Pool{
-	New: func() interface{} {
-		return new(Packet)
-	},
+type packetPooler struct {
+	orbyte.Pooler[Packet]
 }
 
-// SelectPacket 从池中取出一个 Packet
-func SelectPacket() *Packet {
-	return packetPool.Get().(*Packet)
+func (packetPooler) New(_ any, pooled Packet) Packet {
+	return pooled
 }
 
-// PutPacket 将 Packet 放回池中
-func PutPacket(p *Packet) {
+func (packetPooler) Parse(obj any, _ Packet) Packet {
+	return obj.(Packet)
+}
+
+func (packetPooler) Reset(p *Packet) {
 	p.idxdatsz = 0
-	if p.buffered {
-		helper.PutBytes(p.data)
-		p.buffered = false
-	}
+	p.data = pbuf.Bytes{}
 	p.a, p.b = 0, 0
-	p.data = nil
 	p.rembytes = 0
-	packetPool.Put(p)
+}
+
+func (packetPooler) Copy(dst, src *Packet) {
+	*dst = *src
+	dst.data = src.data.Copy()
+}
+
+var packetPool = orbyte.NewPool[Packet](packetPooler{})
+
+// selectPacket 从池中取出一个 Packet
+func selectPacket() *orbyte.Item[Packet] {
+	return packetPool.New(nil)
 }

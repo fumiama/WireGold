@@ -76,10 +76,10 @@ func (s *Tunnel) Read(p []byte) (int, error) {
 			return 0, io.EOF
 		}
 		if pkt.Pointer().BodyLen() < 4 {
-			logrus.Warnln("[tunnel] unexpected packet data len", pkt.Pointer().BodyLen(), "content", hex.EncodeToString(pkt.Pointer().Body()))
+			logrus.Warnln("[tunnel] unexpected packet data len", pkt.Pointer().BodyLen(), "content", hex.EncodeToString(pkt.Pointer().UnsafeBody()))
 			return 0, io.EOF
 		}
-		d = pkt.Pointer().Body()[4:]
+		d = pkt.Pointer().UnsafeBody()[4:]
 	}
 	if d != nil {
 		if len(p) >= len(d) {
@@ -180,9 +180,9 @@ func (s *Tunnel) handleRead() {
 			endl = "."
 		}
 		if config.ShowDebugLog {
-			logrus.Debugln("[tunnel] read recv", hex.EncodeToString(pp.Body()[:end]), endl)
+			logrus.Debugln("[tunnel] read recv", hex.EncodeToString(pp.UnsafeBody()[:end]), endl)
 		}
-		recvseq := binary.LittleEndian.Uint32(pp.Body()[:4])
+		recvseq := binary.LittleEndian.Uint32(pp.UnsafeBody()[:4])
 		if recvseq == seq {
 			if config.ShowDebugLog {
 				logrus.Debugln("[tunnel] dispatch seq", seq)

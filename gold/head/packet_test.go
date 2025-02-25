@@ -47,7 +47,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 			t.Fatal("index", i)
 		}
 		if !p.Pointer().IsVaildHash() {
-			t.Fatal("index", i, "expect body", hex.EncodeToString(data.SliceTo(i).Bytes()), "got", hex.EncodeToString(p.Pointer().Body()))
+			t.Fatal("index", i, "expect body", hex.EncodeToString(data.SliceTo(i).Bytes()), "got", hex.EncodeToString(p.Pointer().UnsafeBody()))
 		}
 		if p.Pointer().Proto != proto {
 			t.Fatal("index", i)

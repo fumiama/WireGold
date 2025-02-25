@@ -63,8 +63,8 @@ func NewPacketPartial(
 	proto uint8, srcPort uint16,
 	dst net.IP, dstPort uint16,
 	data pbuf.Bytes,
-) (p *orbyte.Item[Packet]) {
-	p = selectPacket()
+) *orbyte.Item[Packet] {
+	p := selectPacket()
 	pp := p.Pointer()
 	pp.Proto = proto
 	pp.TTL = 16
@@ -73,7 +73,7 @@ func NewPacketPartial(
 	pp.Dst = dst
 	pp.data = data
 	pp.b = data.Len()
-	return
+	return p
 }
 
 func ParsePacket(p Packet) *orbyte.Item[Packet] {
@@ -131,7 +131,7 @@ func ParsePacketHeader(data []byte) (p *orbyte.Item[Packet], err error) {
 func (p *Packet) ParseData(data []byte) (complete bool) {
 	sz := p.Len()
 	if sz+PacketHeadLen == len(data) {
-		p.data = pbuf.ParseBytes(data[PacketHeadLen:]...)
+		p.data = pbuf.ParseBytes(data[PacketHeadLen:]...).Copy()
 		return true
 	}
 
@@ -199,14 +199,14 @@ func (p *Packet) MarshalWith(
 		w.Write(p.Hash[:])
 		p.crc64 = CalcCRC64(w.UnsafeBytes())
 		w.WriteUInt64(p.crc64)
-		w.Write(p.Body())
+		w.Write(p.UnsafeBody())
 	})
 }
 
 // FillHash 生成 p.Data 的 Hash
 func (p *Packet) FillHash() {
 	h := blake2b.New256()
-	_, err := h.Write(p.Body())
+	_, err := h.Write(p.UnsafeBody())
 	if err != nil {
 		logrus.Errorln("[packet] err when fill hash:", err)
 		return
@@ -220,7 +220,7 @@ func (p *Packet) FillHash() {
 // IsVaildHash 验证 packet 合法性
 func (p *Packet) IsVaildHash() bool {
 	h := blake2b.New256()
-	_, err := h.Write(p.Body())
+	_, err := h.Write(p.UnsafeBody())
 	if err != nil {
 		logrus.Errorln("[packet] err when check hash:", err)
 		return false
@@ -228,7 +228,7 @@ func (p *Packet) IsVaildHash() bool {
 	var sum [32]byte
 	_ = h.Sum(sum[:0])
 	if config.ShowDebugLog {
-		logrus.Debugln("[packet] sum data len:", len(p.Body()))
+		logrus.Debugln("[packet] sum data len:", len(p.UnsafeBody()))
 		logrus.Debugln("[packet] sum calulated:", hex.EncodeToString(sum[:]))
 		logrus.Debugln("[packet] sum in packet:", hex.EncodeToString(p.Hash[:]))
 	}
@@ -254,8 +254,15 @@ func (p *Packet) CRC64() uint64 {
 	return p.crc64
 }
 
-// Body returns data
-func (p *Packet) Body() []byte {
+// TransBody returns item.Trans().Slice()
+func (p *Packet) TransBody() pbuf.Bytes {
+	d := p.data.Trans().Slice(p.a, p.b)
+	p.data = pbuf.Bytes{}
+	return d
+}
+
+// UnsafeBody returns data
+func (p *Packet) UnsafeBody() []byte {
 	return p.data.Bytes()[p.a:p.b]
 }
 

@@ -126,7 +126,7 @@ func (m *Me) waitordispatch(index int, addr p2p.EndPoint, buf pbuf.Bytes, hasntf
 		return
 	}
 	if config.ShowDebugLog {
-		logrus.Debugln("[listen] index", index, "dispatch", len(packet.Pointer().Body()), "bytes packet")
+		logrus.Debugln("[listen] index", index, "dispatch", len(packet.Pointer().UnsafeBody()), "bytes packet")
 	}
 	if index >= 0 {
 		defer hasntfinished[index].Unlock()
@@ -176,24 +176,27 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 		}
 		addt := pp.AdditionalData()
 		var err error
-		data, err := p.decode(pp.CipherIndex(), addt, pp.Body())
+		data, err := p.decode(pp.CipherIndex(), addt, pp.UnsafeBody())
 		if err != nil {
 			if config.ShowDebugLog {
 				logrus.Debugln("[listen] @", index, "drop invalid packet key idx:", pp.CipherIndex(), "addt:", addt, "err:", err)
 			}
 			return
 		}
-		pp.SetBody(data.Trans().Bytes())
 		if p.usezstd {
-			dat, err := decodezstd(pp.Body())
+			dat, err := decodezstd(data.Trans().Bytes())
 			if err != nil {
 				if config.ShowDebugLog {
 					logrus.Debugln("[listen] @", index, "drop invalid zstd packet:", err)
 				}
 				return
 			}
-			pp.SetBody(dat.Trans().Bytes())
+			if config.ShowDebugLog {
+				logrus.Debugln("[listen] @", index, "zstd decoded len:", dat.Len())
+			}
+			data = dat
 		}
+		pp.SetBody(data.Trans().Bytes())
 		if !pp.IsVaildHash() {
 			if config.ShowDebugLog {
 				logrus.Debugln("[listen] @", index, "drop invalid hash packet")
@@ -203,9 +206,9 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 		switch pp.Proto {
 		case head.ProtoHello:
 			switch {
-			case len(pp.Body()) == 0:
+			case len(pp.UnsafeBody()) == 0:
 				logrus.Warnln("[listen] @", index, "recv old hello packet, do nothing")
-			case pp.Body()[0] == byte(head.HelloPing):
+			case pp.UnsafeBody()[0] == byte(head.HelloPing):
 				n, err := p.WritePacket(head.NewPacketPartial(
 					head.ProtoHello, m.SrcPort(), p.peerip, m.DstPort(), pbuf.ParseBytes(byte(head.HelloPong))), false)
 				if err == nil {
@@ -218,10 +221,10 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 			}
 		case head.ProtoNotify:
 			logrus.Infoln("[listen] @", index, "recv notify from", pp.Src)
-			p.onNotify(pp.Body())
+			p.onNotify(pp.UnsafeBody())
 		case head.ProtoQuery:
 			logrus.Infoln("[listen] @", index, "recv query from", pp.Src)
-			p.onQuery(pp.Body())
+			p.onQuery(pp.UnsafeBody())
 		case head.ProtoData:
 			if p.pipe != nil {
 				p.pipe <- packet.Copy()
@@ -229,7 +232,7 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 					logrus.Debugln("[listen] @", index, "deliver to pipe of", p.peerip)
 				}
 			} else {
-				_, err := m.nic.Write(pp.Body())
+				_, err := m.nic.Write(pp.UnsafeBody())
 				if err != nil {
 					logrus.Errorln("[listen] @", index, "deliver", pp.BodyLen(), "bytes data to nic err:", err)
 				} else if config.ShowDebugLog {

@@ -96,7 +96,7 @@ func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 	if config.ShowDebugLog {
 		logrus.Debugln("[send] data len before encrypt:", p.BodyLen())
 	}
-	data := p.Body()
+	data := p.TransBody().Bytes()
 	if l.usezstd {
 		data = encodezstd(data).Trans().Bytes()
 		if config.ShowDebugLog {

@@ -137,24 +137,22 @@ func (m *Me) waitordispatch(index int, addr p2p.EndPoint, buf pbuf.Bytes, hasntf
 }
 
 func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index int) {
-	defer runtime.KeepAlive(packet)
-
 	if config.ShowDebugLog {
 		defer logrus.Debugln("[listen] dispatched, unlock index", index)
 		logrus.Debugln("[listen] start dispatching index", index)
 	}
-	pp := packet.Pointer()
-	r := pp.Len() - pp.BodyLen()
+	pp := packet.Pointer
+	r := pp().Len() - pp().BodyLen()
 	if r > 0 {
-		logrus.Warnln("[listen] @", index, "packet from endpoint", addr, "len", pp.BodyLen(), "is smaller than it declared len", pp.Len(), ", drop it")
+		logrus.Warnln("[listen] @", index, "packet from endpoint", addr, "len", pp().BodyLen(), "is smaller than it declared len", pp().Len(), ", drop it")
 		return
 	}
-	p, ok := m.IsInPeer(pp.Src.String())
+	p, ok := m.IsInPeer(pp().Src.String())
 	if config.ShowDebugLog {
-		logrus.Debugln("[listen] @", index, "recv from endpoint", addr, "src", pp.Src, "dst", pp.Dst)
+		logrus.Debugln("[listen] @", index, "recv from endpoint", addr, "src", pp().Src, "dst", pp().Dst)
 	}
 	if !ok {
-		logrus.Warnln("[listen] @", index, "packet from", pp.Src, "to", pp.Dst, "is refused")
+		logrus.Warnln("[listen] @", index, "packet from", pp().Src, "to", pp().Dst, "is refused")
 		return
 	}
 	if helper.IsNilInterface(p.endpoint) || !p.endpoint.Euqal(addr) {
@@ -169,17 +167,17 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 	now := time.Now()
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&p.lastalive)), unsafe.Pointer(&now))
 	switch {
-	case p.IsToMe(pp.Dst):
-		if !p.Accept(pp.Src) {
-			logrus.Warnln("[listen] @", index, "refused packet from", pp.Src.String()+":"+strconv.Itoa(int(pp.SrcPort)))
+	case p.IsToMe(pp().Dst):
+		if !p.Accept(pp().Src) {
+			logrus.Warnln("[listen] @", index, "refused packet from", pp().Src.String()+":"+strconv.Itoa(int(pp().SrcPort)))
 			return
 		}
-		addt := pp.AdditionalData()
+		addt := pp().AdditionalData()
 		var err error
-		data, err := p.decode(pp.CipherIndex(), addt, pp.UnsafeBody())
+		data, err := p.decode(pp().CipherIndex(), addt, pp().TransBody().Bytes())
 		if err != nil {
 			if config.ShowDebugLog {
-				logrus.Debugln("[listen] @", index, "drop invalid packet key idx:", pp.CipherIndex(), "addt:", addt, "err:", err)
+				logrus.Debugln("[listen] @", index, "drop invalid packet key idx:", pp().CipherIndex(), "addt:", addt, "err:", err)
 			}
 			return
 		}
@@ -196,19 +194,19 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 			}
 			data = dat
 		}
-		pp.SetBody(data.Trans().Bytes())
-		if !pp.IsVaildHash() {
+		pp().SetBody(data)
+		if !pp().IsVaildHash() {
 			if config.ShowDebugLog {
 				logrus.Debugln("[listen] @", index, "drop invalid hash packet")
 			}
 			return
 		}
-		switch pp.Proto {
+		switch pp().Proto {
 		case head.ProtoHello:
 			switch {
-			case len(pp.UnsafeBody()) == 0:
+			case len(pp().UnsafeBody()) == 0:
 				logrus.Warnln("[listen] @", index, "recv old hello packet, do nothing")
-			case pp.UnsafeBody()[0] == byte(head.HelloPing):
+			case pp().UnsafeBody()[0] == byte(head.HelloPing):
 				n, err := p.WritePacket(head.NewPacketPartial(
 					head.ProtoHello, m.SrcPort(), p.peerip, m.DstPort(), pbuf.ParseBytes(byte(head.HelloPong))), false)
 				if err == nil {
@@ -220,11 +218,13 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 				logrus.Infoln("[listen] @", index, "recv hello ack packet, do nothing")
 			}
 		case head.ProtoNotify:
-			logrus.Infoln("[listen] @", index, "recv notify from", pp.Src)
-			p.onNotify(pp.UnsafeBody())
+			logrus.Infoln("[listen] @", index, "recv notify from", pp().Src)
+			p.onNotify(pp().UnsafeBody())
+			runtime.KeepAlive(packet)
 		case head.ProtoQuery:
-			logrus.Infoln("[listen] @", index, "recv query from", pp.Src)
-			p.onQuery(pp.UnsafeBody())
+			logrus.Infoln("[listen] @", index, "recv query from", pp().Src)
+			p.onQuery(pp().UnsafeBody())
+			runtime.KeepAlive(packet)
 		case head.ProtoData:
 			if p.pipe != nil {
 				p.pipe <- packet.Copy()
@@ -232,23 +232,23 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 					logrus.Debugln("[listen] @", index, "deliver to pipe of", p.peerip)
 				}
 			} else {
-				_, err := m.nic.Write(pp.UnsafeBody())
+				_, err := m.nic.Write(pp().UnsafeBody())
 				if err != nil {
-					logrus.Errorln("[listen] @", index, "deliver", pp.BodyLen(), "bytes data to nic err:", err)
+					logrus.Errorln("[listen] @", index, "deliver", pp().BodyLen(), "bytes data to nic err:", err)
 				} else if config.ShowDebugLog {
-					logrus.Debugln("[listen] @", index, "deliver", pp.BodyLen(), "bytes data to nic")
+					logrus.Debugln("[listen] @", index, "deliver", pp().BodyLen(), "bytes data to nic")
 				}
 			}
 		default:
-			logrus.Warnln("[listen] @", index, "recv unknown proto:", pp.Proto)
+			logrus.Warnln("[listen] @", index, "recv unknown proto:", pp().Proto)
 		}
-	case p.Accept(pp.Dst):
+	case p.Accept(pp().Dst):
 		if !p.allowtrans {
-			logrus.Warnln("[listen] @", index, "refused to trans packet to", pp.Dst.String()+":"+strconv.Itoa(int(pp.DstPort)))
+			logrus.Warnln("[listen] @", index, "refused to trans packet to", pp().Dst.String()+":"+strconv.Itoa(int(pp().DstPort)))
 			return
 		}
 		// 转发
-		lnk := m.router.NextHop(pp.Dst.String())
+		lnk := m.router.NextHop(pp().Dst.String())
 		if lnk == nil {
 			logrus.Warnln("[listen] @", index, "transfer drop packet: nil nexthop")
 			return
@@ -256,12 +256,12 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 		n, err := lnk.WritePacket(packet, true)
 		if err == nil {
 			if config.ShowDebugLog {
-				logrus.Debugln("[listen] @", index, "trans", n, "bytes packet to", pp.Dst.String()+":"+strconv.Itoa(int(pp.DstPort)))
+				logrus.Debugln("[listen] @", index, "trans", n, "bytes packet to", pp().Dst.String()+":"+strconv.Itoa(int(pp().DstPort)))
 			}
 		} else {
-			logrus.Errorln("[listen] @", index, "trans packet to", pp.Dst.String()+":"+strconv.Itoa(int(pp.DstPort)), "err:", err)
+			logrus.Errorln("[listen] @", index, "trans packet to", pp().Dst.String()+":"+strconv.Itoa(int(pp().DstPort)), "err:", err)
 		}
 	default:
-		logrus.Warnln("[listen] @", index, "packet dst", pp.Dst.String()+":"+strconv.Itoa(int(pp.DstPort)), "is not in peers")
+		logrus.Warnln("[listen] @", index, "packet dst", pp().Dst.String()+":"+strconv.Itoa(int(pp().DstPort)), "is not in peers")
 	}
 }

@@ -270,10 +270,10 @@ func (p *Packet) BodyLen() int {
 	return p.b - p.a
 }
 
-func (p *Packet) SetBody(b []byte) {
+func (p *Packet) SetBody(b pbuf.Bytes) {
 	p.a = 0
-	p.b = len(b)
-	p.data = pbuf.ParseBytes(b...)
+	p.b = b.Len()
+	p.data = b
 }
 
 func (p *Packet) CropBody(a, b int) {

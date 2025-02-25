@@ -103,7 +103,7 @@ func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 			logrus.Debugln("[send] data len after zstd:", len(data))
 		}
 	}
-	p.SetBody(l.encode(teatype, sndcnt&0x07ff, data).Trans().Bytes())
+	p.SetBody(l.encode(teatype, sndcnt&0x07ff, data).Trans())
 	if config.ShowDebugLog {
 		logrus.Debugln("[send] data len after xchacha20:", p.BodyLen(), "addt:", sndcnt)
 	}

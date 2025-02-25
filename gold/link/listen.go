@@ -114,7 +114,7 @@ func (m *Me) waitordispatch(index int, addr p2p.EndPoint, buf pbuf.Bytes, hasntf
 		atomic.StoreUint64(&m.recvtotlcnt, 0)
 		atomic.StoreInt64(&m.recvlooptime, now)
 	}
-	packet := m.wait(buf.Trans())
+	packet := m.wait(buf.Trans().Bytes())
 	if packet == nil {
 		if index < 0 {
 			if config.ShowDebugLog {

@@ -1,16 +1,18 @@
 package link
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"hash/crc64"
+	"io"
 	"strconv"
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/helper"
 	base14 "github.com/fumiama/go-base16384"
 	"github.com/fumiama/orbyte"
-	"github.com/fumiama/orbyte/pbuf"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,47 +21,55 @@ func (l *Link) Read() *orbyte.Item[head.Packet] {
 	return <-l.pipe
 }
 
-func (m *Me) wait(data pbuf.Bytes) *orbyte.Item[head.Packet] {
-	if data.Len() < head.PacketHeadLen { // not a valid packet
+func (m *Me) wait(data []byte) *orbyte.Item[head.Packet] {
+	if len(data) < head.PacketHeadLen { // not a valid packet
 		if config.ShowDebugLog {
-			logrus.Debugln("[recv] invalid data len", data.Len())
+			logrus.Debugln("[recv] invalid data len", len(data))
 		}
 		return nil
 	}
 	bound := 64
 	endl := "..."
-	if data.Len() < bound {
-		bound = data.Len()
+	if len(data) < bound {
+		bound = len(data)
 		endl = "."
 	}
 	if config.ShowDebugLog {
-		logrus.Debugln("[recv] data bytes, len", data.Len(), "val", hex.EncodeToString(data.Bytes()[:bound]), endl)
+		logrus.Debugln("[recv] data bytes, len", len(data), "val", hex.EncodeToString(data[:bound]), endl)
 	}
 	if m.base14 {
-		data = pbuf.ParseBytes(base14.Decode(data.Bytes())...)
-		if data.Len() < bound {
-			bound = data.Len()
+		w := helper.SelectWriter()
+		_, err := io.Copy(w, base14.NewDecoder(bytes.NewReader(data)))
+		if err != nil { // not a valid packet
+			if config.ShowDebugLog {
+				logrus.Debugln("[recv] decode base14 err:", err)
+			}
+			return nil
+		}
+		data = w.TransBytes()
+		if len(data) < bound {
+			bound = len(data)
 			endl = "."
 		}
 		if config.ShowDebugLog {
-			logrus.Debugln("[recv] data b14ed, len", data.Len(), "val", hex.EncodeToString(data.Bytes()[:bound]), endl)
+			logrus.Debugln("[recv] data b14ed, len", len(data), "val", hex.EncodeToString(data[:bound]), endl)
 		}
-		if data.Len() < head.PacketHeadLen { // not a valid packet
+		if len(data) < head.PacketHeadLen { // not a valid packet
 			if config.ShowDebugLog {
-				logrus.Debugln("[recv] invalid data len", data.Len())
+				logrus.Debugln("[recv] invalid data len", len(data))
 			}
 			return nil
 		}
 	}
-	seq, dat := m.xordec(data.Trans().Bytes())
-	if len(dat) < bound {
-		bound = len(dat)
+	seq, data := m.xordec(data) // inplace decoding
+	if len(data) < bound {
+		bound = len(data)
 		endl = "."
 	}
 	if config.ShowDebugLog {
-		logrus.Debugln("[recv] data xored, len", len(dat), "val", hex.EncodeToString(dat[:bound]), endl)
+		logrus.Debugln("[recv] data xored, len", len(data), "val", hex.EncodeToString(data[:bound]), endl)
 	}
-	header, err := head.ParsePacketHeader(dat)
+	header, err := head.ParsePacketHeader(data)
 	if err != nil { // not a valid packet
 		if config.ShowDebugLog {
 			logrus.Debugln("[recv] invalid packet header:", err)
@@ -87,24 +97,24 @@ func (m *Me) wait(data pbuf.Bytes) *orbyte.Item[head.Packet] {
 	if config.ShowDebugLog {
 		logrus.Debugln(
 			"[recv]", strconv.FormatUint(crc, 16),
-			len(dat), "bytes data with flag", header.Pointer().Flags,
+			len(data), "bytes data with flag", header.Pointer().Flags,
 			"offset", header.Pointer().Flags.Offset(),
 		)
 	}
 	if header.Pointer().Flags.IsSingle() || header.Pointer().Flags.NoFrag() {
-		ok := header.Pointer().ParseData(dat)
+		ok := header.Pointer().ParseData(data)
 		if !ok {
 			logrus.Errorln("[recv]", strconv.FormatUint(crc, 16), "unexpected !ok")
 			return nil
 		}
 		if config.ShowDebugLog {
-			logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), len(dat), "bytes full data waited")
+			logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), len(data), "bytes full data waited")
 		}
 		return header
 	}
 
 	crchash := crc64.New(crc64.MakeTable(crc64.ISO))
-	_, _ = crchash.Write(head.Hash(data.Bytes()))
+	_, _ = crchash.Write(head.Hash(data))
 	var buf [4]byte
 	binary.LittleEndian.PutUint32(buf[:], seq)
 	_, _ = crchash.Write(buf[:])
@@ -116,7 +126,7 @@ func (m *Me) wait(data pbuf.Bytes) *orbyte.Item[head.Packet] {
 	if config.ShowDebugLog {
 		logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), "get frag part of", strconv.FormatUint(hsh, 16), "isnew:", !got)
 	}
-	ok := h.Pointer().ParseData(dat)
+	ok := h.Pointer().ParseData(data)
 	if !ok {
 		if config.ShowDebugLog {
 			logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), "wait other frag parts of", strconv.FormatUint(hsh, 16), "isnew:", !got)

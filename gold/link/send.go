@@ -104,7 +104,7 @@ func (l *Link) encrypt(p *head.Packet, sndcnt uint16, teatype uint8) {
 		enc, _ := zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedFastest))
 		_, _ = io.Copy(enc, bytes.NewReader(data))
 		enc.Close()
-		data = w.TransBytes()
+		data = w.TransBytes().Bytes()
 		if config.ShowDebugLog {
 			logrus.Debugln("[send] data len after zstd:", len(data))
 		}

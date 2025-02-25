@@ -202,7 +202,7 @@ func (m *Me) dispatch(packet *orbyte.Item[head.Packet], addr p2p.EndPoint, index
 			if config.ShowDebugLog {
 				logrus.Debugln("[listen] @", index, "zstd decoded len:", w.Len())
 			}
-			pp.SetBody(w.TransBytes())
+			pp.SetBody(w.TransBytes().Bytes())
 		}
 		if !pp.IsVaildHash() {
 			if config.ShowDebugLog {

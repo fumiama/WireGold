@@ -1,18 +1,14 @@
 package tcp
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
 	"net"
-	"runtime"
 	"time"
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/helper"
-	"github.com/fumiama/orbyte"
-	"github.com/fumiama/orbyte/pbuf"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,19 +33,16 @@ var (
 type packet struct {
 	typ packetType
 	len uint16
-	dat pbuf.Bytes
+	dat []byte
 	io.ReaderFrom
 	io.WriterTo
 }
 
-func (p *packet) pack() (net.Buffers, func()) {
-	d := helper.NewWriterF(func(w *helper.Writer) {
+func (p *packet) pack() *net.Buffers {
+	return &net.Buffers{magicbuf, helper.NewWriterF(func(w *helper.Writer) {
 		w.WriteByte(byte(p.typ))
 		w.WriteUInt16(p.len)
-	})
-	return net.Buffers{magicbuf, d.Bytes(), p.dat.Bytes()}, func() {
-		runtime.KeepAlive(d)
-	}
+	}).Trans().Bytes(), p.dat}
 }
 
 func (p *packet) Read(_ []byte) (int, error) {
@@ -87,14 +80,12 @@ func (p *packet) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return
 	}
-	p.dat = pbuf.BufferItemToBytes((*orbyte.Item[bytes.Buffer])(w).Trans())
+	p.dat = w.TransBytes()
 	return
 }
 
 func (p *packet) WriteTo(w io.Writer) (n int64, err error) {
-	buf, cl := p.pack()
-	defer cl()
-	return io.Copy(w, &buf)
+	return io.Copy(w, p.pack())
 }
 
 func isvalid(tcpconn *net.TCPConn, timeout time.Duration) (issub, ok bool) {

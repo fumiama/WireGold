@@ -65,14 +65,14 @@ func (l *Link) WritePacket(proto uint8, data []byte) {
 // 因为不保证可达所以不返回错误。
 func (l *Link) write2peer(b pbuf.Bytes, seq uint32) {
 	if l.doublepacket {
-		_, err := l.write2peer1(b, seq)
+		err := l.write2peer1(b, seq)
 		if err != nil {
 			if config.ShowDebugLog {
 				logrus.Warnln("[send] double wr2peer", l.peerip, "err:", err)
 			}
 		}
 	}
-	_, err := l.write2peer1(b, seq)
+	err := l.write2peer1(b, seq)
 	if err != nil {
 		if config.ShowDebugLog {
 			logrus.Warnln("[send] wr2peer", l.peerip, "err:", err)
@@ -81,15 +81,15 @@ func (l *Link) write2peer(b pbuf.Bytes, seq uint32) {
 }
 
 // write2peer1 计算 xor + b14 后向 peer 发一个包
-func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (n int, err error) {
+func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (err error) {
 	peerep := l.endpoint
 	if bin.IsNilInterface(peerep) {
-		return 0, errors.New("nil endpoint of " + l.peerip.String())
+		return errors.New("nil endpoint of " + l.peerip.String())
 	}
 
 	conn := l.me.conn
 	if conn == nil {
-		return 0, io.ErrClosedPipe
+		return io.ErrClosedPipe
 	}
 	b.V(func(data []byte) {
 		if config.ShowDebugLog {
@@ -134,7 +134,7 @@ func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (n int, err error) {
 		if config.ShowDebugLog {
 			logrus.Debugln("[send] write", len(b), "bytes data from ep", conn.LocalAddr(), "to", peerep)
 		}
-		n, err = conn.WriteToPeer(b, peerep)
+		_, err = conn.WriteToPeer(b, peerep)
 	})
 	return
 }

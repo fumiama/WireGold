@@ -95,11 +95,11 @@ func (pb *DataBuilder) Zstd() *DataBuilder {
 }
 
 func (pb *DataBuilder) Hash() *DataBuilder {
-	return (*DataBuilder)(pb.p(func(ub *PacketBuf) {
+	return pb.p(func(ub *PacketBuf) {
 		ub.DAT.hash = algo.Blake2bHash8(
 			uint64(ub.DAT.md5h8rem), ub.Bytes(),
 		)
-	}))
+	})
 }
 
 func (pb *DataBuilder) tea(typ uint8) *DataBuilder {

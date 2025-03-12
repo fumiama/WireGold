@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/fumiama/WireGold/config"
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/WireGold/internal/bin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -39,10 +39,10 @@ type packet struct {
 }
 
 func (p *packet) pack() *net.Buffers {
-	return &net.Buffers{magicbuf, helper.NewWriterF(func(w *helper.Writer) {
+	return &net.Buffers{magicbuf, bin.NewWriterF(func(w *bin.Writer) {
 		w.WriteByte(byte(p.typ))
 		w.WriteUInt16(p.len)
-	}).Trans().Bytes(), p.dat}
+	}).Trans(), p.dat}
 }
 
 func (p *packet) Read(_ []byte) (int, error) {
@@ -74,13 +74,13 @@ func (p *packet) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 	p.typ = packetType(buf[0])
 	p.len = binary.LittleEndian.Uint16(buf[1:3])
-	w := helper.SelectWriter()
+	w := bin.SelectWriter()
 	copied, err := io.CopyN(w, r, int64(p.len))
 	n += copied
 	if err != nil {
 		return
 	}
-	p.dat = w.TransUnderlyingBytes()
+	p.dat = w.ToBytes().Trans()
 	return
 }
 

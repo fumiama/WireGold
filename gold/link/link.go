@@ -7,16 +7,23 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/WireGold/internal/bin"
 	base14 "github.com/fumiama/go-base16384"
-	"github.com/fumiama/orbyte"
+	"github.com/fumiama/orbyte/pbuf"
+	"github.com/sirupsen/logrus"
 )
 
 var (
 	ErrPerrNotExist = errors.New("peer not exist")
 )
+
+type LinkData struct {
+	H head.Packet
+	D pbuf.Bytes
+}
 
 // Link 是本机到 peer 的连接抽象
 type Link struct {
@@ -27,7 +34,7 @@ type Link struct {
 	// 收到的包的队列
 	// 没有下层 nic 时
 	// 包会分发到此
-	pipe chan *orbyte.Item[head.Packet]
+	pipe chan LinkData
 	// peer 的虚拟 ip
 	peerip net.IP
 	// peer 的公网 endpoint
@@ -63,9 +70,53 @@ func (m *Me) Connect(peer string) (*Link, error) {
 	return nil, ErrPerrNotExist
 }
 
+func (l *Link) ToLower(header *head.Packet, data pbuf.Bytes) {
+	if l.pipe != nil {
+		l.pipe <- LinkData{
+			H: *header,
+			D: data,
+		}
+		if config.ShowDebugLog {
+			logrus.Debugln("[listen] deliver to pipe of", l.peerip)
+		}
+		return
+	}
+	var err error
+	data.V(func(b []byte) {
+		_, err = l.me.nic.Write(b)
+	})
+	if err != nil {
+		logrus.Errorln("[listen] deliver", data.Len(), "bytes data to nic err:", err)
+	} else if config.ShowDebugLog {
+		logrus.Debugln("[listen] deliver", data.Len(), "bytes data to nic")
+	}
+}
+
 // Close 关闭到 peer 的连接
 func (l *Link) Close() {
 	l.Destroy()
+}
+
+// IP is wiregold peer ip
+func (l *Link) IP() net.IP {
+	return l.peerip
+}
+
+// RawEndPoint is initial ep in cfg
+func (l *Link) RawEndPoint() string {
+	return l.rawep
+}
+
+func (l *Link) EndPoint() p2p.EndPoint {
+	return l.endpoint
+}
+
+func (l *Link) SetEndPoint(ep p2p.EndPoint) {
+	l.endpoint = ep
+}
+
+func (l *Link) Me() *Me {
+	return l.me
 }
 
 // Destroy 从 connections 移除 peer
@@ -80,7 +131,7 @@ func (l *Link) String() (n string) {
 	if l.pubk != nil {
 		b, err := base14.UTF16BE2UTF8(base14.Encode(l.pubk[:7]))
 		if err == nil {
-			n = helper.BytesToString(b)
+			n = bin.BytesToString(b)
 		} else {
 			n = err.Error()
 		}

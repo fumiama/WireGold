@@ -12,11 +12,10 @@ import (
 	"time"
 
 	curve "github.com/fumiama/go-x25519"
-	"github.com/fumiama/orbyte"
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/gold/link"
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/WireGold/internal/bin"
 )
 
 func TestTunnelUDP(t *testing.T) {
@@ -432,7 +431,7 @@ type logFormat struct {
 func (f logFormat) Format(entry *logrus.Entry) ([]byte, error) {
 	// this writer will not be put back
 
-	buf := (*orbyte.Item[bytes.Buffer])(helper.SelectWriter()).Trans().Pointer()
+	buf := bin.SelectWriter()
 
 	buf.WriteByte('[')
 	if f.enableColor {
@@ -446,7 +445,7 @@ func (f logFormat) Format(entry *logrus.Entry) ([]byte, error) {
 	buf.WriteString(entry.Message)
 	buf.WriteString("\n")
 
-	return buf.Bytes(), nil
+	return buf.ToBytes().Trans(), nil
 }
 
 const (

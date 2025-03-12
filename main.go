@@ -15,8 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/config"
-	"github.com/fumiama/WireGold/gold/head"
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/WireGold/internal/bin"
+	"github.com/fumiama/WireGold/internal/file"
 	"github.com/fumiama/WireGold/upper"
 	"github.com/fumiama/WireGold/upper/services/wg"
 )
@@ -26,7 +26,7 @@ func main() {
 	gen := flag.Bool("g", false, "generate key pair")
 	pshgen := flag.Bool("pg", false, "generate preshared key")
 	showp := flag.Bool("p", false, "show my publickey")
-	file := flag.String("c", "config.yaml", "specify conf file")
+	cfile := flag.String("c", "config.yaml", "specify conf file")
 	debug := flag.Bool("d", false, "print debug logs")
 	warn := flag.Bool("w", false, "only show logs above warn level")
 	logfile := flag.String("l", "-", "write log to file")
@@ -52,8 +52,8 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("PublicKey:", helper.BytesToString(pubk[:57]))
-		fmt.Println("PrivateKey:", helper.BytesToString(prvk[:57]))
+		fmt.Println("PublicKey:", bin.BytesToString(pubk[:57]))
+		fmt.Println("PrivateKey:", bin.BytesToString(prvk[:57]))
 		os.Exit(0)
 	}
 	if *pshgen {
@@ -66,7 +66,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("PresharedKey:", helper.BytesToString(pshk[:57]))
+		fmt.Println("PresharedKey:", bin.BytesToString(pshk[:57]))
 		os.Exit(0)
 	}
 	if *logfile != "-" {
@@ -77,7 +77,7 @@ func main() {
 		defer f.Close()
 		logrus.SetOutput(f)
 	}
-	if helper.IsNotExist(*file) {
+	if file.IsNotExist(*cfile) {
 		f := new(bytes.Buffer)
 		var r string
 		fmt.Print("IP: ")
@@ -125,14 +125,14 @@ func main() {
 		f.WriteString("MTU: " + strings.TrimSpace(r) + "\n")
 		r = ""
 
-		cfgf, err := os.Create(*file)
+		cfgf, err := os.Create(*cfile)
 		if err != nil {
 			panic(err)
 		}
 		cfgf.Write(f.Bytes())
 		cfgf.Close()
 	}
-	c := config.Parse(*file)
+	c := config.Parse(*cfile)
 	if c.IP == "" {
 		displayHelp("nil ip")
 	}
@@ -145,7 +145,7 @@ func main() {
 	if c.EndPoint == "" {
 		displayHelp("nil endpoint")
 	}
-	if c.MTU <= head.PacketHeadLen {
+	if c.MTU < 128 {
 		displayHelp("invalid mtu")
 	}
 	w, err := wg.NewWireGold(&c)

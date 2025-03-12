@@ -1,9 +1,13 @@
-package helper
+package bin
 
 import (
+	"encoding/binary"
 	"reflect"
 	"unsafe"
 )
+
+// IsLittleEndian judge by binary packet.
+var IsLittleEndian = reflect.ValueOf(&binary.NativeEndian).Elem().Field(0).Type().String() == "binary.littleEndian"
 
 // slice is the runtime representation of a slice.
 // It cannot be used safely or portably and its representation may

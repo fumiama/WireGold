@@ -5,7 +5,7 @@ import (
 	"net/netip"
 
 	"github.com/fumiama/WireGold/gold/p2p"
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/WireGold/internal/file"
 )
 
 func NewEndpoint(endpoint string, configs ...any) (p2p.EndPoint, error) {
@@ -27,7 +27,7 @@ func NewEndpoint(endpoint string, configs ...any) (p2p.EndPoint, error) {
 }
 
 func init() {
-	name := helper.FolderName()
+	name := file.FolderName()
 	_, hasexist := p2p.Register(name, NewEndpoint)
 	if hasexist {
 		panic("network " + name + " has been registered")

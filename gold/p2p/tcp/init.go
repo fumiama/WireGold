@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/fumiama/WireGold/gold/p2p"
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/WireGold/internal/file"
 )
 
 type Config struct {
@@ -41,7 +41,7 @@ func newEndpoint(endpoint string, configs ...any) (*EndPoint, error) {
 }
 
 func init() {
-	name := helper.FolderName()
+	name := file.FolderName()
 	_, hasexist := p2p.Register(name, NewEndpoint)
 	if hasexist {
 		panic("network " + name + " has been registered")

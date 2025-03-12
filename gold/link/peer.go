@@ -4,10 +4,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
+	"github.com/fumiama/WireGold/internal/algo"
 	curve "github.com/fumiama/go-x25519"
-	"github.com/fumiama/orbyte"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/chacha20poly1305"
 )
@@ -50,7 +49,7 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 	}
 
 	if !cfg.NoPipe {
-		l.pipe = make(chan *orbyte.Item[head.Packet], 65536)
+		l.pipe = make(chan LinkData, 4096)
 	}
 	var k, p []byte
 	if cfg.PubicKey != nil {
@@ -62,7 +61,7 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 	if len(k) == 32 {
 		var err error
 		if len(p) == 32 {
-			mixk := mixkeys(k, p)
+			mixk := algo.MixKeys(k, p)
 			for i := range k {
 				l.keys[i], err = chacha20poly1305.NewX(mixk[i : i+32])
 				if err != nil {
@@ -113,7 +112,7 @@ func (m *Me) AddPeer(cfg *PeerConfig) (l *Link) {
 	}
 	logrus.Infoln("[peer] add peer:", cfg.PeerIP, "allow:", cfg.AllowedIPs)
 	go l.keepAlive(cfg.KeepAliveDur)
-	go l.sendquery(time.Second*time.Duration(cfg.QueryTick), cfg.Querys...)
+	go l.sendQuery(time.Second*time.Duration(cfg.QueryTick), cfg.Querys...)
 	return
 }
 

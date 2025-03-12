@@ -1,3 +1,3 @@
 package config
 
-const ShowDebugLog = false
+const ShowDebugLog = true

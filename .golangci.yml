@@ -4,8 +4,8 @@ linters-settings:
     ignoretests: true
     exclude-functions:
       - (*os.File).Write
-      - (*github.com/fumiama/WireGold/helper.Writer).Write
-      - (*github.com/fumiama/WireGold/helper.Writer).WriteByte
+      - (*github.com/fumiama/WireGold/bin.Writer).Write
+      - (*github.com/fumiama/WireGold/bin.Writer).WriteByte
       - (*github.com/fumiama/WireGold/upper/services/tunnel.Tunnel).Write
       - (*github.com/fumiama/WireGold/upper/services/tunnel.Tunnel).Read
 

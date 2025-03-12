@@ -75,11 +75,11 @@ func listenUDPLite(network string, laddr *net.UDPAddr) (*net.UDPConn, error) {
 	}
 	var errsys error
 	err = rc.Control(func(fd uintptr) {
-		errsys = syscall.SetsockoptInt(int(fd), SOL_UDPLITE, UDPLITE_SEND_CSCOV, head.PacketHeadLen+8) // for xor rand
+		errsys = syscall.SetsockoptInt(int(fd), SOL_UDPLITE, UDPLITE_SEND_CSCOV, int(head.PacketHeadLen)) // for xor rand
 		if errsys != nil {
 			return
 		}
-		errsys = syscall.SetsockoptInt(int(fd), SOL_UDPLITE, UDPLITE_RECV_CSCOV, head.PacketHeadLen+8) // for xor rand
+		errsys = syscall.SetsockoptInt(int(fd), SOL_UDPLITE, UDPLITE_RECV_CSCOV, int(head.PacketHeadLen)) // for xor rand
 	})
 	if err != nil {
 		_ = conn.Close()

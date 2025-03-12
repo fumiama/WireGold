@@ -13,10 +13,11 @@ import (
 	_ "github.com/fumiama/WireGold/gold/p2p/tcp"     // support tcp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udp"     // support udp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udplite" // support udplite connection
+	_ "github.com/fumiama/WireGold/gold/proto"       // support basic protos
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/link"
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/WireGold/internal/bin"
 )
 
 const suffix32 = "㴄"
@@ -32,7 +33,7 @@ func NewWireGold(c *config.Config) (wg WG, err error) {
 	wg.c = c
 
 	var k []byte
-	k, err = base14.UTF82UTF16BE(helper.StringToBytes(c.PrivateKey + suffix32))
+	k, err = base14.UTF82UTF16BE(bin.StringToBytes(c.PrivateKey + suffix32))
 	if err != nil {
 		return
 	}
@@ -47,7 +48,7 @@ func NewWireGold(c *config.Config) (wg WG, err error) {
 	if err != nil {
 		return
 	}
-	wg.PublicKey = helper.BytesToString(pubk[:57])
+	wg.PublicKey = bin.BytesToString(pubk[:57])
 
 	return
 }
@@ -118,7 +119,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 
 	for _, peer := range wg.c.Peers {
 		var peerkey [32]byte
-		k, err := base14.UTF82UTF16BE(helper.StringToBytes(peer.PublicKey + suffix32))
+		k, err := base14.UTF82UTF16BE(bin.StringToBytes(peer.PublicKey + suffix32))
 		if err != nil {
 			panic(err)
 		}
@@ -128,7 +129,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 		}
 		var pshk *[32]byte
 		if peer.PresharedKey != "" {
-			k, err := base14.UTF82UTF16BE(helper.StringToBytes(peer.PresharedKey + suffix32))
+			k, err := base14.UTF82UTF16BE(bin.StringToBytes(peer.PresharedKey + suffix32))
 			if err != nil {
 				panic(err)
 			}

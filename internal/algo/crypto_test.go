@@ -1,4 +1,4 @@
-package link
+package algo
 
 import (
 	"bytes"
@@ -12,9 +12,7 @@ import (
 )
 
 func TestXOR(t *testing.T) {
-	m := Me{
-		mask: 0x12345678_90abcdef,
-	}
+	mask := uint64(0x12345678_90abcdef)
 	buf := make([]byte, 4096)
 	buf2 := make([]byte, 4096)
 	for i := 0; i < 4096; i++ {
@@ -27,7 +25,7 @@ func TestXOR(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		seq, dec := m.xordec(m.xorenc(r1.Bytes(), uint32(i)).Trans().Bytes())
+		seq, dec := DecodeXOR(EncodeXOR(r1.Bytes(), mask, uint32(i)).Trans(), mask)
 		if !bytes.Equal(dec, r2.Bytes()) {
 			t.Fatal("unexpected xor at", i, "except", hex.EncodeToString(r2.Bytes()), "got", hex.EncodeToString(dec))
 		}
@@ -53,11 +51,11 @@ func TestXChacha20(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < 4096; i++ {
-		db, err := decode(aead, uint16(i), encode(aead, uint16(i), data[:i]).Trans().Bytes())
+		db, err := DecodeAEAD(aead, uint16(i), EncodeAEAD(aead, uint16(i), data[:i]).Trans())
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !bytes.Equal(db.Bytes(), data[:i]) {
+		if !bytes.Equal(db.Trans(), data[:i]) {
 			t.Fatal("unexpected preshared at idx(len)", i, "addt", uint16(i))
 		}
 	}
@@ -77,14 +75,14 @@ func TestExpandKeyUnit(t *testing.T) {
 func TestMixKeys(t *testing.T) {
 	k1, _ := hex.DecodeString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	k2, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000000")
-	k := mixkeys(k1, k2)
+	k := MixKeys(k1, k2)
 	kexp, _ := hex.DecodeString("55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555")
 	if !bytes.Equal(k, kexp) {
 		t.Fatal(hex.EncodeToString(k))
 	}
 	k1, _ = hex.DecodeString("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
 	k2, _ = hex.DecodeString("deadbeef1239876540deadbeef1239876540deadbeef1239876540abcdef4567")
-	k = mixkeys(k1, k2)
+	k = MixKeys(k1, k2)
 	kexp, _ = hex.DecodeString("2ca9188d3ebb4a9f22e34d4479d857fca48390253ebbe23f22cbcf6e59507ddc06a9b08794316abfa26b67cedb7a5d542c8912adb493c0352aebe76e73dadf7e")
 	if !bytes.Equal(k, kexp) {
 		t.Fatal(hex.EncodeToString(k))

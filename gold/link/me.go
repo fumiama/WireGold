@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/FloatTech/ttl"
-	"github.com/fumiama/orbyte"
 	"github.com/fumiama/orbyte/pbuf"
 	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
@@ -18,7 +17,7 @@ import (
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/WireGold/gold/p2p"
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/WireGold/internal/bin"
 	"github.com/fumiama/WireGold/lower"
 )
 
@@ -48,9 +47,9 @@ type Me struct {
 	// 本机路由表
 	router *Router
 	// 本机未接收完全分片池
-	recving *ttl.Cache[uint64, *orbyte.Item[head.Packet]]
+	recving *ttl.Cache[uint16, head.PacketBytes]
 	// 抗重放攻击记录池
-	recved *ttl.Cache[uint64, struct{}]
+	recved *ttl.Cache[uint32, struct{}]
 	// 本机上层配置
 	srcport, dstport, mtu, speedloop uint16
 	// 报头掩码
@@ -122,11 +121,11 @@ func NewMe(cfg *MyConfig) (m Me) {
 	m.router.SetDefault(nil)
 	m.srcport = cfg.SrcPort
 	m.dstport = cfg.DstPort
-	m.mtu = (cfg.MTU - head.PacketHeadLen) & 0xfff8
+	m.mtu = cfg.MTU
 	if cfg.NICConfig != nil {
 		m.nic = lower.NewNIC(
 			cfg.NICConfig.IP, cfg.NICConfig.SubNet,
-			strconv.FormatUint(uint64(m.MTU()), 10), cfg.NICConfig.CIDRs...,
+			strconv.FormatUint(uint64(m.mtu), 10), cfg.NICConfig.CIDRs...,
 		)
 	}
 	m.mask = cfg.Mask
@@ -135,8 +134,8 @@ func NewMe(cfg *MyConfig) (m Me) {
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], m.mask)
 	logrus.Infoln("[me] xor mask", hex.EncodeToString(buf[:]))
-	m.recving = ttl.NewCache[uint64, *orbyte.Item[head.Packet]](time.Second * 10)
-	m.recved = ttl.NewCache[uint64, struct{}](time.Minute)
+	m.recving = ttl.NewCache[uint16, head.PacketBytes](time.Second * 10)
+	m.recved = ttl.NewCache[uint32, struct{}](time.Minute)
 	return
 }
 
@@ -144,7 +143,7 @@ func NewMe(cfg *MyConfig) (m Me) {
 func (m *Me) Restart() error {
 	oldconn := m.conn
 	m.conn = nil
-	if helper.IsNonNilInterface(oldconn) {
+	if bin.IsNonNilInterface(oldconn) {
 		_ = oldconn.Close()
 	}
 	var err error
@@ -184,9 +183,13 @@ func (m *Me) EndPoint() p2p.EndPoint {
 	return m.ep
 }
 
+func (m *Me) NetworkConfigs() []any {
+	return m.networkconfigs
+}
+
 func (m *Me) Close() error {
 	m.connections = nil
-	if helper.IsNonNilInterface(m.conn) {
+	if bin.IsNonNilInterface(m.conn) {
 		_ = m.conn.Close()
 		m.conn = nil
 	}
@@ -291,12 +294,11 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 		return
 	}
 	pcp := pbuf.NewBytes(len(packet))
-	copy(pcp.Bytes(), packet)
-	go func(packet pbuf.Bytes) {
-		_, err := lnk.WritePacket(head.NewPacketPartial(head.ProtoData, m.SrcPort(), lnk.peerip, m.DstPort(), packet), false)
-		if err != nil {
-			logrus.Warnln("[me] write to peer", lnk.peerip, "err:", err)
-		}
-	}(pcp)
+	pcp.V(func(b []byte) {
+		copy(b, packet)
+	})
+	go pcp.V(func(b []byte) {
+		lnk.WritePacket(head.ProtoData, b)
+	})
 	return
 }

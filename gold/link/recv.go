@@ -2,31 +2,29 @@ package link
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
-	"hash/crc64"
 	"io"
 	"strconv"
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
-	"github.com/fumiama/WireGold/helper"
+	"github.com/fumiama/WireGold/internal/bin"
 	base14 "github.com/fumiama/go-base16384"
-	"github.com/fumiama/orbyte"
 	"github.com/sirupsen/logrus"
 )
 
 // Read 从 peer 收包
-func (l *Link) Read() *orbyte.Item[head.Packet] {
+func (l *Link) Read() LinkData {
 	return <-l.pipe
 }
 
-func (m *Me) wait(data []byte) *orbyte.Item[head.Packet] {
-	if len(data) < head.PacketHeadLen { // not a valid packet
+// wait TODO: 判断是否为 trans 并提前 call dispatch
+func (m *Me) wait(data []byte) (h head.PacketBytes) {
+	if len(data) < int(head.PacketHeadLen)+8 { // not a valid packet
 		if config.ShowDebugLog {
 			logrus.Debugln("[recv] invalid data len", len(data))
 		}
-		return nil
+		return
 	}
 	bound := 64
 	endl := "..."
@@ -38,15 +36,15 @@ func (m *Me) wait(data []byte) *orbyte.Item[head.Packet] {
 		logrus.Debugln("[recv] data bytes, len", len(data), "val", hex.EncodeToString(data[:bound]), endl)
 	}
 	if m.base14 {
-		w := helper.SelectWriter()
+		w := bin.SelectWriter()
 		_, err := io.Copy(w, base14.NewDecoder(bytes.NewReader(data)))
 		if err != nil { // not a valid packet
 			if config.ShowDebugLog {
 				logrus.Debugln("[recv] decode base14 err:", err)
 			}
-			return nil
+			return
 		}
-		data = w.TransUnderlyingBytes()
+		data = w.ToBytes().Trans()
 		if len(data) < bound {
 			bound = len(data)
 			endl = "."
@@ -54,11 +52,11 @@ func (m *Me) wait(data []byte) *orbyte.Item[head.Packet] {
 		if config.ShowDebugLog {
 			logrus.Debugln("[recv] data b14ed, len", len(data), "val", hex.EncodeToString(data[:bound]), endl)
 		}
-		if len(data) < head.PacketHeadLen { // not a valid packet
+		if len(data) < int(head.PacketHeadLen)+8 { // not a valid packet
 			if config.ShowDebugLog {
 				logrus.Debugln("[recv] invalid data len", len(data))
 			}
-			return nil
+			return
 		}
 	}
 	seq, data := m.xordec(data) // inplace decoding
@@ -74,68 +72,65 @@ func (m *Me) wait(data []byte) *orbyte.Item[head.Packet] {
 		if config.ShowDebugLog {
 			logrus.Debugln("[recv] invalid packet header:", err)
 		}
-		return nil
-	}
-	if !header.Pointer().Flags.IsValid() {
-		if config.ShowDebugLog {
-			logrus.Debugln("[recv] drop invalid flags packet:", header.Pointer().Flags)
-		}
-		return nil
-	}
-	crc := header.Pointer().CRC64()
-	crclog := crc
-	crc ^= (uint64(seq) << 16)
-	if config.ShowDebugLog {
-		logrus.Debugf("[recv] packet crc %016x, seq %08x, xored crc %016x", crclog, seq, crc)
-	}
-	if _, got := m.recved.GetOrSet(crc, struct{}{}); got {
-		if config.ShowDebugLog {
-			logrus.Debugln("[recv] ignore duplicated crc packet", strconv.FormatUint(crc, 16))
-		}
-		return nil
+		return
 	}
 	if config.ShowDebugLog {
-		logrus.Debugln(
-			"[recv]", strconv.FormatUint(crc, 16),
-			len(data), "bytes data with flag", header.Pointer().Flags,
-			"offset", header.Pointer().Flags.Offset(),
-		)
+		logrus.Debugf("[recv] packet seq %08x", seq)
 	}
-	if header.Pointer().Flags.IsSingle() || header.Pointer().Flags.NoFrag() {
-		ok := header.Pointer().ParseData(data)
-		if !ok {
-			logrus.Errorln("[recv]", strconv.FormatUint(crc, 16), "unexpected !ok")
-			return nil
-		}
+	if _, got := m.recved.GetOrSet(seq, struct{}{}); got {
 		if config.ShowDebugLog {
-			logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), len(data), "bytes full data waited")
+			logrus.Debugln("[recv] ignore duplicated seq packet", strconv.FormatUint(uint64(seq), 16))
 		}
-		return header
+		return
+	}
+	if config.ShowDebugLog {
+		header.B(func(_ []byte, p *head.Packet) {
+			logrus.Debugln(
+				"[recv]", strconv.FormatUint(uint64(seq), 16),
+				len(data), "bytes data with protoflag", p.Proto,
+				"offset", p.Offset,
+			)
+		})
 	}
 
-	crchash := crc64.New(crc64.MakeTable(crc64.ISO))
-	_, _ = crchash.Write(head.Hash(data))
-	var buf [4]byte
-	binary.LittleEndian.PutUint32(buf[:], seq)
-	_, _ = crchash.Write(buf[:])
-	hsh := crchash.Sum64()
-	h, got := m.recving.GetOrSet(hsh, header)
+	header.B(func(buf []byte, p *head.Packet) {
+		if !p.Proto.HasMore() {
+			ok := p.WriteDataSegment(data, buf)
+			if !ok {
+				logrus.Errorln("[recv]", strconv.FormatUint(uint64(seq), 16), "unexpected !ok")
+				return
+			}
+			if config.ShowDebugLog {
+				logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq), 16), len(data), "bytes full data waited")
+			}
+			h = header
+			return
+		}
+	})
+
+	if h.HasInit() {
+		return
+	}
+
+	h, got := m.recving.GetOrSet(uint16(seq), header)
 	if got && h == header {
 		panic("unexpected multi-put found")
 	}
 	if config.ShowDebugLog {
-		logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), "get frag part of", strconv.FormatUint(hsh, 16), "isnew:", !got)
+		logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq&0xffff), 16), "get frag part isnew:", !got)
 	}
-	ok := h.Pointer().ParseData(data)
-	if !ok {
-		if config.ShowDebugLog {
-			logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), "wait other frag parts of", strconv.FormatUint(hsh, 16), "isnew:", !got)
+	h.B(func(buf []byte, p *head.Packet) {
+		ok := p.WriteDataSegment(data, buf)
+		if !ok {
+			if config.ShowDebugLog {
+				logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq&0xffff), 16), "wait other frag parts isnew:", !got)
+			}
+			return
 		}
-		return nil
-	}
-	m.recving.Delete(hsh)
-	if config.ShowDebugLog {
-		logrus.Debugln("[recv]", strconv.FormatUint(crc, 16), "all parts of", strconv.FormatUint(hsh, 16), "has reached")
-	}
-	return h
+		m.recving.Delete(uint16(seq))
+		if config.ShowDebugLog {
+			logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq&0xffff), 16), "all parts has reached")
+		}
+	})
+	return
 }

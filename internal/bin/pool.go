@@ -1,4 +1,4 @@
-package helper
+package bin
 
 import (
 	"github.com/fumiama/orbyte/pbuf"

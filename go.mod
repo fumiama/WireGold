@@ -1,6 +1,6 @@
 module github.com/fumiama/WireGold
 
-go 1.20
+go 1.21
 
 require (
 	github.com/FloatTech/ttl v0.0.0-20250224045156-012b1463287d
@@ -8,7 +8,7 @@ require (
 	github.com/fumiama/blake2b-simd v0.0.0-20220412110131-4481822068bb
 	github.com/fumiama/go-base16384 v1.7.0
 	github.com/fumiama/go-x25519 v1.0.0
-	github.com/fumiama/orbyte v0.0.0-20250225150552-190281785ccc
+	github.com/fumiama/orbyte v0.0.0-20250228175313-326f247ad703
 	github.com/fumiama/water v0.0.0-20211231134027-da391938d6ac
 	github.com/klauspost/compress v1.17.9
 	github.com/sirupsen/logrus v1.9.3

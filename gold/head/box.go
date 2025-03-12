@@ -51,7 +51,7 @@ func (p *Packet) WriteHeaderTo(buf *bytes.Buffer) {
 			(unsafe.Pointer)(p),
 		)[:])
 		p.md5h8rem = int64(algo.MD5Hash8(buf.Bytes()))
-		binary.Write(buf, binary.LittleEndian, p.md5h8rem)
+		_ = binary.Write(buf, binary.LittleEndian, p.md5h8rem)
 		return
 	}
 	w := bin.SelectWriter()
@@ -68,6 +68,6 @@ func (p *Packet) WriteHeaderTo(buf *bytes.Buffer) {
 	})
 	w.WriteUInt64(uint64(p.md5h8rem))
 	w.P(func(b *pbuf.Buffer) {
-		buf.ReadFrom(b)
+		_, _ = buf.ReadFrom(b)
 	})
 }

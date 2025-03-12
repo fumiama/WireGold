@@ -137,7 +137,7 @@ func (pb *DataBuilder) Plain(teatyp uint8, additional uint16) *PacketBuilder {
 			w.Write(ub.Bytes())
 			w.P(func(b *pbuf.Buffer) {
 				ub.Reset()
-				ub.ReadFrom(b)
+				_, _ = ub.ReadFrom(b)
 			})
 		}))
 }

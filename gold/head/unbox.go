@@ -54,7 +54,12 @@ func ParsePacketHeader(data []byte) (pbytes PacketBytes, err error) {
 			}
 			return
 		}
-		crc := algo.MD5Hash8(data[:PacketHeadNoCRCLen])
+		var crc uint64
+		pbuf.NewBytes(int(PacketHeadNoCRCLen)).V(func(b []byte) {
+			copy(b, data[:PacketHeadNoCRCLen])
+			ClearTTL(b)
+			crc = algo.MD5Hash8(b)
+		})
 		if crc != uint64(pb.DAT.md5h8rem) {
 			err = ErrBadCRCChecksum
 			if config.ShowDebugLog {

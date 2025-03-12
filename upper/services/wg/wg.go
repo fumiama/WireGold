@@ -13,7 +13,9 @@ import (
 	_ "github.com/fumiama/WireGold/gold/p2p/tcp"     // support tcp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udp"     // support udp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udplite" // support udplite connection
-	_ "github.com/fumiama/WireGold/gold/proto"       // support basic protos
+	_ "github.com/fumiama/WireGold/gold/proto/data"  // support data proto
+	_ "github.com/fumiama/WireGold/gold/proto/hello" // support hello proto
+	_ "github.com/fumiama/WireGold/gold/proto/nat"   // support nat proto
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/link"
@@ -115,6 +117,7 @@ func (wg *WG) init(srcport, dstport uint16) {
 		SpeedLoop: wg.c.SpeedLoop,
 		Mask:      wg.c.Mask,
 		Base14:    wg.c.Base14,
+		MaxTTL:    wg.c.MaxTTL,
 	})
 
 	for _, peer := range wg.c.Peers {

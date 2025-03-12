@@ -12,7 +12,9 @@ import (
 	_ "github.com/fumiama/WireGold/gold/p2p/tcp"     // support tcp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udp"     // support udp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udplite" // support udplite connection
-	_ "github.com/fumiama/WireGold/gold/proto"       // support basic protos
+	_ "github.com/fumiama/WireGold/gold/proto/data"  // support data proto
+	_ "github.com/fumiama/WireGold/gold/proto/hello" // support hello proto
+	_ "github.com/fumiama/WireGold/gold/proto/nat"   // support nat proto
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
@@ -125,7 +127,7 @@ func (s *Tunnel) handleWrite() {
 			binary.LittleEndian.PutUint32(buf[:4], seq)
 			seq++
 			copy(buf[4:], b[:s.mtu-4])
-			s.l.WritePacket(head.ProtoData, buf)
+			s.l.WritePacket(head.ProtoData, buf, s.l.Me().TTL())
 			if config.ShowDebugLog {
 				logrus.Debugln("[tunnel] seq", seq-1, "written")
 			}
@@ -134,7 +136,7 @@ func (s *Tunnel) handleWrite() {
 		binary.LittleEndian.PutUint32(buf[:4], seq)
 		seq++
 		copy(buf[4:], b)
-		s.l.WritePacket(head.ProtoData, buf[:len(b)+4])
+		s.l.WritePacket(head.ProtoData, buf[:len(b)+4], s.l.Me().TTL())
 		if config.ShowDebugLog {
 			logrus.Debugln("[tunnel] seq", seq-1, "written")
 		}

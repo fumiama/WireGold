@@ -62,6 +62,8 @@ type Me struct {
 	recvloopcnt uintptr
 	// 是否进行 base16384 编码
 	base14 bool
+	// 本机初始 ttl
+	ttl uint8
 	// 本机网络端点初始化配置
 	networkconfigs []any
 }
@@ -76,6 +78,7 @@ type MyConfig struct {
 	SrcPort, DstPort, MTU, SpeedLoop uint16
 	Mask                             uint64
 	Base14                           bool
+	MaxTTL                           uint8
 }
 
 type NICConfig struct {
@@ -131,6 +134,11 @@ func NewMe(cfg *MyConfig) (m Me) {
 	m.mask = cfg.Mask
 	m.recvlooptime = time.Now().UnixMilli()
 	m.base14 = cfg.Base14
+	if cfg.MaxTTL == 0 {
+		m.ttl = 64
+	} else {
+		m.ttl = cfg.MaxTTL
+	}
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], m.mask)
 	logrus.Infoln("[me] xor mask", hex.EncodeToString(buf[:]))
@@ -177,6 +185,10 @@ func (m *Me) DstPort() uint16 {
 
 func (m *Me) MTU() uint16 {
 	return m.mtu
+}
+
+func (m *Me) TTL() uint8 {
+	return m.ttl
 }
 
 func (m *Me) EndPoint() p2p.EndPoint {
@@ -298,7 +310,7 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 		copy(b, packet)
 	})
 	go pcp.V(func(b []byte) {
-		lnk.WritePacket(head.ProtoData, b)
+		lnk.WritePacket(head.ProtoData, b, lnk.me.ttl)
 	})
 	return
 }

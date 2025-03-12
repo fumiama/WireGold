@@ -32,7 +32,7 @@ func randseq(i uint16) uint32 {
 // WritePacket 基于 data 向 peer 发包
 //
 // data 可为空, 因为不保证可达所以不返回错误。
-func (l *Link) WritePacket(proto uint8, data []byte) {
+func (l *Link) WritePacket(proto uint8, data []byte, ttl uint8) {
 	teatype := l.randkeyidx()
 	sndcnt := uint16(l.incgetsndcnt())
 	mtu := l.mtu
@@ -44,7 +44,7 @@ func (l *Link) WritePacket(proto uint8, data []byte) {
 	}
 	pb := head.NewPacketBuilder().
 		Src(l.me.me, l.me.srcport).Dst(l.peerip, l.me.dstport).
-		Proto(proto).TTL(64).With(data)
+		Proto(proto).TTL(ttl).With(data)
 	if l.usezstd {
 		pb.Zstd()
 	}

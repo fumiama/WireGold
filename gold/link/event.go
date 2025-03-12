@@ -1,22 +1,22 @@
 package link
 
 import (
-	"strconv"
-
+	"github.com/RomiChan/syncx"
 	"github.com/fumiama/WireGold/gold/head"
 	"github.com/fumiama/orbyte/pbuf"
 )
 
 // 事件分发器
-var dispachers map[uint8]EventDispacher = make(map[uint8]EventDispacher)
+var dispachers syncx.Map[uint8, Dispacher]
 
-type EventDispacher func(header *head.Packet, peer *Link, data pbuf.Bytes)
+type Dispacher func(header *head.Packet, peer *Link, data pbuf.Bytes)
 
-// AddProto is thread unsafe. Use in init() only.
-func AddProto(p uint8, d EventDispacher) {
-	_, ok := dispachers[p]
-	if ok {
-		panic("proto " + strconv.Itoa(int(p)) + " has been registered")
-	}
-	dispachers[p] = d
+// RegisterDispacher of proto
+func RegisterDispacher(p uint8, d Dispacher) (actual Dispacher, hasexist bool) {
+	return dispachers.LoadOrStore(p, d)
+}
+
+// GetDispacher fn, ok
+func GetDispacher(p uint8) (Dispacher, bool) {
+	return dispachers.Load(p)
 }

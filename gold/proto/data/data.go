@@ -1,4 +1,4 @@
-package proto
+package data
 
 import (
 	"github.com/fumiama/orbyte/pbuf"
@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	link.AddProto(head.ProtoData, func(header *head.Packet, peer *link.Link, data pbuf.Bytes) {
+	link.RegisterDispacher(head.ProtoData, func(header *head.Packet, peer *link.Link, data pbuf.Bytes) {
 		peer.ToLower(header, data)
 	})
 }

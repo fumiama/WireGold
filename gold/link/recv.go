@@ -8,8 +8,10 @@ import (
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
+	"github.com/fumiama/WireGold/gold/p2p"
 	"github.com/fumiama/WireGold/internal/bin"
 	base14 "github.com/fumiama/go-base16384"
+	"github.com/fumiama/orbyte/pbuf"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,8 +20,7 @@ func (l *Link) Read() LinkData {
 	return <-l.pipe
 }
 
-// wait TODO: 判断是否为 trans 并提前 call dispatch
-func (m *Me) wait(data []byte) (h head.PacketBytes) {
+func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 	if len(data) < int(head.PacketHeadLen)+8 { // not a valid packet
 		if config.ShowDebugLog {
 			logrus.Debugln("[recv] invalid data len", len(data))
@@ -44,7 +45,7 @@ func (m *Me) wait(data []byte) (h head.PacketBytes) {
 			}
 			return
 		}
-		data = w.ToBytes().Trans()
+		data = w.ToBytes().Copy().Trans()
 		if len(data) < bound {
 			bound = len(data)
 			endl = "."
@@ -94,6 +95,31 @@ func (m *Me) wait(data []byte) (h head.PacketBytes) {
 	}
 
 	header.B(func(buf []byte, p *head.Packet) {
+		peer := m.extractPeer(p.Src(), p.Dst(), addr)
+		if peer == nil {
+			return
+		}
+		if !peer.IsToMe(p.Dst()) { // 提前处理转发
+			if !peer.allowtrans {
+				logrus.Warnln("[recv] refused to trans packet to", p.Dst().String()+":"+strconv.Itoa(int(p.DstPort)))
+				return
+			}
+			// 转发
+			lnk := m.router.NextHop(p.Dst().String())
+			if lnk == nil {
+				logrus.Warnln("[recv] transfer drop packet: nil nexthop")
+				return
+			}
+			if head.DecTTL(data) { // need drop
+				logrus.Warnln("[recv] transfer drop packet: zero ttl")
+				return
+			}
+			go lnk.write2peer(pbuf.ParseBytes(data...).Copy(), seq)
+			if config.ShowDebugLog {
+				logrus.Debugln("[listen] trans", len(data), "bytes packet to", p.Dst().String()+":"+strconv.Itoa(int(p.DstPort)))
+			}
+			return
+		}
 		if !p.Proto.HasMore() {
 			ok := p.WriteDataSegment(data, buf)
 			if !ok {

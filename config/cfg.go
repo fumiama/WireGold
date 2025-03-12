@@ -19,6 +19,7 @@ type Config struct {
 	SpeedLoop  uint16 `yaml:"SpeedLoop"`
 	Mask       uint64 `yaml:"Mask"`   // Mask 是异或报文所用掩码, 必须保证各端统一
 	Base14     bool   `yaml:"Base14"` // Base14 是否将最终报文进行 base16384 编码后再发送
+	MaxTTL     uint8  `yaml:"MaxTTL"` // MaxTTL 默认 64
 	Peers      []Peer `yaml:"Peers"`
 }
 

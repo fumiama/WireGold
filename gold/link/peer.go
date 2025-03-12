@@ -2,13 +2,19 @@ package link
 
 import (
 	"net"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
-	"github.com/fumiama/WireGold/gold/p2p"
-	"github.com/fumiama/WireGold/internal/algo"
 	curve "github.com/fumiama/go-x25519"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/chacha20poly1305"
+
+	"github.com/fumiama/WireGold/config"
+	"github.com/fumiama/WireGold/gold/p2p"
+	"github.com/fumiama/WireGold/internal/algo"
+	"github.com/fumiama/WireGold/internal/bin"
+	"github.com/fumiama/WireGold/internal/file"
 )
 
 type PeerConfig struct {
@@ -122,4 +128,27 @@ func (m *Me) IsInPeer(peer string) (p *Link, ok bool) {
 	p, ok = m.connections[peer]
 	m.connmapmu.RUnlock()
 	return
+}
+
+func (m *Me) extractPeer(srcip, dstip net.IP, addr p2p.EndPoint) *Link {
+	p, ok := m.IsInPeer(srcip.String())
+	if config.ShowDebugLog {
+		logrus.Debugln(file.Header(), "recv from endpoint", addr, "src", srcip, "dst", dstip)
+	}
+	if !ok {
+		logrus.Warnln(file.Header(), "packet from", srcip, "to", dstip, "is refused")
+		return nil
+	}
+	if bin.IsNilInterface(p.endpoint) || !p.endpoint.Euqal(addr) {
+		if m.ep.Network() == "tcp" && !addr.Euqal(p.endpoint) {
+			logrus.Infoln(file.Header(), "set endpoint of peer", p.peerip, "to", addr.String())
+			p.endpoint = addr
+		} else { // others are all no status link
+			logrus.Infoln(file.Header(), "set endpoint of peer", p.peerip, "to", addr.String())
+			p.endpoint = addr
+		}
+	}
+	now := time.Now()
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&p.lastalive)), unsafe.Pointer(&now))
+	return p
 }

@@ -27,13 +27,13 @@ func TestBuilderNative(t *testing.T) {
 				Split(16384, false)[0]).Trans()
 			s := hex.EncodeToString(dat)
 			if s[:8] != "12004593" {
-				panic("1")
+				panic(s[:8])
 			}
 			if s[16:48] != "03ff05000a0000000102030406070809" {
-				panic("2")
+				panic(s[16:48])
 			}
 			if s[80:] != "30313233343536373839" {
-				panic("3")
+				panic(s[80:])
 			}
 			p, err := ParsePacketHeader(dat)
 			if err != nil {
@@ -88,13 +88,13 @@ func TestBuilderBE(t *testing.T) {
 				Split(16384, false)[0]).Trans()
 			s := hex.EncodeToString(dat)
 			if s[:8] != "12004593" {
-				panic("1")
+				panic(s[:8])
 			}
 			if s[16:48] != "03ff05000a0000000102030406070809" {
-				panic("2")
+				panic(s[16:48])
 			}
 			if s[80:] != "30313233343536373839" {
-				panic("3")
+				panic(s[80:])
 			}
 			p, err := ParsePacketHeader(dat)
 			if err != nil {

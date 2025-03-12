@@ -33,7 +33,7 @@ func (l *Link) keepAlive(dur int64) {
 					logrus.Infoln(file.Header(), "re-connect me succeeded")
 				}
 			}
-			l.WritePacket(head.ProtoHello, []byte{byte(head.HelloPing)})
+			l.WritePacket(head.ProtoHello, []byte{byte(head.HelloPing)}, 64)
 			logrus.Infoln(file.Header(), "send keep alive to", l.peerip)
 		}
 	}
@@ -50,7 +50,7 @@ func (l *Link) sendQuery(tick time.Duration, peers ...string) {
 	}
 	t := time.NewTicker(tick)
 	for range t.C {
-		l.WritePacket(head.ProtoQuery, data)
+		l.WritePacket(head.ProtoQuery, data, l.me.ttl)
 		logrus.Infoln(file.Header(), "send query to", l.peerip)
 	}
 }

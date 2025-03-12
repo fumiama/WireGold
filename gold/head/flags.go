@@ -7,7 +7,7 @@ import (
 const (
 	hasmorebit FlagsProto = 0x20 << iota
 	nofragbit
-	topbit //TODO: 改为 trans 标记
+	topbit
 )
 
 const (

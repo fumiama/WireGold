@@ -49,7 +49,7 @@ type Me struct {
 	// 本机未接收完全分片池
 	recving *ttl.Cache[uint16, head.PacketBytes]
 	// 抗重放攻击记录池
-	recved *ttl.Cache[uint32, struct{}]
+	recved *ttl.Cache[uint64, struct{}]
 	// 本机上层配置
 	srcport, dstport, mtu, speedloop uint16
 	// 报头掩码
@@ -143,7 +143,7 @@ func NewMe(cfg *MyConfig) (m Me) {
 	binary.BigEndian.PutUint64(buf[:], m.mask)
 	logrus.Infoln("[me] xor mask", hex.EncodeToString(buf[:]))
 	m.recving = ttl.NewCache[uint16, head.PacketBytes](time.Second * 10)
-	m.recved = ttl.NewCache[uint32, struct{}](time.Minute)
+	m.recved = ttl.NewCache[uint64, struct{}](time.Minute)
 	return
 }
 

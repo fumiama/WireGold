@@ -17,18 +17,21 @@ import (
 // PreCRC64 calculate crc64 checksum without idxdatsz.
 func (p *Packet) PreCRC64() (crc uint64) {
 	w := bin.SelectWriter()
-	// 固定 TTL 为 0 计算
+	// 固定 TTL 为 0, flag 为空 计算
 	if bin.IsLittleEndian {
 		ttl := p.TTL
+		f := p.Proto
 		p.TTL = 0
+		p.Proto &= protobit
 		w.Write((*[PacketHeadNoCRCLen]byte)(
 			(unsafe.Pointer)(p),
 		)[:])
 		p.TTL = ttl
+		p.Proto = f
 	} else {
 		w.WriteUInt32(p.idxdatsz)
 		w.WriteUInt32(uint32(p.randn))
-		w.WriteUInt16(uint16(p.Proto)) // TTL is set to 0
+		w.WriteUInt16(uint16(p.Proto & protobit)) // TTL, flags is set to 0
 		w.WriteUInt16(p.SrcPort)
 		w.WriteUInt16(p.DstPort)
 		w.WriteUInt16(p.Offset)
@@ -58,9 +61,9 @@ func (p *Packet) WriteHeaderTo(buf *bytes.Buffer) {
 		pbuf.NewBytes(buf.Len()).V(func(b []byte) {
 			copy(b, buf.Bytes())
 			ClearTTL(b)
-			p.md5h8rem = int64(algo.MD5Hash8(b))
+			p.md5h8 = algo.MD5Hash8(b)
 		})
-		_ = binary.Write(buf, binary.LittleEndian, p.md5h8rem)
+		_ = binary.Write(buf, binary.LittleEndian, p.md5h8)
 		return
 	}
 	w := bin.SelectWriter()
@@ -76,10 +79,10 @@ func (p *Packet) WriteHeaderTo(buf *bytes.Buffer) {
 		pbuf.NewBytes(buf.Len()).V(func(b []byte) {
 			copy(b, buf.Bytes())
 			ClearTTL(b)
-			p.md5h8rem = int64(algo.MD5Hash8(b))
+			p.md5h8 = algo.MD5Hash8(b)
 		})
 	})
-	w.WriteUInt64(uint64(p.md5h8rem))
+	w.WriteUInt64(p.md5h8)
 	w.P(func(b *pbuf.Buffer) {
 		_, _ = buf.ReadFrom(b)
 	})

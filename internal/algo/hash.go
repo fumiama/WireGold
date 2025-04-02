@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/blake2b-simd"
@@ -20,7 +21,7 @@ func Blake2bHash8(precrc64 uint64, data []byte) uint64 {
 	_, _ = h.Write(data)
 	b := h.Sum(tgt[:0])[:8]
 	if config.ShowDebugLog {
-		logrus.Debugln("[algo] blk2b hash:", hex.EncodeToString(b))
+		logrus.Debugln("[algo] precrc64:", fmt.Sprintf("%04x", precrc64), "blk2b hash:", hex.EncodeToString(b))
 	}
 	return binary.LittleEndian.Uint64(b)
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand"
 
@@ -40,7 +41,7 @@ func (l *Link) WritePacket(proto uint8, data []byte, ttl uint8) {
 		mtu -= uint16(rand.Intn(int(l.mturandomrange)))
 	}
 	if config.ShowDebugLog {
-		logrus.Debugln("[send] write mtu:", mtu, ", addt:", sndcnt&0x07ff, ", key index:", teatype)
+		logrus.Debugln("[send] write mtu:", mtu, ", addt:", sndcnt&0x07ff, ", key index:", teatype, ", data len:", len(data))
 	}
 	pb := head.NewPacketBuilder().
 		Src(l.me.me, l.me.srcport).Dst(l.peerip, l.me.dstport).
@@ -55,7 +56,11 @@ func (l *Link) WritePacket(proto uint8, data []byte, ttl uint8) {
 	} else {
 		pktb = pb.Seal(l.keys[teatype], teatype, sndcnt&0x07ff)
 	}
-	for _, b := range pktb.Split(int(mtu), false) { //TODO: impl. nofrag
+	bs := pktb.Split(int(mtu), false)
+	if config.ShowDebugLog {
+		logrus.Debugln("[send] split packet into", len(bs), "parts")
+	}
+	for _, b := range bs { //TODO: impl. nofrag
 		go l.write2peer(head.BuildPacketFromBytes(b), randseq(sndcnt))
 	}
 }
@@ -99,7 +104,7 @@ func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (err error) {
 				bound = len(data)
 				endl = "."
 			}
-			logrus.Debugln("[send] raw data bytes", hex.EncodeToString(data[:bound]), endl)
+			logrus.Debugln("[send] crc seq", fmt.Sprintf("%08x", seq), "raw data bytes", hex.EncodeToString(data[:bound]), endl)
 		}
 		b = l.me.xorenc(data, seq)
 		if config.ShowDebugLog {
@@ -110,7 +115,7 @@ func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (err error) {
 				endl = "."
 			}
 			b.V(func(b []byte) {
-				logrus.Debugln("[send] xored data bytes", hex.EncodeToString(b[:bound]), endl)
+				logrus.Debugln("[send] crc seq", fmt.Sprintf("%08x", seq), "xored data bytes", hex.EncodeToString(b[:bound]), endl)
 			})
 		}
 	})
@@ -125,14 +130,14 @@ func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (err error) {
 					endl = "."
 				}
 				b.V(func(b []byte) {
-					logrus.Debugln("[send] xored data bytes", hex.EncodeToString(b[:bound]), endl)
+					logrus.Debugln("[send] crc seq", fmt.Sprintf("%08x", seq), "b14ed data bytes", hex.EncodeToString(b[:bound]), endl)
 				})
 			}
 		})
 	}
 	b.V(func(b []byte) {
 		if config.ShowDebugLog {
-			logrus.Debugln("[send] write", len(b), "bytes data from ep", conn.LocalAddr(), "to", peerep)
+			logrus.Debugln("[send] crc seq", fmt.Sprintf("%08x", seq), "write", len(b), "bytes data from ep", conn.LocalAddr(), "to", peerep)
 		}
 		_, err = conn.WriteToPeer(b, peerep)
 	})

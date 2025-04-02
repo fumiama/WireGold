@@ -69,11 +69,11 @@ func (pb *HeaderBuilder) Dst(ip net.IP, p uint16) *HeaderBuilder {
 func (pb *HeaderBuilder) With(data []byte) *DataBuilder {
 	return (*DataBuilder)(pb.p(func(ub *PacketBuf) {
 		// header crc64 except idxdatasz
-		ub.DAT.md5h8rem = int64(ub.DAT.PreCRC64())
+		ub.DAT.md5h8 = ub.DAT.PreCRC64()
 		// plain data
 		ub.Buffer.Write(data)
 		if config.ShowDebugLog {
-			logrus.Debugln(file.Header(), strconv.FormatUint(uint64(ub.DAT.md5h8rem), 16), "build with data", file.ToLimitHexString(data, 64))
+			logrus.Debugln(file.Header(), strconv.FormatUint(ub.DAT.md5h8, 16), "build with data", file.ToLimitHexString(data, 64))
 		}
 	}))
 }
@@ -89,16 +89,16 @@ func (pb *DataBuilder) Zstd() *DataBuilder {
 		ub.Reset()
 		data.V(func(b []byte) { ub.Write(b) })
 		if config.ShowDebugLog {
-			logrus.Debugln(file.Header(), strconv.FormatUint(uint64(ub.DAT.md5h8rem), 16), "data after zstd", file.ToLimitHexString(ub.Bytes(), 64))
+			logrus.Debugln(file.Header(), strconv.FormatUint(ub.DAT.md5h8, 16), "data after zstd", file.ToLimitHexString(ub.Bytes(), 64))
 		}
 	})
 }
 
 func (pb *DataBuilder) Hash() *DataBuilder {
 	return pb.p(func(ub *PacketBuf) {
-		ub.DAT.hash = algo.Blake2bHash8(
-			uint64(ub.DAT.md5h8rem), ub.Bytes(),
-		)
+		ub.DAT.hashrem = int64(algo.Blake2bHash8(
+			ub.DAT.md5h8, ub.Bytes(),
+		))
 	})
 }
 
@@ -119,7 +119,7 @@ func (pb *DataBuilder) Seal(aead cipher.AEAD, teatyp uint8, additional uint16) *
 		p(func(ub *PacketBuf) {
 			// encrypted data: chacha20(hash + plain)
 			w := bin.SelectWriter()
-			w.WriteUInt64(ub.DAT.hash)
+			w.WriteUInt64(uint64(ub.DAT.hashrem))
 			w.Write(ub.Bytes())
 			w.P(func(b *pbuf.Buffer) {
 				data := algo.EncodeAEAD(aead, additional, b.Bytes())
@@ -133,7 +133,7 @@ func (pb *DataBuilder) Plain(teatyp uint8, additional uint16) *PacketBuilder {
 	return (*PacketBuilder)(pb.tea(teatyp).additional(additional).
 		p(func(ub *PacketBuf) {
 			w := bin.SelectWriter()
-			w.WriteUInt64(ub.DAT.hash)
+			w.WriteUInt64(uint64(ub.DAT.hashrem))
 			w.Write(ub.Bytes())
 			w.P(func(b *pbuf.Buffer) {
 				ub.Reset()

@@ -1,9 +1,14 @@
 package link
 
 import (
-	"github.com/fumiama/orbyte/pbuf"
+	"encoding/hex"
 
+	"github.com/fumiama/orbyte/pbuf"
+	"github.com/sirupsen/logrus"
+
+	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/internal/algo"
+	"github.com/fumiama/WireGold/internal/file"
 )
 
 func (l *Link) randkeyidx() uint8 {
@@ -19,11 +24,20 @@ func (l *Link) decode(teatype uint8, additional uint16, b []byte) (db pbuf.Bytes
 		return
 	}
 	if l.keys[0] == nil {
+		if config.ShowDebugLog {
+			n := len(b)
+			endl := "."
+			if n > 64 {
+				n = 64
+				endl = "..."
+			}
+			logrus.Debugln(file.Header(), "copy plain text", hex.EncodeToString(b[:n]), endl)
+		}
 		return pbuf.ParseBytes(b...).Copy(), nil
 	}
 	aead := l.keys[teatype]
 	if aead == nil {
-		return
+		panic("unexpected empty aead")
 	}
 	return algo.DecodeAEAD(aead, additional, b)
 }

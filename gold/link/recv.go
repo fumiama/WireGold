@@ -78,9 +78,13 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 	if config.ShowDebugLog {
 		logrus.Debugf("[recv] packet seq %08x", seq)
 	}
-	if _, got := m.recved.GetOrSet(seq, struct{}{}); got {
+	crc := uint64(0)
+	header.B(func(_ []byte, p *head.Packet) {
+		crc = p.CRC64()
+	})
+	if _, got := m.recved.GetOrSet(uint64(seq)^crc, struct{}{}); got {
 		if config.ShowDebugLog {
-			logrus.Debugln("[recv] ignore duplicated seq packet", strconv.FormatUint(uint64(seq), 16))
+			logrus.Debugln("[recv] ignore duplicated seq^crc packet, seq", strconv.FormatUint(uint64(seq), 16), "crc", strconv.FormatUint(crc, 16))
 		}
 		return
 	}
@@ -145,8 +149,9 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 	if config.ShowDebugLog {
 		logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq&0xffff), 16), "get frag part isnew:", !got)
 	}
+	ok := false
 	h.B(func(buf []byte, p *head.Packet) {
-		ok := p.WriteDataSegment(data, buf)
+		ok = p.WriteDataSegment(data, buf)
 		if !ok {
 			if config.ShowDebugLog {
 				logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq&0xffff), 16), "wait other frag parts isnew:", !got)
@@ -158,5 +163,8 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 			logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq&0xffff), 16), "all parts has reached")
 		}
 	})
+	if !ok {
+		return head.PacketBytes{}
+	}
 	return
 }

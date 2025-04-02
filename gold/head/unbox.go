@@ -37,7 +37,7 @@ func ParsePacketHeader(data []byte) (pbytes PacketBytes, err error) {
 			pb.DAT.Offset = binary.LittleEndian.Uint16(data[14:16])
 			copy(pb.DAT.src[:], data[16:20])
 			copy(pb.DAT.dst[:], data[20:24])
-			pb.DAT.md5h8rem = int64(binary.LittleEndian.Uint64(data[24:32]))
+			pb.DAT.md5h8 = binary.LittleEndian.Uint64(data[24:32])
 		}
 		sz = pb.DAT.Size()
 		if !pb.DAT.Proto.IsValid() {
@@ -60,10 +60,10 @@ func ParsePacketHeader(data []byte) (pbytes PacketBytes, err error) {
 			ClearTTL(b)
 			crc = algo.MD5Hash8(b)
 		})
-		if crc != uint64(pb.DAT.md5h8rem) {
+		if crc != pb.DAT.md5h8 {
 			err = ErrBadCRCChecksum
 			if config.ShowDebugLog {
-				logrus.Warnf("[unbox] exp crc %016x but got %016x", pb.DAT.md5h8rem, crc)
+				logrus.Warnf("[unbox] exp crc %016x but got %016x", pb.DAT.md5h8, crc)
 			}
 			return
 		}
@@ -72,12 +72,12 @@ func ParsePacketHeader(data []byte) (pbytes PacketBytes, err error) {
 		}
 		if sz+int(PacketHeadLen) == len(data) {
 			pb.Buffer.Write(data[PacketHeadLen:])
-			pb.DAT.md5h8rem = -1
+			pb.DAT.hashrem = -1
 			return
 		}
 		pb.Buffer.Grow(sz)
 		pb.Buffer.Write(make([]byte, sz))
-		pb.DAT.md5h8rem = int64(sz)
+		pb.DAT.hashrem = int64(sz)
 	})
 	if err != nil {
 		return
@@ -92,7 +92,7 @@ func ParsePacketHeader(data []byte) (pbytes PacketBytes, err error) {
 //
 // return: complete.
 func (p *Packet) WriteDataSegment(data, buf []byte) bool {
-	if atomic.LoadInt64(&p.md5h8rem) <= 0 {
+	if p.HasFinished() {
 		return true
 	}
 
@@ -103,21 +103,24 @@ func (p *Packet) WriteDataSegment(data, buf []byte) bool {
 	}
 
 	if offset == 0 {
+		p.randn = int32(binary.LittleEndian.Uint32(data[4:8]))
 		p.Proto = flags
+		p.TTL = data[9]
 		p.Offset = 0
+		p.md5h8 = binary.LittleEndian.Uint64(data[24:32])
 		if config.ShowDebugLog {
 			logrus.Debugln("[unbox] parse data set zero offset flags", flags)
 		}
 	}
 
-	rembytes := atomic.LoadInt64(&p.md5h8rem)
+	rembytes := atomic.LoadInt64(&p.hashrem)
 	if rembytes > 0 {
 		n := int64(copy(buf[offset:], data[PacketHeadLen:]))
 		newrem := rembytes - n
-		for !atomic.CompareAndSwapInt64(&p.md5h8rem, rembytes, newrem) {
-			rembytes = atomic.LoadInt64(&p.md5h8rem)
+		for !atomic.CompareAndSwapInt64(&p.hashrem, rembytes, newrem) {
+			rembytes = atomic.LoadInt64(&p.hashrem)
 			newrem = rembytes - n
 		}
 	}
-	return atomic.LoadInt64(&p.md5h8rem) <= 0
+	return p.HasFinished()
 }

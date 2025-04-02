@@ -3,6 +3,7 @@ package head
 import (
 	"errors"
 	"net"
+	"sync/atomic"
 	"unsafe"
 
 	"github.com/fumiama/orbyte"
@@ -13,8 +14,8 @@ const (
 	// PacketHeadPreCRCIdx skip idxdatsz, which will be set at Seal().
 	PacketHeadPreCRCIdx = unsafe.Offsetof(Packet{}.randn)
 	// PacketHeadNoCRCLen without final crc
-	PacketHeadNoCRCLen = unsafe.Offsetof(Packet{}.md5h8rem)
-	PacketHeadLen      = unsafe.Offsetof(Packet{}.hash)
+	PacketHeadNoCRCLen = unsafe.Offsetof(Packet{}.md5h8)
+	PacketHeadLen      = unsafe.Offsetof(Packet{}.hashrem)
 )
 
 var (
@@ -57,19 +58,18 @@ type Packet struct {
 	src [4]byte
 	// dst 目的 ip (ipv4)
 	dst [4]byte
-	// md5h8rem 发送时记录包头字段除自身外的 checksum 值,
-	// 接收时记录剩余字节数.
+	// md5h8 发送时记录包头字段除自身外的 checksum 值.
 	//
 	// 可以认为在一定时间内唯一 (现已更改算法为 md5 但名字未变)。
-	md5h8rem int64
+	md5h8 uint64
 
 	// 以下字段为包体, 与 data 一起加密
 
-	// hash 使用 BLAKE2B 生成加密前 packet data+crc64 的摘要,
-	// 取其前 8 字节, 小端序读写.
+	// hashrem 使用 BLAKE2B 生成加密前 packet data+crc64 的摘要,
+	// 取其前 8 字节, 小端序读写. 接收时记录剩余字节数.
 	//
 	// https://github.com/fumiama/blake2b-simd
-	hash uint64
+	hashrem int64
 
 	// Buffer 用于 builder with 暂存原始包体数据
 	// 以及接收时保存 body, 通过 PacketBytes 截取偏移.
@@ -92,7 +92,7 @@ func (p *Packet) Size() int {
 
 // CRC64 extract md5h8rem field
 func (p *Packet) CRC64() uint64 {
-	return uint64(p.md5h8rem)
+	return p.md5h8
 }
 
 func (p *Packet) Src() net.IP {
@@ -101,4 +101,8 @@ func (p *Packet) Src() net.IP {
 
 func (p *Packet) Dst() net.IP {
 	return append(net.IP{}, p.dst[:]...)
+}
+
+func (p *Packet) HasFinished() bool {
+	return atomic.LoadInt64(&p.hashrem) <= 0
 }

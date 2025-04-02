@@ -69,7 +69,17 @@ func (m *Me) waitordispatch(addr p2p.EndPoint, buf pbuf.Bytes, n int) {
 	recvlooptime := atomic.LoadInt64(&m.recvlooptime)
 	if recvloopcnt%uintptr(m.speedloop) == 0 {
 		now := time.Now().UnixMilli()
-		logrus.Infof("[listen] queue recv avg speed: %.2f KB/s", float64(recvtotlcnt)/float64(now-recvlooptime))
+		kb := float64(recvtotlcnt) / float64(now-recvlooptime)
+		if kb < 1024 {
+			logrus.Infof("[listen] queue recv avg speed: %.2f KB/s", kb)
+		} else {
+			kb /= 1024
+			if kb < 1024 {
+				logrus.Infof("[listen] queue recv avg speed: %.2f MB/s", kb)
+			} else {
+				logrus.Infof("[listen] queue recv avg speed: %.2f GB/s", kb/1024)
+			}
+		}
 		atomic.StoreUint64(&m.recvtotlcnt, 0)
 		atomic.StoreInt64(&m.recvlooptime, now)
 	}
@@ -84,6 +94,9 @@ func (m *Me) waitordispatch(addr p2p.EndPoint, buf pbuf.Bytes, n int) {
 		h.B(func(b []byte, p *head.Packet) {
 			if config.ShowDebugLog {
 				logrus.Debugln("[listen] dispatch", len(b), "bytes packet")
+			}
+			if !p.HasFinished() {
+				panic("unexpected unfinished")
 			}
 			m.dispatch(p, b, addr)
 		})

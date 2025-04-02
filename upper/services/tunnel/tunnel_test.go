@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -18,42 +19,34 @@ import (
 	"github.com/fumiama/WireGold/internal/bin"
 )
 
-func TestTunnelUDP(t *testing.T) {
-	testTunnelNetwork(t, "udp", 4096)
+func testTunnelMTUsNetwork(t *testing.T, nw string) {
+	for i := 1; i <= 4; i++ {
+		sz := 1024 * i
+		if !t.Run(strconv.Itoa(sz), func(t *testing.T) {
+			testTunnelNetwork(t, nw, uint16(sz))
+		}) {
+			return
+		}
+	}
 }
 
-func TestTunnelUDPSmallMTU(t *testing.T) {
-	testTunnelNetwork(t, "udp", 1024)
+func TestTunnelUDP(t *testing.T) {
+	testTunnelMTUsNetwork(t, "udp")
 }
 
 func TestTunnelUDPLite(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		return
 	}
-	testTunnelNetwork(t, "udplite", 4096)
-}
-
-func TestTunnelUDPLiteSmallMTU(t *testing.T) {
-	if runtime.GOOS == "darwin" {
-		return
-	}
-	testTunnelNetwork(t, "udplite", 1024)
+	testTunnelMTUsNetwork(t, "udplite")
 }
 
 func TestTunnelTCP(t *testing.T) {
-	testTunnelNetwork(t, "tcp", 4096)
-}
-
-func TestTunnelTCPSmallMTU(t *testing.T) {
-	testTunnelNetwork(t, "tcp", 1024)
+	testTunnelMTUsNetwork(t, "tcp")
 }
 
 func TestTunnelIP(t *testing.T) {
-	testTunnelNetwork(t, "ip", 4096)
-}
-
-func TestTunnelIPSmallMTU(t *testing.T) {
-	testTunnelNetwork(t, "ip", 1024)
+	testTunnelMTUsNetwork(t, "ip")
 }
 
 func BenchmarkTunnelUDP(b *testing.B) {
@@ -95,7 +88,7 @@ func BenchmarkTunnelIPSmallMTU(b *testing.B) {
 }
 
 func testTunnel(t *testing.T, nw string, isplain, isbase14 bool, pshk *[32]byte, mtu uint16) {
-	fmt.Println("start", nw, "testing")
+	fmt.Println("start", nw, "testing, mtu", mtu, "plain", isplain, "b14", isbase14, "pshk", pshk != nil)
 	selfpk, err := curve.New(nil)
 	if err != nil {
 		panic(err)
@@ -195,50 +188,25 @@ func testTunnel(t *testing.T, nw string, isplain, isbase14 bool, pshk *[32]byte,
 		t.Fail()
 	}
 
-	sendb = make([]byte, 4096)
-	for i := 0; i < 4096; i++ {
+	sendb = make([]byte, mtu+4)
+	for i := 0; i < len(sendb); i++ {
 		sendb[i] = byte(i)
 	}
-	go tunnme.Write(sendb)
-	buf = make([]byte, 4096)
-	_, err = io.ReadFull(&tunnpeer, buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(sendb) != string(buf) {
-		t.Fatal("error: recv 4096 bytes data")
-	}
 
-	sendbufs := make(chan []byte, 32)
-
-	go func() {
-		time.Sleep(time.Second)
-		for i := 0; i < 32; i++ {
-			sendb := make([]byte, 65535)
-			for j := 0; j < 65535; j++ {
-				sendb[j] = byte(i + j)
-			}
-			n, _ := tunnme.Write(sendb)
-			sendbufs <- sendb
-			logrus.Debugln("loop", i, "write", n, "bytes")
-		}
-		close(sendbufs)
-	}()
-	buf = make([]byte, 65535)
-	i := 0
-	for sendb := range sendbufs {
-		n, err := io.ReadFull(&tunnpeer, buf)
+	for i := 1; i < len(sendb); i++ {
+		rand.Read(sendb[:i])
+		go tunnme.Write(sendb[:i])
+		buf := make([]byte, i)
+		_, err = io.ReadFull(&tunnpeer, buf)
 		if err != nil {
 			t.Fatal(err)
 		}
-		logrus.Debugln("loop", i, "read", n, "bytes")
-		if string(sendb) != string(buf) {
-			t.Fatal("loop", i, "error: recv 65535 bytes data")
+		if !bytes.Equal(sendb[:i], buf) {
+			t.Fatal("error: recv", i, "bytes data")
 		}
-		i++
 	}
 
-	for i := 0; i < 4096; i++ {
+	for i := 0; i < len(sendb); i++ {
 		sendb[i] = ^byte(i)
 	}
 	tunnme.Write(sendb)
@@ -255,7 +223,7 @@ func testTunnel(t *testing.T, nw string, isplain, isbase14 bool, pshk *[32]byte,
 		t.Fatal(err)
 	}
 	if string(sendb) != rd.String() {
-		t.Fatal("error: recv fragmented 4096 bytes data")
+		t.Fatal("error: recv fragmented data")
 	}
 }
 

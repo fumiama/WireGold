@@ -163,9 +163,8 @@ func (s *Tunnel) handleRead() {
 		}
 		end := 64
 		endl := "..."
-		pp := &p.H
-		if pp.Size() < 64 {
-			end = pp.Size()
+		if p.D.Len() < 64 {
+			end = p.D.Len()
 			endl = "."
 		}
 		var recvseq uint32

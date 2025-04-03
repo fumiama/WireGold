@@ -98,47 +98,55 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 		})
 	}
 
+	ok := false
 	header.B(func(buf []byte, p *head.Packet) {
 		peer := m.extractPeer(p.Src(), p.Dst(), addr)
 		if peer == nil {
+			ok = true
 			return
 		}
 		if !peer.IsToMe(p.Dst()) { // 提前处理转发
 			if !peer.allowtrans {
 				logrus.Warnln("[recv] refused to trans packet to", p.Dst().String()+":"+strconv.Itoa(int(p.DstPort)))
+				ok = true
 				return
 			}
 			// 转发
 			lnk := m.router.NextHop(p.Dst().String())
 			if lnk == nil {
 				logrus.Warnln("[recv] transfer drop packet: nil nexthop")
+				ok = true
 				return
 			}
 			if head.DecTTL(data) { // need drop
 				logrus.Warnln("[recv] transfer drop packet: zero ttl")
+				ok = true
 				return
 			}
 			go lnk.write2peer(pbuf.ParseBytes(data...).Copy(), seq)
 			if config.ShowDebugLog {
 				logrus.Debugln("[listen] trans", len(data), "bytes packet to", p.Dst().String()+":"+strconv.Itoa(int(p.DstPort)))
 			}
+			ok = true
 			return
 		}
 		if !p.Proto.HasMore() {
 			ok := p.WriteDataSegment(data, buf)
 			if !ok {
 				logrus.Errorln("[recv]", strconv.FormatUint(uint64(seq), 16), "unexpected !ok")
+				ok = true
 				return
 			}
 			if config.ShowDebugLog {
 				logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq), 16), len(data), "bytes full data waited")
 			}
 			h = header
+			ok = true
 			return
 		}
 	})
 
-	if h.HasInit() {
+	if ok {
 		return
 	}
 
@@ -149,7 +157,7 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 	if config.ShowDebugLog {
 		logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq&0xffff), 16), "get frag part isnew:", !got)
 	}
-	ok := false
+	ok = false
 	h.B(func(buf []byte, p *head.Packet) {
 		ok = p.WriteDataSegment(data, buf)
 		if !ok {

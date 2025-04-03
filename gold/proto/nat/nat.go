@@ -106,6 +106,7 @@ func init() {
 				w.P(func(b *pbuf.Buffer) {
 					peer.WritePacket(head.ProtoNotify, b.Bytes(), peer.Me().TTL())
 				})
+				w.Destroy()
 			}
 		})
 	})

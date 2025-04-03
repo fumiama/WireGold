@@ -11,10 +11,12 @@ import (
 // Writer 写入
 type Writer pbuf.OBuffer
 
-func NewWriterF(f func(writer *Writer)) pbuf.Bytes {
+func NewWriterF(f func(writer *Writer)) []byte {
 	w := SelectWriter()
 	f(w)
-	return w.ToBytes()
+	b := w.ToBytes().Copy()
+	w.Destroy()
+	return b.Trans()
 }
 
 func (w *Writer) P(f func(*pbuf.Buffer)) *Writer {
@@ -63,4 +65,8 @@ func (w *Writer) WriteUInt64(v uint64) {
 
 func (w *Writer) ToBytes() pbuf.Bytes {
 	return pbuf.BufferItemToBytes((*pbuf.OBuffer)(w))
+}
+
+func (w *Writer) Destroy() {
+	(*pbuf.OBuffer)(w).ManualDestroy()
 }

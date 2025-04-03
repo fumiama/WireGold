@@ -22,7 +22,7 @@ var (
 
 type LinkData struct {
 	H head.Packet
-	D pbuf.Bytes
+	D []byte
 }
 
 // Link 是本机到 peer 的连接抽象
@@ -74,7 +74,7 @@ func (l *Link) ToLower(header *head.Packet, data pbuf.Bytes) {
 	if l.pipe != nil {
 		l.pipe <- LinkData{
 			H: *header,
-			D: data,
+			D: data.Copy().Trans(),
 		}
 		if config.ShowDebugLog {
 			logrus.Debugln("[listen] deliver to pipe of", l.peerip)

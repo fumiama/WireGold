@@ -91,6 +91,7 @@ func (pb *DataBuilder) Zstd() *DataBuilder {
 		if config.ShowDebugLog {
 			logrus.Debugln(file.Header(), strconv.FormatUint(ub.DAT.md5h8, 16), "data after zstd", file.ToLimitHexString(ub.Bytes(), 64))
 		}
+		data.ManualDestroy()
 	})
 }
 
@@ -125,7 +126,9 @@ func (pb *DataBuilder) Seal(aead cipher.AEAD, teatyp uint8, additional uint16) *
 				data := algo.EncodeAEAD(aead, additional, b.Bytes())
 				ub.Reset()
 				data.V(func(b []byte) { ub.Write(b) })
+				data.ManualDestroy()
 			})
+			w.Destroy()
 		}))
 }
 
@@ -139,6 +142,7 @@ func (pb *DataBuilder) Plain(teatyp uint8, additional uint16) *PacketBuilder {
 				ub.Reset()
 				_, _ = ub.ReadFrom(b)
 			})
+			w.Destroy()
 		}))
 }
 
@@ -226,6 +230,11 @@ func (pb *PacketBuilder) Split(mtu int, nofrag bool) (pbs []PacketBytes) {
 		}
 	})
 	return
+}
+
+// Destroy call this once no one use it.
+func (pb *PacketBuilder) Destroy() {
+	(*PacketItem)(pb).ManualDestroy()
 }
 
 func BuildPacketFromBytes(pb PacketBytes) pbuf.Bytes {

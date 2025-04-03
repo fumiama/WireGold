@@ -11,8 +11,8 @@ github.com/fumiama/go-base16384 v1.7.0 h1:6fep7XPQWxRlh4Hu+KsdH+6+YdUp+w6CwRXtMW
 github.com/fumiama/go-base16384 v1.7.0/go.mod h1:OEn+947GV5gsbTAnyuUW/SrfxJYUdYupSIQXOuGOcXM=
 github.com/fumiama/go-x25519 v1.0.0 h1:hiGg9EhseVmGCc8T1jECVkj8Keu/aJ1ZK05RM8Vuavo=
 github.com/fumiama/go-x25519 v1.0.0/go.mod h1:8VOhfyGZzw4IUs4nCjQFqW9cA3V/QpSCtP3fo2dLNg4=
-github.com/fumiama/orbyte v0.0.0-20250403074130-f9204e9924a1 h1:E6/hCWUUcwJBlbNRHDl2VyqX0l48Xv6sVYPLh4ZFpPQ=
-github.com/fumiama/orbyte v0.0.0-20250403074130-f9204e9924a1/go.mod h1:qkUllQ1+gTx5sGrmKvIsqUgsnOO21Hiq847YHJRifbk=
+github.com/fumiama/orbyte v0.0.0-20250403152421-da8338096f2d h1:paZ9NH9v7pwULgypKZytzuYNtODDGQGMvXcD6mzpXEs=
+github.com/fumiama/orbyte v0.0.0-20250403152421-da8338096f2d/go.mod h1:qkUllQ1+gTx5sGrmKvIsqUgsnOO21Hiq847YHJRifbk=
 github.com/fumiama/water v0.0.0-20211231134027-da391938d6ac h1:A/5A0rODsg+EQHH61Ew5mMUtDpRXaSNqHhPvW+fN4C4=
 github.com/fumiama/water v0.0.0-20211231134027-da391938d6ac/go.mod h1:BBnNY9PwK+UUn4trAU+H0qsMEypm7+3Bj1bVFuJItlo=
 github.com/fumiama/wintun v0.0.0-20211229152851-8bc97c8034c0 h1:WfrSFlIlCAtg6Rt2IGna0HhJYSDE45YVHiYqO4wwsEw=

@@ -64,6 +64,8 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 }
 
 func (m *Me) waitordispatch(addr p2p.EndPoint, buf pbuf.Bytes, n int) {
+	defer buf.ManualDestroy()
+
 	recvtotlcnt := atomic.AddUint64(&m.recvtotlcnt, uint64(buf.Len()))
 	recvloopcnt := atomic.AddUintptr(&m.recvloopcnt, 1)
 	recvlooptime := atomic.LoadInt64(&m.recvlooptime)
@@ -100,6 +102,7 @@ func (m *Me) waitordispatch(addr p2p.EndPoint, buf pbuf.Bytes, n int) {
 			}
 			m.dispatch(p, b, addr)
 		})
+		h.ManualDestroy()
 	})
 }
 
@@ -151,7 +154,9 @@ func (m *Me) dispatch(header *head.Packet, body []byte, addr p2p.EndPoint) {
 	data = data.SliceFrom(8)
 	if p.usezstd {
 		data.V(func(b []byte) {
+			old := data
 			data, err = algo.DecodeZstd(b) // skip hash
+			old.ManualDestroy()
 		})
 		if err != nil {
 			if config.ShowDebugLog {
@@ -169,4 +174,5 @@ func (m *Me) dispatch(header *head.Packet, body []byte, addr p2p.EndPoint) {
 		return
 	}
 	fn(header, p, data)
+	data.ManualDestroy()
 }

@@ -46,6 +46,7 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 			return
 		}
 		data = w.ToBytes().Copy().Trans()
+		w.Destroy()
 		if len(data) < bound {
 			bound = len(data)
 			endl = "."
@@ -142,6 +143,9 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 	})
 
 	if ok {
+		if !h.HasInit() {
+			header.ManualDestroy()
+		}
 		return
 	}
 

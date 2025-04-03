@@ -73,14 +73,14 @@ func (s *Tunnel) Read(p []byte) (int, error) {
 		d = s.outcache
 	} else {
 		pkt := <-s.out
-		if !pkt.D.HasInit() {
+		if len(pkt.D) == 0 {
 			return 0, io.EOF
 		}
 		if pkt.H.Size() < 4 {
-			logrus.Warnln("[tunnel] unexpected packet data len", pkt.H.Size(), "content", hex.EncodeToString(pkt.D.Trans()))
+			logrus.Warnln("[tunnel] unexpected packet data len", pkt.H.Size(), "content", hex.EncodeToString(pkt.D))
 			return 0, io.EOF
 		}
-		d = pkt.D.Trans()[4:]
+		d = pkt.D[4:]
 	}
 	if d != nil {
 		if len(p) >= len(d) {
@@ -157,23 +157,21 @@ func (s *Tunnel) handleRead() {
 			continue
 		}
 		p := s.l.Read()
-		if !p.D.HasInit() {
+		if len(p.D) == 0 {
 			logrus.Errorln("[tunnel] read recv nil")
 			break
 		}
 		end := 64
 		endl := "..."
-		if p.D.Len() < 64 {
-			end = p.D.Len()
+		if len(p.D) < 64 {
+			end = len(p.D)
 			endl = "."
 		}
 		var recvseq uint32
-		p.D.V(func(b []byte) {
-			if config.ShowDebugLog {
-				logrus.Debugln("[tunnel] read recv", hex.EncodeToString(b[:end]), endl)
-			}
-			recvseq = binary.LittleEndian.Uint32(b[:4])
-		})
+		if config.ShowDebugLog {
+			logrus.Debugln("[tunnel] read recv", hex.EncodeToString(p.D[:end]), endl)
+		}
+		recvseq = binary.LittleEndian.Uint32(p.D[:4])
 		if recvseq == seq {
 			if config.ShowDebugLog {
 				logrus.Debugln("[tunnel] dispatch seq", seq)

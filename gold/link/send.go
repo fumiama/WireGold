@@ -57,11 +57,13 @@ func (l *Link) WritePacket(proto uint8, data []byte, ttl uint8) {
 		pktb = pb.Seal(l.keys[teatype], teatype, sndcnt&0x07ff)
 	}
 	bs := pktb.Split(int(mtu), false)
+	pktb.Destroy()
 	if config.ShowDebugLog {
 		logrus.Debugln("[send] split packet into", len(bs), "parts")
 	}
 	for _, b := range bs { //TODO: impl. nofrag
 		go l.write2peer(head.BuildPacketFromBytes(b), randseq(sndcnt))
+		b.ManualDestroy()
 	}
 }
 
@@ -69,6 +71,7 @@ func (l *Link) WritePacket(proto uint8, data []byte, ttl uint8) {
 //
 // 因为不保证可达所以不返回错误。
 func (l *Link) write2peer(b pbuf.Bytes, seq uint32) {
+	defer b.ManualDestroy()
 	if l.doublepacket {
 		err := l.write2peer1(b, seq)
 		if err != nil {
@@ -96,6 +99,7 @@ func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (err error) {
 	if conn == nil {
 		return io.ErrClosedPipe
 	}
+	isnewb := false
 	b.V(func(data []byte) {
 		if config.ShowDebugLog {
 			bound := 64
@@ -107,6 +111,7 @@ func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (err error) {
 			logrus.Debugln("[send] crc seq", fmt.Sprintf("%08x", seq), "raw data bytes", hex.EncodeToString(data[:bound]), endl)
 		}
 		b = l.me.xorenc(data, seq)
+		isnewb = true
 		if config.ShowDebugLog {
 			bound := 64
 			endl := "..."
@@ -121,7 +126,12 @@ func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (err error) {
 	})
 	if l.me.base14 {
 		b.V(func(data []byte) {
+			old := b
 			b = pbuf.ParseBytes(base14.Encode(data)...)
+			if isnewb {
+				old.ManualDestroy()
+			}
+			isnewb = true
 			if config.ShowDebugLog {
 				bound := 64
 				endl := "..."
@@ -141,5 +151,8 @@ func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (err error) {
 		}
 		_, err = conn.WriteToPeer(b, peerep)
 	})
+	if isnewb {
+		b.ManualDestroy()
+	}
 	return
 }

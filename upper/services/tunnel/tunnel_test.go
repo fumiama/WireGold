@@ -413,7 +413,10 @@ func (f logFormat) Format(entry *logrus.Entry) ([]byte, error) {
 	buf.WriteString(entry.Message)
 	buf.WriteString("\n")
 
-	return buf.ToBytes().Trans(), nil
+	b := buf.ToBytes().Copy()
+	buf.Destroy()
+
+	return b.Trans(), nil
 }
 
 const (

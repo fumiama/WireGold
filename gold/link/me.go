@@ -312,8 +312,11 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 	pcp.V(func(b []byte) {
 		copy(b, packet)
 	})
-	go pcp.V(func(b []byte) {
-		lnk.WritePacket(head.ProtoData, b, lnk.me.ttl)
-	})
+	go func() {
+		pcp.V(func(b []byte) {
+			lnk.WritePacket(head.ProtoData, b, lnk.me.ttl)
+		})
+		pcp.ManualDestroy()
+	}()
 	return
 }

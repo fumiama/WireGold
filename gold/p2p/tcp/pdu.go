@@ -42,7 +42,7 @@ func (p *packet) pack() *net.Buffers {
 	return &net.Buffers{magicbuf, bin.NewWriterF(func(w *bin.Writer) {
 		w.WriteByte(byte(p.typ))
 		w.WriteUInt16(p.len)
-	}).Trans(), p.dat}
+	}), p.dat}
 }
 
 func (p *packet) Read(_ []byte) (int, error) {
@@ -80,7 +80,8 @@ func (p *packet) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return
 	}
-	p.dat = w.ToBytes().Trans()
+	p.dat = w.ToBytes().Copy().Trans()
+	w.Destroy()
 	return
 }
 

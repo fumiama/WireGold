@@ -23,25 +23,25 @@ import (
 
 // Me 是本机的抽象
 type Me struct {
-	// 用于自我重连
-	cfg *MyConfig
+	// 读写同步锁
+	connmapmu sync.RWMutex
+	// 本机总接收字节数
+	recvtotlcnt uint64
+	// 上一次触发循环计数时间
+	recvlooptime int64
 	// 本机私钥
 	// 利用 Curve25519 生成
 	// https://pkg.go.dev/golang.org/x/crypto/curve25519
 	// https://www.zhihu.com/question/266758647
 	privKey [32]byte
-	// 本机虚拟 ip
-	me net.IP
-	// 本机子网
-	subnet net.IPNet
-	// 本机 endpoint
-	ep p2p.EndPoint
-	// 本机活跃的所有连接
-	connections map[string]*Link
-	// 读写同步锁
-	connmapmu sync.RWMutex
-	// 本机监听的连接端点, 也用于向对端直接发送报文
-	conn p2p.Conn
+	// 本机上层配置
+	srcport, dstport, mtu, speedloop uint16
+	// 报头掩码
+	mask uint64
+	// 本机总接收数据包计数
+	recvloopcnt uintptr
+	// 用于自我重连
+	cfg *MyConfig
 	// 本机网卡
 	nic *lower.NICIO
 	// 本机路由表
@@ -50,16 +50,19 @@ type Me struct {
 	recving *ttl.Cache[uint16, head.PacketBytes]
 	// 抗重放攻击记录池
 	recved *ttl.Cache[uint64, struct{}]
-	// 本机上层配置
-	srcport, dstport, mtu, speedloop uint16
-	// 报头掩码
-	mask uint64
-	// 本机总接收字节数
-	recvtotlcnt uint64
-	// 上一次触发循环计数时间
-	recvlooptime int64
-	// 本机总接收数据包计数
-	recvloopcnt uintptr
+
+	// 以上为64位对齐, 修改时注意保持
+
+	// 本机虚拟 ip
+	me net.IP
+	// 本机子网
+	subnet net.IPNet
+	// 本机 endpoint
+	ep p2p.EndPoint
+	// 本机活跃的所有连接
+	connections map[string]*Link
+	// 本机监听的连接端点, 也用于向对端直接发送报文
+	conn p2p.Conn
 	// 是否进行 base16384 编码
 	base14 bool
 	// 本机初始 ttl

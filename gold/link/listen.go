@@ -3,6 +3,7 @@ package link
 import (
 	"errors"
 	"net"
+	"runtime"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -27,6 +28,9 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 	}
 	m.ep = conn.LocalAddr()
 	logrus.Infoln("[listen] at", m.ep)
+	ncpu := runtime.NumCPU()
+	bufs := make([]byte, lstnbufgragsz*ncpu)
+	fils := make([]uintptr, ncpu)
 	go func() {
 		var (
 			n    int
@@ -34,7 +38,26 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 			err  error
 		)
 		for {
-			lbf := pbuf.NewBytes(lstnbufgragsz)
+			idx := -1
+			for i := 0; i < ncpu; i++ {
+				if !atomic.CompareAndSwapUintptr(&fils[i], 0, 1) {
+					continue
+				}
+				idx = i
+				break
+			}
+
+			var (
+				lbf pbuf.Bytes
+				fil *uintptr
+			)
+			if idx < 0 {
+				lbf = pbuf.NewBytes(lstnbufgragsz)
+			} else {
+				lbf = pbuf.ParseBytes(bufs[idx*lstnbufgragsz : (idx+1)*lstnbufgragsz]...)
+				fil = &fils[idx]
+			}
+
 			lbf.V(func(b []byte) {
 				n, addr, err = conn.ReadFromPeer(b)
 			})
@@ -57,16 +80,21 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 				}
 				continue
 			}
-			go m.waitordispatch(addr, lbf, n)
+			go m.waitordispatch(addr, lbf, n, fil)
 		}
 	}()
 	return
 }
 
-func (m *Me) waitordispatch(addr p2p.EndPoint, buf pbuf.Bytes, n int) {
-	defer buf.ManualDestroy()
+func (m *Me) waitordispatch(addr p2p.EndPoint, buf pbuf.Bytes, n int, fil *uintptr) {
+	defer func() {
+		buf.ManualDestroy()
+		if fil != nil {
+			atomic.StoreUintptr(fil, 0)
+		}
+	}()
 
-	recvtotlcnt := atomic.AddUint64(&m.recvtotlcnt, uint64(buf.Len()))
+	recvtotlcnt := atomic.AddUint64(&m.recvtotlcnt, uint64(n))
 	recvloopcnt := atomic.AddUintptr(&m.recvloopcnt, 1)
 	recvlooptime := atomic.LoadInt64(&m.recvlooptime)
 	if recvloopcnt%uintptr(m.speedloop) == 0 {

@@ -8,7 +8,7 @@ require (
 	github.com/fumiama/blake2b-simd v0.0.0-20220412110131-4481822068bb
 	github.com/fumiama/go-base16384 v1.7.0
 	github.com/fumiama/go-x25519 v1.0.0
-	github.com/fumiama/orbyte v0.0.0-20250404130147-ac9d26dfb903
+	github.com/fumiama/orbyte v0.0.0-20250414141219-63dd01e81ea2
 	github.com/fumiama/water v0.0.0-20211231134027-da391938d6ac
 	github.com/klauspost/compress v1.17.9
 	github.com/sirupsen/logrus v1.9.3

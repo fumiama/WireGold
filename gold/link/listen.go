@@ -108,7 +108,7 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 				go m.waitordispatch(addr, lbf, n, fil)
 			} else {
 				if config.ShowDebugLog {
-					logrus.Infoln("[listen] send dispatch to cpu", idx)
+					logrus.Debugln("[listen] send dispatch to cpu", idx)
 				}
 				m.jobs[idx] <- job{addr: addr, buf: lbf, n: n, fil: fil}
 			}

@@ -87,6 +87,7 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 		if config.ShowDebugLog {
 			logrus.Debugln("[recv] ignore duplicated seq^crc packet, seq", strconv.FormatUint(uint64(seq), 16), "crc", strconv.FormatUint(crc, 16))
 		}
+		header.ManualDestroy()
 		return
 	}
 	if config.ShowDebugLog {
@@ -150,8 +151,11 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 	}
 
 	h, got := m.recving.GetOrSet(uint16(seq), header)
-	if got && h == header {
-		panic("unexpected multi-put found")
+	if got {
+		if h == header {
+			panic("unexpected multi-put found")
+		}
+		header.ManualDestroy()
 	}
 	if config.ShowDebugLog {
 		logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq&0xffff), 16), "get frag part isnew:", !got)

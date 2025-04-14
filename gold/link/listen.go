@@ -20,6 +20,26 @@ import (
 
 const lstnbufgragsz = 65536
 
+type job struct {
+	addr p2p.EndPoint
+	buf  pbuf.Bytes
+	n    int
+	fil  *uintptr
+}
+
+func (m *Me) runworkers() {
+	ncpu := runtime.NumCPU()
+	m.jobs = make([]chan job, ncpu)
+	for i := 0; i < ncpu; i++ {
+		m.jobs[i] = make(chan job, 4096)
+		go func(jobs <-chan job) {
+			for jb := range jobs {
+				m.waitordispatch(jb.addr, jb.buf, jb.n, jb.fil)
+			}
+		}(m.jobs[i])
+	}
+}
+
 // 监听本机 endpoint
 func (m *Me) listen() (conn p2p.Conn, err error) {
 	conn, err = m.ep.Listen()
@@ -31,6 +51,7 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 	ncpu := runtime.NumCPU()
 	bufs := make([]byte, lstnbufgragsz*ncpu)
 	fils := make([]uintptr, ncpu)
+	go m.runworkers()
 	go func() {
 		var (
 			n    int
@@ -80,7 +101,17 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 				}
 				continue
 			}
-			go m.waitordispatch(addr, lbf, n, fil)
+			if idx < 0 {
+				if config.ShowDebugLog {
+					logrus.Infoln("[listen] go dispatch")
+				}
+				go m.waitordispatch(addr, lbf, n, fil)
+			} else {
+				if config.ShowDebugLog {
+					logrus.Infoln("[listen] send dispatch to cpu", idx)
+				}
+				m.jobs[idx] <- job{addr: addr, buf: lbf, n: n, fil: fil}
+			}
 		}
 	}()
 	return

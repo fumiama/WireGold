@@ -63,6 +63,8 @@ type Me struct {
 	connections map[string]*Link
 	// 本机监听的连接端点, 也用于向对端直接发送报文
 	conn p2p.Conn
+	// 供内部使用的包分发任务列
+	jobs []chan job
 	// 是否进行 base16384 编码
 	base14 bool
 	// 本机初始 ttl
@@ -152,6 +154,9 @@ func NewMe(cfg *MyConfig) (m Me) {
 
 // Restart 重新连接
 func (m *Me) Restart() error {
+	for i := 0; i < len(m.jobs); i++ {
+		close(m.jobs[i])
+	}
 	oldconn := m.conn
 	m.conn = nil
 	if bin.IsNonNilInterface(oldconn) {
@@ -203,6 +208,9 @@ func (m *Me) NetworkConfigs() []any {
 }
 
 func (m *Me) Close() error {
+	for i := 0; i < len(m.jobs); i++ {
+		close(m.jobs[i])
+	}
 	m.connections = nil
 	if bin.IsNonNilInterface(m.conn) {
 		_ = m.conn.Close()

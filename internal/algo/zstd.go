@@ -9,7 +9,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
-func EncodeZstd(data []byte) pbuf.Bytes {
+func EncodeZstd(data []byte) []byte {
 	return bin.SelectWriter().P(func(w *pbuf.Buffer) {
 		enc, err := zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedFastest))
 		if err != nil {
@@ -23,19 +23,19 @@ func EncodeZstd(data []byte) pbuf.Bytes {
 		if err != nil {
 			panic(err)
 		}
-	}).ToBytes()
+	}).ToBytes().Copy().Ignore().Trans()
 }
 
-func DecodeZstd(data []byte) (b pbuf.Bytes, err error) {
+func DecodeZstd(data []byte) (b []byte, err error) {
 	dec, err := zstd.NewReader(bytes.NewReader(data))
 	if err != nil {
-		return pbuf.Bytes{}, err
+		return
 	}
 
 	b = bin.SelectWriter().P(func(w *pbuf.Buffer) {
 		_, err = io.Copy(w, dec)
 		dec.Close()
-	}).ToBytes()
+	}).ToBytes().Copy().Ignore().Trans()
 
 	return
 }

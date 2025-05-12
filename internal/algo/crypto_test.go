@@ -25,7 +25,7 @@ func TestXOR(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		seq, dec := DecodeXOR(EncodeXOR(r1.Bytes(), mask, uint32(i)).Trans(), mask)
+		seq, dec := DecodeXOR(EncodeXOR(r1.Bytes(), mask, uint32(i)), mask)
 		if !bytes.Equal(dec, r2.Bytes()) {
 			t.Fatal("unexpected xor at", i, "except", hex.EncodeToString(r2.Bytes()), "got", hex.EncodeToString(dec))
 		}
@@ -51,11 +51,11 @@ func TestXChacha20(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < 4096; i++ {
-		db, err := DecodeAEAD(aead, uint16(i), EncodeAEAD(aead, uint16(i), data[:i]).Trans())
+		db, err := DecodeAEAD(aead, uint16(i), EncodeAEAD(aead, uint16(i), data[:i]))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !bytes.Equal(db.Trans(), data[:i]) {
+		if !bytes.Equal(db, data[:i]) {
 			t.Fatal("unexpected preshared at idx(len)", i, "addt", uint16(i))
 		}
 	}

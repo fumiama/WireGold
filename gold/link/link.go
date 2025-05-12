@@ -12,7 +12,6 @@ import (
 	"github.com/fumiama/WireGold/gold/p2p"
 	"github.com/fumiama/WireGold/internal/bin"
 	base14 "github.com/fumiama/go-base16384"
-	"github.com/fumiama/orbyte/pbuf"
 	"github.com/sirupsen/logrus"
 )
 
@@ -70,25 +69,24 @@ func (m *Me) Connect(peer string) (*Link, error) {
 	return nil, ErrPerrNotExist
 }
 
-func (l *Link) ToLower(header *head.Packet, data pbuf.Bytes) {
+func (l *Link) ToLower(header *head.Packet, data []byte) {
 	if l.pipe != nil {
+		d := make([]byte, len(data))
+		copy(d, data)
 		l.pipe <- LinkData{
 			H: *header,
-			D: data.Copy().Trans(),
+			D: d,
 		}
 		if config.ShowDebugLog {
 			logrus.Debugln("[listen] deliver to pipe of", l.peerip)
 		}
 		return
 	}
-	var err error
-	data.V(func(b []byte) {
-		_, err = l.me.nic.Write(b)
-	})
+	_, err := l.me.nic.Write(data)
 	if err != nil {
-		logrus.Errorln("[listen] deliver", data.Len(), "bytes data to nic err:", err)
+		logrus.Errorln("[listen] deliver", len(data), "bytes data to nic err:", err)
 	} else if config.ShowDebugLog {
-		logrus.Debugln("[listen] deliver", data.Len(), "bytes data to nic")
+		logrus.Debugln("[listen] deliver", len(data), "bytes data to nic")
 	}
 }
 

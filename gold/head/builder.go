@@ -87,11 +87,10 @@ func (pb *DataBuilder) Zstd() *DataBuilder {
 	return pb.p(func(ub *PacketBuf) {
 		data := algo.EncodeZstd(ub.Bytes())
 		ub.Reset()
-		data.V(func(b []byte) { ub.Write(b) })
+		ub.Write(data)
 		if config.ShowDebugLog {
 			logrus.Debugln(file.Header(), strconv.FormatUint(ub.DAT.md5h8, 16), "data after zstd", file.ToLimitHexString(ub.Bytes(), 64))
 		}
-		data.ManualDestroy()
 	})
 }
 
@@ -125,8 +124,7 @@ func (pb *DataBuilder) Seal(aead cipher.AEAD, teatyp uint8, additional uint16) *
 			w.P(func(b *pbuf.Buffer) {
 				data := algo.EncodeAEAD(aead, additional, b.Bytes())
 				ub.Reset()
-				data.V(func(b []byte) { ub.Write(b) })
-				data.ManualDestroy()
+				ub.Write(data)
 			})
 			w.Destroy()
 		}))
@@ -204,7 +202,7 @@ func (pb *PacketBuilder) Split(mtu int, nofrag bool) (pbs []PacketBytes) {
 			pbs = []PacketBytes{
 				pbuf.BufferItemToBytes((*PacketItem)(
 					pb.copy().noFrag(nofrag).hasMore(false).offset(0),
-				)),
+				)).Ignore(),
 			}
 			return
 		}
@@ -226,7 +224,7 @@ func (pb *PacketBuilder) Split(mtu int, nofrag bool) (pbs []PacketBytes) {
 			}
 			pbs[i] = pbuf.BufferItemToBytes((*PacketItem)(
 				pb.copy().offset(uint16(i*datalim)),
-			)).Slice(a, b)
+			)).Ignore().Slice(a, b)
 		}
 	})
 	return

@@ -123,7 +123,7 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 				logrus.Warnln("[recv] transfer drop packet: zero ttl")
 				return
 			}
-			go lnk.write2peer(pbuf.ParseBytes(data...).Copy(), seq)
+			go lnk.write2peer(pbuf.ParseBytes(data...).Ignore().Copy(), seq)
 			if config.ShowDebugLog {
 				logrus.Debugln("[listen] trans", len(data), "bytes packet to", p.Dst().String()+":"+strconv.Itoa(int(p.DstPort)))
 			}

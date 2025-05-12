@@ -110,24 +110,24 @@ func (l *Link) write2peer1(b pbuf.Bytes, seq uint32) (err error) {
 			}
 			logrus.Debugln("[send] crc seq", fmt.Sprintf("%08x", seq), "raw data bytes", hex.EncodeToString(data[:bound]), endl)
 		}
-		b = l.me.xorenc(data, seq)
+		b = pbuf.ParseBytes(l.me.xorenc(data, seq)...).Ignore()
 		isnewb = true
-		if config.ShowDebugLog {
-			bound := 64
-			endl := "..."
-			if b.Len() < bound {
-				bound = b.Len()
-				endl = "."
-			}
-			b.V(func(b []byte) {
-				logrus.Debugln("[send] crc seq", fmt.Sprintf("%08x", seq), "xored data bytes", hex.EncodeToString(b[:bound]), endl)
-			})
-		}
 	})
+	if config.ShowDebugLog {
+		bound := 64
+		endl := "..."
+		if b.Len() < bound {
+			bound = b.Len()
+			endl = "."
+		}
+		b.V(func(b []byte) {
+			logrus.Debugln("[send] crc seq", fmt.Sprintf("%08x", seq), "xored data bytes", hex.EncodeToString(b[:bound]), endl)
+		})
+	}
 	if l.me.base14 {
 		b.V(func(data []byte) {
 			old := b
-			b = pbuf.ParseBytes(base14.Encode(data)...)
+			b = pbuf.ParseBytes(base14.Encode(data)...).Ignore()
 			if isnewb {
 				old.ManualDestroy()
 			}

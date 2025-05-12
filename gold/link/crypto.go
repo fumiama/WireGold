@@ -3,7 +3,6 @@ package link
 import (
 	"encoding/hex"
 
-	"github.com/fumiama/orbyte/pbuf"
 	"github.com/sirupsen/logrus"
 
 	"github.com/fumiama/WireGold/config"
@@ -19,7 +18,7 @@ func (l *Link) randkeyidx() uint8 {
 }
 
 // decode by aead and put b into pool
-func (l *Link) decode(teatype uint8, additional uint16, b []byte) (db pbuf.Bytes, err error) {
+func (l *Link) decode(teatype uint8, additional uint16, b []byte) (db []byte, err error) {
 	if len(b) == 0 || teatype >= 32 {
 		return
 	}
@@ -33,7 +32,9 @@ func (l *Link) decode(teatype uint8, additional uint16, b []byte) (db pbuf.Bytes
 			}
 			logrus.Debugln(file.Header(), "copy plain text", hex.EncodeToString(b[:n]), endl)
 		}
-		return pbuf.ParseBytes(b...).Copy(), nil
+		db = make([]byte, len(b))
+		copy(db, b)
+		return
 	}
 	aead := l.keys[teatype]
 	if aead == nil {
@@ -43,7 +44,7 @@ func (l *Link) decode(teatype uint8, additional uint16, b []byte) (db pbuf.Bytes
 }
 
 // xorenc 按 8 字节, 以初始 m.mask 循环异或编码 data
-func (m *Me) xorenc(data []byte, seq uint32) pbuf.Bytes {
+func (m *Me) xorenc(data []byte, seq uint32) []byte {
 	return algo.EncodeXOR(data, m.mask, seq)
 }
 

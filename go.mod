@@ -5,10 +5,10 @@ go 1.21
 require (
 	github.com/FloatTech/ttl v0.0.0-20250224045156-012b1463287d
 	github.com/RomiChan/syncx v0.0.0-20240418144900-b7402ffdebc7
-	github.com/fumiama/blake2b-simd v0.0.0-20220412110131-4481822068bb
+	github.com/fumiama/blake2b-simd v0.0.0-20250228045919-a5dcaba5419a
 	github.com/fumiama/go-base16384 v1.7.0
 	github.com/fumiama/go-x25519 v1.0.0
-	github.com/fumiama/orbyte v0.0.0-20250414141219-63dd01e81ea2
+	github.com/fumiama/orbyte v0.0.0-20250512155242-23a2b7120589
 	github.com/fumiama/water v0.0.0-20211231134027-da391938d6ac
 	github.com/klauspost/compress v1.17.9
 	github.com/sirupsen/logrus v1.9.3

@@ -59,13 +59,10 @@ func (p *Packet) WriteHeaderTo(buf *bytes.Buffer) {
 		buf.Write((*[PacketHeadNoCRCLen]byte)(
 			(unsafe.Pointer)(p),
 		)[:])
-		b := pbuf.NewBytes(buf.Len())
-		b.V(func(b []byte) {
-			copy(b, buf.Bytes())
-			ClearTTL(b)
-			p.md5h8 = algo.MD5Hash8(b)
-		})
-		b.ManualDestroy()
+		b := make([]byte, buf.Len())
+		copy(b, buf.Bytes())
+		ClearTTL(b)
+		p.md5h8 = algo.MD5Hash8(b)
 		_ = binary.Write(buf, binary.LittleEndian, p.md5h8)
 		return
 	}
@@ -79,13 +76,10 @@ func (p *Packet) WriteHeaderTo(buf *bytes.Buffer) {
 	w.Write(p.src[:])
 	w.Write(p.dst[:])
 	w.P(func(buf *pbuf.Buffer) {
-		b := pbuf.NewBytes(buf.Len())
-		b.V(func(b []byte) {
-			copy(b, buf.Bytes())
-			ClearTTL(b)
-			p.md5h8 = algo.MD5Hash8(b)
-		})
-		b.ManualDestroy()
+		b := make([]byte, buf.Len())
+		copy(b, buf.Bytes())
+		ClearTTL(b)
+		p.md5h8 = algo.MD5Hash8(b)
 	})
 	w.WriteUInt64(p.md5h8)
 	w.P(func(b *pbuf.Buffer) {

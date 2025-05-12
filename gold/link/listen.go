@@ -32,11 +32,17 @@ func (m *Me) runworkers() {
 	m.jobs = make([]chan job, ncpu)
 	for i := 0; i < ncpu; i++ {
 		m.jobs[i] = make(chan job, 4096)
-		go func(jobs <-chan job) {
+		go func(i int, jobs <-chan job) {
 			for jb := range jobs {
+				if config.ShowDebugLog {
+					logrus.Debugln("[listen] job thread", i, "call waitordispatch")
+				}
 				m.waitordispatch(jb.addr, jb.buf, jb.n, jb.fil)
+				if config.ShowDebugLog {
+					logrus.Debugln("[listen] job thread", i, "fin waitordispatch")
+				}
 			}
-		}(m.jobs[i])
+		}(i, m.jobs[i])
 	}
 }
 
@@ -73,9 +79,9 @@ func (m *Me) listen() (conn p2p.Conn, err error) {
 				fil *uintptr
 			)
 			if idx < 0 {
-				lbf = pbuf.NewBytes(lstnbufgragsz)
+				lbf = pbuf.NewLargeBytes(lstnbufgragsz)
 			} else {
-				lbf = pbuf.ParseBytes(bufs[idx*lstnbufgragsz : (idx+1)*lstnbufgragsz]...)
+				lbf = pbuf.ParseBytes(bufs[idx*lstnbufgragsz : (idx+1)*lstnbufgragsz : (idx+1)*lstnbufgragsz]...).Ignore()
 				fil = &fils[idx]
 			}
 
@@ -194,29 +200,23 @@ func (m *Me) dispatch(header *head.Packet, body []byte, addr p2p.EndPoint) {
 		}
 		return
 	}
-	if data.Len() < 8 {
+	if len(data) < 8 {
 		if config.ShowDebugLog {
-			logrus.Debugln("[listen] drop invalid data len packet key idx:", header.CipherIndex(), "addt:", addt, "len", data.Len())
+			logrus.Debugln("[listen] drop invalid data len packet key idx:", header.CipherIndex(), "addt:", addt, "len", len(data))
 		}
 		return
 	}
 	ok := false
-	data.V(func(b []byte) {
-		ok = algo.IsVaildBlake2bHash8(header.PreCRC64(), b)
-	})
+	ok = algo.IsVaildBlake2bHash8(header.PreCRC64(), data)
 	if !ok {
 		if config.ShowDebugLog {
 			logrus.Debugln("[listen] drop invalid hash packet")
 		}
 		return
 	}
-	data = data.SliceFrom(8)
+	data = data[8:]
 	if p.usezstd {
-		data.V(func(b []byte) {
-			old := data
-			data, err = algo.DecodeZstd(b) // skip hash
-			old.ManualDestroy()
-		})
+		data, err = algo.DecodeZstd(data) // skip hash
 		if err != nil {
 			if config.ShowDebugLog {
 				logrus.Debugln("[listen] drop invalid zstd packet:", err)
@@ -224,7 +224,7 @@ func (m *Me) dispatch(header *head.Packet, body []byte, addr p2p.EndPoint) {
 			return
 		}
 		if config.ShowDebugLog {
-			logrus.Debugln("[listen] zstd decoded len:", data.Len())
+			logrus.Debugln("[listen] zstd decoded len:", len(data))
 		}
 	}
 	fn, ok := GetDispacher(header.Proto.Proto())
@@ -233,5 +233,4 @@ func (m *Me) dispatch(header *head.Packet, body []byte, addr p2p.EndPoint) {
 		return
 	}
 	fn(header, p, data)
-	data.ManualDestroy()
 }

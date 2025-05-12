@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/FloatTech/ttl"
-	"github.com/fumiama/orbyte/pbuf"
 	"github.com/fumiama/water/waterutil"
 	"github.com/sirupsen/logrus"
 
@@ -316,15 +315,6 @@ func (m *Me) sendAllSameDst(packet []byte) (n int) {
 		logrus.Warnln("[me] drop packet to", dst.String()+":"+strconv.Itoa(int(m.DstPort())), ": nil nexthop")
 		return
 	}
-	pcp := pbuf.NewBytes(len(packet))
-	pcp.V(func(b []byte) {
-		copy(b, packet)
-	})
-	go func() {
-		pcp.V(func(b []byte) {
-			lnk.WritePacket(head.ProtoData, b, lnk.me.ttl)
-		})
-		pcp.ManualDestroy()
-	}()
+	lnk.WritePacket(head.ProtoData, packet, lnk.me.ttl)
 	return
 }

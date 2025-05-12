@@ -12,6 +12,10 @@ import (
 var packetPool = pbuf.NewBufferPool[Packet]()
 
 func init() {
+	packetPool.LimitInput(256)
+	packetPool.LimitOutput(256)
+	pbuf.LimitInput(256)
+	pbuf.LimitOutput(256)
 	if config.ShowDebugLog {
 		go status()
 	}
@@ -23,7 +27,7 @@ func selectPacket(buf ...byte) *PacketItem {
 }
 
 func status() {
-	for range time.NewTicker(time.Minute).C {
+	for range time.NewTicker(time.Second).C {
 		out, in := packetPool.CountItems()
 		logrus.Infoln(file.Header(), "packet outside:", out, "inside:", in)
 		out, in = pbuf.CountItems()

@@ -145,6 +145,9 @@ func (wg *WG) init(srcport, dstport uint16) {
 		if peer.MTU >= 65535 {
 			panic("peer " + peer.IP + ": MTU too large")
 		}
+		if peer.MTU == 0 {
+			peer.MTU = wg.c.MTU
+		}
 		if peer.MTURandomRange >= peer.MTU/2 {
 			panic("peer " + peer.IP + ": MTURandomRange too large")
 		}

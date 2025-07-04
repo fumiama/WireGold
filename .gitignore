@@ -15,5 +15,5 @@
 # vendor/
 
 .DS_Store
-config.yaml
+/*.yaml
 WireGold

@@ -27,7 +27,7 @@ func selectPacket(buf ...byte) *PacketItem {
 }
 
 func status() {
-	for range time.NewTicker(time.Second).C {
+	for range time.NewTicker(time.Minute).C {
 		out, in := packetPool.CountItems()
 		logrus.Infoln(file.Header(), "packet outside:", out, "inside:", in)
 		out, in = pbuf.CountItems()

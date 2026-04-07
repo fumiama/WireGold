@@ -36,7 +36,6 @@ jobs:
         uses: actions/setup-go@master
         with:
           go-version: ^1.25
-          install-mode: goinstall
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@master
@@ -45,3 +44,4 @@ jobs:
         uses: golangci/golangci-lint-action@master
         with:
           version: latest
+          install-mode: goinstall

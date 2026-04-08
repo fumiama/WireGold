@@ -5,55 +5,54 @@
   <h1>WireGold</h1>
   Wire Golang Guard = WireGold<br><br>
 
-  English | [中文](README_ZH.md)
+  [English](README.md) | 中文
 </div>
 
-## Overview
+## 概述
 
-WireGold is a pure Go Layer 3 VPN inspired by WireGuard.
+WireGold 是一个纯 Go 实现的第 3 层 VPN，灵感来自 WireGuard。
 
-### Features
+### 主要特性
 
-- **Encryption**: XChaCha20-Poly1305 (AEAD) + Curve25519 key exchange + BLAKE2B integrity check
-- **Transport**: UDP / UDP-Lite / TCP / Raw IP
-- **Encoding**: Optional Base16384 encoding to traverse text-only filters
-- **Anti-censorship**: XOR mask header obfuscation + randomized MTU scaling + optional double-send
-- **Compression**: Optional Zstd payload compression
-- **NAT traversal**: Built-in Hello/Query/Notify protocol for keepalive and hole punching
-- **Routing**: Multi-hop forwarding with TTL decrement and routing table management
-- **Key rotation**: 32 preshared key slots with random index selection per packet
+- **加密**: XChaCha20-Poly1305 (AEAD) + Curve25519 密钥交换 + BLAKE2B 完整性校验
+- **传输**: 支持 UDP / UDP-Lite / TCP / Raw IP 多种底层传输
+- **编码**: 可选 Base16384 编码以穿越文本过滤
+- **抗审查**: XOR 掩码混淆报头 + 随机 MTU 放缩 + 可选双倍发包
+- **压缩**: 可选 Zstd 数据压缩
+- **NAT 穿透**: 内置 Hello/Query/Notify 协议实现 NAT 保活与穿透
+- **路由转发**: 支持多跳转发 (TTL 递减) 与路由表管理
+- **密钥集**: 支持 32 组预共享密钥混合，随机选择密钥索引
 
+## 使用方法
 
-## Usage
+> Windows 用户需将对应架构的 `wintun.dll` (位于 `lower/wintun/`) 放在可执行文件同目录下
 
-> On Windows, place the `wintun.dll` matching your architecture (from `lower/wintun/`) alongside the executable.
-
-> For high-latency lossy links, consider pairing with [UDPspeeder](https://github.com/wangyu-/UDPspeeder).
+> 高延迟有损链路建议配合 [UDPspeeder](https://github.com/wangyu-/UDPspeeder) 使用
 
 ```bash
 wg [-c config.yaml] [-d|w] [-g] [-h] [-p] [-l log.txt]
 ```
 
-#### Flags
+#### 参数说明
 
 ```bash
   -c string
-        specify conf file (default "config.yaml")
-  -d    print debug logs
-  -g    generate key pair
-  -h    display this help
+        指定配置文件 (默认 "config.yaml")
+  -d    输出调试日志
+  -g    生成密钥对
+  -h    显示帮助
   -l string
-        write log to file (default "-")
-  -p    show my publickey
+        将日志写入文件 (默认 "-")
+  -p    显示本机公钥
   -pg
-        generate preshared key
-  -w    only show logs above warn level
+        生成预共享密钥
+  -w    仅显示 warn 及以上级别日志
 ```
 
-## Configuration
+## 配置文件示例
 
-- **macOS Mojave**: max MTU (IPv4 endpoint) is `9159`
-- **IPv6 endpoint**: recommended MTU `1280–1500` to avoid oversized segment drops
+- **macOS Mojave**: 最大 MTU (IPv4 endpoint) 为 `9159`
+- **IPv6 endpoint**: 推荐 MTU `1280~1500`，避免大分片被丢弃
 
 ```yaml
 IP: 192.168.233.1
@@ -70,7 +69,7 @@ Peers:
     PublicKey: 徯萃嵾爻燸攗窍褃冔蒔犡緇袿屿組待族砇嘀
     PresharedKey: 瀸敀爅崾嘊嵜紼樴稍毯攣矐訷蟷扛嬋庩崛昀
     EndPoint: 1.2.3.4:56789
-    AllowedIPs: ["192.168.233.2/32", "x192.168.233.3/32"] # accept packets from 192.168.233.3, but don not create route
+    AllowedIPs: ["192.168.233.2/32", "x192.168.233.3/32"]
     KeepAliveSeconds: 0
     QueryList: ["192.168.233.3"]
     MTU: 1400
@@ -83,30 +82,30 @@ Peers:
     PublicKey: 牢喨粷詸衭譛浾蘹櫠砙杹蟫瑳叩刋橋経挵蘀
     PresharedKey: 竅琚喫従痸告烈兇厕趭萨假蔛瀇譄施烸蝫瘀
     EndPoint: ""
-    AllowedIPs: ["192.168.233.3/32", "y192.168.66.1/32"] # add route to 192.168.66.1 into inner route table but do not add it to system one
+    AllowedIPs: ["192.168.233.3/32", "y192.168.66.1/32"]
     MTU: 752
     DoublePacket: true
     KeepAliveSeconds: 0
     AllowTrans: false
 ```
 
-### Configuration Reference
+### 配置字段说明
 
-| Field | Description |
-|-------|-------------|
-| `AllowedIPs` | Prefix `x` to accept packets from the subnet without creating a system route; prefix `y` to add an internal route table entry only |
-| `Mask` | XOR mask for header obfuscation |
-| `Base14` | Enable Base16384 encoding |
-| `MTURandomRange` | Randomly shrink MTU by up to this value (never grows), adding traffic fingerprint randomness |
-| `DoublePacket` | Send every packet twice to counter heavy packet loss |
-| `KeepAliveSeconds` | NAT keepalive interval in seconds; 0 disables keepalive |
-| `QueryList` | Peer IPs to query for NAT traversal |
-| `UseZstd` | Enable Zstd compression |
-| `AllowTrans` | Allow this peer to relay traffic for other peers |
+| 字段 | 说明 |
+|------|------|
+| `AllowedIPs` | 前缀 `x` 表示只接受该网段报文但不建系统路由；前缀 `y` 表示只添加内部路由表条目 |
+| `Mask` | XOR 掩码，用于混淆报头 |
+| `Base14` | 启用 Base16384 编码 |
+| `MTURandomRange` | 随机缩小 MTU 的范围 (只减不增)，增加流量特征随机性 |
+| `DoublePacket` | 双倍发包以对抗强丢包链路 |
+| `KeepAliveSeconds` | NAT 保活间隔 (秒)，0 为不保活 |
+| `QueryList` | NAT 穿透时查询的对端 IP 列表 |
+| `UseZstd` | 启用 Zstd 压缩 |
+| `AllowTrans` | 是否允许为其他 Peer 转发流量 |
 
-## Benchmark (localhost)
+## 本地基准测试
 
-> MacBook Air M1, battery mode
+> Mac Book Air M1，电池供电模式
 
 <details>
 <summary>UDP MTU 4096</summary>

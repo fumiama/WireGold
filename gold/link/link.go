@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net"
 	"sync/atomic"
-	"time"
 
 	"github.com/fumiama/WireGold/config"
 	"github.com/fumiama/WireGold/gold/head"
@@ -46,8 +45,8 @@ type Link struct {
 	keys [32]cipher.AEAD
 	// 本机信息
 	me *Me
-	// 最后一次收到报文的时间
-	lastalive *time.Time
+	// 最后一次收到报文的时间 (UnixNano)
+	lastalive atomic.Int64
 	// 是否允许转发
 	allowtrans bool
 	// 是否对数据进行 zstd 压缩

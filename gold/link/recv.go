@@ -152,10 +152,18 @@ func (m *Me) wait(data []byte, addr p2p.EndPoint) (h head.PacketBytes) {
 
 	h, got := m.recving.GetOrSet(uint16(seq), header)
 	if got {
-		if h == header {
+		if !h.HasInit() {
+			// GetOrSet found an expired entry: it deleted it and
+			// returned zero-value while reporting got=true, but did
+			// NOT store our header. Re-store it now.
+			m.recving.Set(uint16(seq), header)
+			h = header
+			got = false
+		} else if h == header {
 			panic("unexpected multi-put found")
+		} else {
+			header.ManualDestroy()
 		}
-		header.ManualDestroy()
 	}
 	if config.ShowDebugLog {
 		logrus.Debugln("[recv]", strconv.FormatUint(uint64(seq&0xffff), 16), "get frag part isnew:", !got)

@@ -2,9 +2,7 @@ package link
 
 import (
 	"encoding/json"
-	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/sirupsen/logrus"
 
@@ -23,8 +21,8 @@ func (l *Link) keepAlive(dur int64) {
 			if l.me.connections == nil {
 				return
 			}
-			la := (*time.Time)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&l.lastalive))))
-			if la != nil && time.Since(*la) > 10*time.Second*time.Duration(dur) { // 可能已经被阻断， 断开重连
+			la := l.lastalive.Load()
+			if la != 0 && time.Since(time.Unix(0, la)) > 10*time.Second*time.Duration(dur) { // 可能已经被阻断， 断开重连
 				logrus.Warnln(file.Header(), "no response after 10 keep alive tries, re-connecting...")
 				err := l.me.Restart()
 				if err != nil {

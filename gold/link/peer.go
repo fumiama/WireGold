@@ -2,9 +2,7 @@ package link
 
 import (
 	"net"
-	"sync/atomic"
 	"time"
-	"unsafe"
 
 	curve "github.com/fumiama/go-x25519"
 	"github.com/sirupsen/logrus"
@@ -148,7 +146,6 @@ func (m *Me) extractPeer(srcip, dstip net.IP, addr p2p.EndPoint) *Link {
 			p.endpoint = addr
 		}
 	}
-	now := time.Now()
-	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&p.lastalive)), unsafe.Pointer(&now))
+	p.lastalive.Store(time.Now().UnixNano())
 	return p
 }

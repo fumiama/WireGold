@@ -168,7 +168,14 @@ func main() {
 }
 
 func displayHelp(hint string) {
-	fmt.Println(hint)
+	if hint != "" {
+		fmt.Println(hint)
+		fmt.Println("")
+	}
+	fmt.Println("WireGold Version:", config.Version)
+	fmt.Println("Author: Fumiama Minamoto")
+	fmt.Println("Released with GPL-3.0 license")
+	fmt.Println("")
 	flag.Usage()
 	os.Exit(0)
 }

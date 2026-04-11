@@ -6,52 +6,69 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ github.token }}
+  CGO_ENABLED: 0
+  LDFLAGS: -s -w -checklinkname=0
+  VERSION_PKG: github.com/fumiama/WireGold/config
 
 jobs:
-  my-job:
-    name: Build WireGold on Push Tag 🚀
+  build:
+    name: Build ${{ matrix.name }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { name: linux-x64,              goos: linux,   goarch: amd64  }
+          - { name: linux-x86,              goos: linux,   goarch: "386"  }
+          - { name: windows-x64,            goos: windows, goarch: amd64, ext: .exe }
+          - { name: windows-x86,            goos: windows, goarch: "386", ext: .exe }
+          - { name: linux-arm64,            goos: linux,   goarch: arm64, goarm: "7" }
+          - { name: linux-armv6,            goos: linux,   goarch: arm,   goarm: "6" }
+          - { name: linux-mips,             goos: linux,   goarch: mips   }
+          - { name: linux-mips-softfloat,   goos: linux,   goarch: mips,   gomips: softfloat }
+          - { name: linux-mipsel,           goos: linux,   goarch: mipsle }
+          - { name: linux-mipsel-softfloat, goos: linux,   goarch: mipsle, gomips: softfloat }
+    env:
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+      GOARM: ${{ matrix.goarm }}
+      GOMIPS: ${{ matrix.gomips }}
     steps:
-
       - name: Set up Go
         uses: actions/setup-go@master
         with:
           go-version: ^1.25
 
-      - name: Check out code into the Go module directory
+      - name: Check out code
         uses: actions/checkout@master
 
       - name: Cache Go
-        id: cache
         uses: actions/cache@v4
         with:
-          # A list of files, directories, and wildcard patterns to cache and restore
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-build-${{ hashFiles('**/go.sum') }}
 
       - name: Tidy Go modules
         run: go mod tidy
 
-      - name: Build linux-x64
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-x64 -trimpath
-      - name: Build linux-x86
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-x86 -trimpath
-      - name: Build windows-x64
-        run: CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-windows-x64.exe -trimpath
-      - name: Build windows-x86
-        run: CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-windows-x86.exe -trimpath
-      - name: Build arm64
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 GOARM=7 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-arm64 -trimpath
-      - name: Build armv6
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-armv6 -trimpath
-      - name: Build mips
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=mips go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-mips -trimpath
-      - name: Build mips-softfloat
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=mips GOMIPS=softfloat go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-mips-softfloat -trimpath
-      - name: Build mipsel
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=mipsle go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-mipsel -trimpath
-      - name: Build mipsel-softfloat
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -ldflags="-s -w -checklinkname=0" -o artifacts/wg-linux-mipsel-softfloat -trimpath
+      - name: Build
+        run: go build -ldflags="${LDFLAGS} -X ${VERSION_PKG}.Version=${GITHUB_REF_NAME#v}" -o wg-${{ matrix.name }}${{ matrix.ext }} -trimpath
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wg-${{ matrix.name }}
+          path: wg-${{ matrix.name }}${{ matrix.ext }}
+
+  release:
+    name: Upload Release 🚀
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

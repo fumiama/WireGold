@@ -75,16 +75,12 @@ func (l *Link) write2peer(b pbuf.Bytes, seq uint32) {
 	if l.doublepacket {
 		err := l.write2peer1(b, seq)
 		if err != nil {
-			if config.ShowDebugLog {
-				logrus.Warnln("[send] double wr2peer", l.peerip, "err:", err)
-			}
+			logrus.Warnln("[send] double wr2peer", l.peerip, "err:", err)
 		}
 	}
 	err := l.write2peer1(b, seq)
 	if err != nil {
-		if config.ShowDebugLog {
-			logrus.Warnln("[send] wr2peer", l.peerip, "err:", err)
-		}
+		logrus.Warnln("[send] wr2peer", l.peerip, "err:", err)
 	}
 }
 

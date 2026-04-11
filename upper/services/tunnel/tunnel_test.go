@@ -103,14 +103,14 @@ func testTunnel(t *testing.T, nw string, isplain, isbase14 bool, pshk *[32]byte,
 	t.Log("peer publ key:", hex.EncodeToString(peerpk.Public()[:]))
 
 	epm := "127.0.0.1"
-	if nw != "ip" {
+	if nw != "ip" && nw != "icmp" {
 		epm += ":0"
 	}
 	// under macos you need to run
 	//
 	// sudo ifconfig lo0 alias 127.0.0.2
 	epp := "127.0.0.2"
-	if nw != "ip" {
+	if nw != "ip" && nw != "icmp" {
 		epp += ":0"
 	}
 
@@ -238,14 +238,14 @@ func benchmarkTunnel(b *testing.B, sz int, nw string, isplain, isbase14 bool, ps
 	}
 
 	epm := "127.0.0.1"
-	if nw != "ip" {
+	if nw != "ip" && nw != "icmp" {
 		epm += ":0"
 	}
 	// under macos you need to run
 	//
 	// sudo ifconfig lo0 alias 127.0.0.2
 	epp := "127.0.0.2"
-	if nw != "ip" {
+	if nw != "ip" && nw != "icmp" {
 		epp += ":0"
 	}
 

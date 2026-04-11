@@ -23,7 +23,7 @@ func Register(network string, initializer Initializer) (actual Initializer, hase
 type EndPoint interface {
 	fmt.Stringer
 	Network() string
-	Euqal(EndPoint) bool
+	Equal(EndPoint) bool
 	Listen() (Conn, error)
 }
 

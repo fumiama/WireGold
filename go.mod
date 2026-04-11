@@ -12,12 +12,13 @@ require (
 	github.com/fumiama/water v0.0.0-20211231134027-da391938d6ac
 	github.com/klauspost/compress v1.18.5
 	github.com/sirupsen/logrus v1.9.4
-	golang.org/x/crypto v0.49.0
+	golang.org/x/crypto v0.50.0
+	golang.org/x/net v0.53.0
+	golang.org/x/sys v0.43.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/fumiama/wintun v0.0.0-20211229152851-8bc97c8034c0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 )

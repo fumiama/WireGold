@@ -208,7 +208,10 @@ func (m *Me) NetworkConfigs() []any {
 
 func (m *Me) Close() error {
 	for i := 0; i < len(m.jobs); i++ {
-		close(m.jobs[i])
+		jb := m.jobs[i]
+		if jb != nil {
+			close(jb)
+		}
 	}
 	m.connections = nil
 	if bin.IsNonNilInterface(m.conn) {

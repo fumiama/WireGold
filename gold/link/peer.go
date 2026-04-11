@@ -137,8 +137,8 @@ func (m *Me) extractPeer(srcip, dstip net.IP, addr p2p.EndPoint) *Link {
 		logrus.Warnln(file.Header(), "packet from", srcip, "to", dstip, "is refused")
 		return nil
 	}
-	if bin.IsNilInterface(p.endpoint) || !p.endpoint.Euqal(addr) {
-		if m.ep.Network() == "tcp" && !addr.Euqal(p.endpoint) {
+	if bin.IsNilInterface(p.endpoint) || !p.endpoint.Equal(addr) {
+		if m.ep.Network() == "tcp" && !addr.Equal(p.endpoint) {
 			logrus.Infoln(file.Header(), "set endpoint of peer", p.peerip, "to", addr.String())
 			p.endpoint = addr
 		} else { // others are all no status link

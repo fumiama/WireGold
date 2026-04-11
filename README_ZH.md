@@ -15,7 +15,7 @@ WireGold 是一个纯 Go 实现的第 3 层 VPN，灵感来自 WireGuard。
 ### 主要特性
 
 - **加密**: XChaCha20-Poly1305 (AEAD) + Curve25519 密钥交换 + BLAKE2B 完整性校验
-- **传输**: 支持 UDP / UDP-Lite / TCP / Raw IP 多种底层传输
+- **传输**: 支持 UDP / UDP-Lite / TCP / Raw IP / ICMP 多种底层传输
 - **编码**: 可选 Base16384 编码以穿越文本过滤
 - **抗审查**: XOR 掩码混淆报头 + 随机 MTU 放缩 + 可选双倍发包
 - **压缩**: 可选 Zstd 数据压缩
@@ -53,14 +53,17 @@ wg [-c config.yaml] [-d|w] [-g] [-h] [-p] [-l log.txt]
 
 - **macOS Mojave**: 最大 MTU (IPv4 endpoint) 为 `9159`
 - **IPv6 endpoint**: 推荐 MTU `1280~1500`，避免大分片被丢弃
+- **ICMP / Raw IP endpoint**: 使用裸 IP 地址，无需端口号 (如 `0.0.0.0`)。需要 root/管理员权限
 
 ```yaml
 IP: 192.168.233.1
 SubNet: 192.168.233.0/24
 PrivateKey: 暲菉斂狧污爉窫擸紈卆帞蔩慈睠庮扝憚瞼縀
+Network: udp  # udp (默认), udplite, tcp, ip, icmp
 EndPoint: 0.0.0.0:56789
 MTU: 1504
 SpeedLoop: 4096
+MaxTTL: 64
 Mask: 0x1234567890abcdef
 Base14: true
 Peers:
@@ -93,6 +96,9 @@ Peers:
 
 | 字段 | 说明 |
 |------|------|
+| `Network` | 传输协议: `udp` (默认), `udplite`, `tcp`, `ip`, `icmp` |
+| `MaxTTL` | 发包初始 TTL，默认 `64` |
+| `SpeedLoop` | 每收到 N 个包时输出一次吞吐统计，默认 `4096` |
 | `AllowedIPs` | 前缀 `x` 表示只接受该网段报文但不建系统路由；前缀 `y` 表示只添加内部路由表条目 |
 | `Mask` | XOR 掩码，用于混淆报头 |
 | `Base14` | 启用 Base16384 编码 |

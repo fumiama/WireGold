@@ -39,7 +39,7 @@ func init() {
 			if err == nil {
 				p, ok := peer.Me().IsInPeer(ps)
 				if ok {
-					if bin.IsNilInterface(p.EndPoint()) || !p.EndPoint().Euqal(addr) {
+					if bin.IsNilInterface(p.EndPoint()) || !p.EndPoint().Equal(addr) {
 						p.SetEndPoint(addr)
 						logrus.Infoln(file.Header(), "notify set ep of peer", ps, "to", ep)
 					}

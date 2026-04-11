@@ -32,7 +32,7 @@ func (ep *EndPoint) Network() string {
 	return ep.addr.Network()
 }
 
-func (ep *EndPoint) Euqal(ep2 p2p.EndPoint) bool {
+func (ep *EndPoint) Equal(ep2 p2p.EndPoint) bool {
 	if ep == nil || ep2 == nil {
 		return ep == nil && ep2 == nil
 	}

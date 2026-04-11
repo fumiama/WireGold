@@ -18,7 +18,7 @@ func (ep *EndPoint) Network() string {
 	return "udplite"
 }
 
-func (ep *EndPoint) Euqal(ep2 p2p.EndPoint) bool {
+func (ep *EndPoint) Equal(ep2 p2p.EndPoint) bool {
 	if ep == nil || ep2 == nil {
 		return ep == nil && ep2 == nil
 	}
@@ -52,6 +52,9 @@ func (conn *Conn) LocalAddr() p2p.EndPoint {
 
 func (conn *Conn) ReadFromPeer(b []byte) (int, p2p.EndPoint, error) {
 	n, addr, err := (*net.UDPConn)(conn).ReadFromUDP(b)
+	if err != nil {
+		return 0, nil, err
+	}
 	return n, (*EndPoint)(addr), err
 }
 

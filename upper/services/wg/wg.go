@@ -9,6 +9,7 @@ import (
 	curve "github.com/fumiama/go-x25519"
 	"github.com/sirupsen/logrus"
 
+	_ "github.com/fumiama/WireGold/gold/p2p/icmp"    // support icmp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/ip"      // support ip connection
 	_ "github.com/fumiama/WireGold/gold/p2p/tcp"     // support tcp connection
 	_ "github.com/fumiama/WireGold/gold/p2p/udp"     // support udp connection

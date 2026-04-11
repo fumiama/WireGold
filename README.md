@@ -15,7 +15,7 @@ WireGold is a pure Go Layer 3 VPN inspired by WireGuard.
 ### Features
 
 - **Encryption**: XChaCha20-Poly1305 (AEAD) + Curve25519 key exchange + BLAKE2B integrity check
-- **Transport**: UDP / UDP-Lite / TCP / Raw IP
+- **Transport**: UDP / UDP-Lite / TCP / Raw IP / ICMP
 - **Encoding**: Optional Base16384 encoding to traverse text-only filters
 - **Anti-censorship**: XOR mask header obfuscation + randomized MTU scaling + optional double-send
 - **Compression**: Optional Zstd payload compression
@@ -54,14 +54,17 @@ wg [-c config.yaml] [-d|w] [-g] [-h] [-p] [-l log.txt]
 
 - **macOS Mojave**: max MTU (IPv4 endpoint) is `9159`
 - **IPv6 endpoint**: recommended MTU `1280–1500` to avoid oversized segment drops
+- **ICMP / Raw IP endpoint**: use bare IP address without port (e.g. `0.0.0.0`), requires root/admin privileges
 
 ```yaml
 IP: 192.168.233.1
 SubNet: 192.168.233.0/24
 PrivateKey: 暲菉斂狧污爉窫擸紈卆帞蔩慈睠庮扝憚瞼縀
+Network: udp  # udp (default), udplite, tcp, ip, icmp
 EndPoint: 0.0.0.0:56789
 MTU: 1504
 SpeedLoop: 4096
+MaxTTL: 64
 Mask: 0x1234567890abcdef
 Base14: true
 Peers:
@@ -94,6 +97,9 @@ Peers:
 
 | Field | Description |
 |-------|-------------|
+| `Network` | Transport protocol: `udp` (default), `udplite`, `tcp`, `ip`, `icmp` |
+| `MaxTTL` | Initial TTL for outgoing packets; default `64` |
+| `SpeedLoop` | Log receive throughput statistics every N packets; default `4096` |
 | `AllowedIPs` | Prefix `x` to accept packets from the subnet without creating a system route; prefix `y` to add an internal route table entry only |
 | `Mask` | XOR mask for header obfuscation |
 | `Base14` | Enable Base16384 encoding |

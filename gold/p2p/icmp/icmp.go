@@ -38,7 +38,7 @@ func newPeerState() *peerState {
 	ps := &peerState{}
 	ps.seqpool = &sync.Pool{
 		New: func() any {
-			return int(ps.seq.Add(1))
+			return ps.seq.Add(1)
 		},
 	}
 	return ps
@@ -180,7 +180,7 @@ func (conn *Conn) ReadFromPeer(b []byte) (n int, ep p2p.EndPoint, err error) {
 			ps := conn.getOrCreatePeerState(ipaddr)
 			ps.id = body.ID
 			ps.seq.Store(uintptr(body.Seq))
-			ps.seqpool.Put(body.Seq)
+			ps.seqpool.Put(uintptr(body.Seq))
 		}
 		n = copy(b, body.Data)
 		if config.ShowDebugLog {
@@ -197,7 +197,7 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (int, error) {
 	}
 	addr := (*netip.Addr)(icmpep)
 	ps := conn.getOrCreatePeerState(*addr)
-	seq := ps.seqpool.Get().(int)
+	seq := int(ps.seqpool.Get().(uintptr))
 	id := ps.id
 	isrequest := id == 0
 	if isrequest {

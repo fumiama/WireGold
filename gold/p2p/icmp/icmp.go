@@ -27,20 +27,51 @@ var (
 	echoid = os.Getpid()
 )
 
+// seqFIFO is a FIFO queue that generates new sequence numbers when empty.
+type seqFIFO struct {
+	mu   sync.Mutex
+	q    []uintptr
+	next *atomic.Uintptr
+}
+
+func (f *seqFIFO) Get() uintptr {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.q) > 0 {
+		v := f.q[0]
+		copy(f.q, f.q[1:])
+		f.q = f.q[:len(f.q)-1]
+		return v
+	}
+	return f.next.Add(1)
+}
+
+func (f *seqFIFO) Put(v uintptr) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.q) == 0 {
+		f.q = make([]uintptr, 1, 128)
+		f.q[0] = v
+		return
+	}
+	if len(f.q) < cap(f.q) {
+		f.q = append(f.q, v)
+		return
+	}
+	copy(f.q, f.q[1:])
+	f.q[len(f.q)-1] = v
+}
+
 // peerState holds per-peer ICMP echo state within a Conn.
 type peerState struct {
 	id      int
 	seq     atomic.Uintptr
-	seqpool *sync.Pool
+	seqfifo seqFIFO
 }
 
 func newPeerState() *peerState {
 	ps := &peerState{}
-	ps.seqpool = &sync.Pool{
-		New: func() any {
-			return ps.seq.Add(1)
-		},
-	}
+	ps.seqfifo.next = &ps.seq
 	return ps
 }
 
@@ -180,7 +211,7 @@ func (conn *Conn) ReadFromPeer(b []byte) (n int, ep p2p.EndPoint, err error) {
 			ps := conn.getOrCreatePeerState(ipaddr)
 			ps.id = body.ID
 			ps.seq.Store(uintptr(body.Seq))
-			ps.seqpool.Put(uintptr(body.Seq))
+			ps.seqfifo.Put(uintptr(body.Seq))
 		}
 		n = copy(b, body.Data)
 		if config.ShowDebugLog {
@@ -197,7 +228,7 @@ func (conn *Conn) WriteToPeer(b []byte, ep p2p.EndPoint) (int, error) {
 	}
 	addr := (*netip.Addr)(icmpep)
 	ps := conn.getOrCreatePeerState(*addr)
-	seq := int(ps.seqpool.Get().(uintptr))
+	seq := int(ps.seqfifo.Get())
 	id := ps.id
 	isrequest := id == 0
 	if isrequest {
